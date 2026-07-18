@@ -8,6 +8,7 @@ const bookingRoutes = require("./routes/bookings");
 const reviewRoutes = require("./routes/reviews");
 const conciergeRoutes = require("./routes/concierge");
 const paymentRoutes = require("./routes/payments");
+const adminSeedRoutes =require("./routes/adminsed");
 const stripeWebhookRoutes = require("./routes/stripeWebhook");
 
 const app = express();
@@ -31,6 +32,7 @@ app.use("/bookings", bookingRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/concierge", conciergeRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/admin", adminSeedRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
