@@ -8,7 +8,7 @@ const bookingRoutes = require("./routes/bookings");
 const reviewRoutes = require("./routes/reviews");
 const conciergeRoutes = require("./routes/concierge");
 const paymentRoutes = require("./routes/payments");
-const adminSeedRoutes =require("./routes/adminsed");
+const adminSeedRoutes = require("./routes/adminSeed");
 const stripeWebhookRoutes = require("./routes/stripeWebhook");
 
 const app = express();
