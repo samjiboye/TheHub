@@ -1,4 +1,4 @@
-# SalonConnect Backend
+# TheHub Backend
 
 A real API for the SalonConnect marketplace: users, salon listings, bookings with
 automatic commission calculation, and reviews. Uses SQLite for zero-config local
@@ -12,7 +12,7 @@ npm install
 npm start
 ```
 
-Server runs at `http://localhost:4000`. The SQLite file (`db/salonconnect.db`) and all
+Server runs at `http://localhost:4000`. The SQLite file (`db/TheHub.db`) and all
 tables are created automatically on first run.
 
 Populate it with demo data (a demo owner account and 6 sample salons) so the app isn't
@@ -22,7 +22,7 @@ empty on first load:
 npm run seed
 ```
 
-This prints the demo owner's login (`owner@salonconnect.demo` / `demo1234`).
+This prints the demo owner's login (`owner@TheHub.demo` / `demo1234`).
 
 Set a real `JWT_SECRET` in a `.env` file before deploying anywhere public:
 
@@ -34,11 +34,11 @@ PORT=4000
 ## How money moves through the API
 
 Every booking (`POST /bookings`) automatically calculates:
-- `commission_amount` — 15% of the service price, taken by SalonConnect
+- `commission_amount` — 15% of the service price, taken by TheHub
 - `payout_amount` — the remaining 85%, owed to the salon
 - `booking_fee` — flat $2.50 charged to the customer on top of the service price
 
-This mirrors the model from the product plan: SalonConnect only earns when a real
+This mirrors the model from the product plan: TheHub only earns when a real
 booking happens, so incentives stay aligned with salons and customers.
 
 ## API Reference
