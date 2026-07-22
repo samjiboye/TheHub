@@ -1,6 +1,5 @@
 const express = require("express");
 const db = require("../db");
-
 const router = express.Router();
 
 // POST /concierge — proxies chat messages to Claude, keeping the API key server-side.
@@ -14,15 +13,17 @@ router.post("/", async (req, res) => {
     return res.status(500).json({ error: "Server is missing ANTHROPIC_API_KEY" });
   }
 
-  const salons = db.prepare("SELECT * FROM salons").all();
-  const salonSummary = salons
-    .map((s) => {
-      const services = db.prepare("SELECT * FROM services WHERE salon_id = ?").all(s.id);
-      return `${s.name} (${s.category}, services: ${services.map((sv) => `${sv.name} $${sv.price}`).join(", ")})`;
-    })
-    .join("\n");
-
   try {
+    const { rows: salons } = await db.query("SELECT * FROM salons");
+    const salonSummary = (
+      await Promise.all(
+        salons.map(async (s) => {
+          const { rows: services } = await db.query("SELECT * FROM services WHERE salon_id = $1", [s.id]);
+          return `${s.name} (${s.category}, services: ${services.map((sv) => `${sv.name} $${sv.price}`).join(", ")})`;
+        })
+      )
+    ).join("\n");
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -33,7 +34,7 @@ router.post("/", async (req, res) => {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1000,
-        system: `You are Aria, the warm and concise front-desk concierge for SalonConnect, a local beauty booking app. Recommend from this exact list of salons only, referring to them by name. Keep replies to 2-4 sentences, friendly but efficient, like a good front-desk person. Salons:\n${salonSummary}`,
+        system: `You are Aria, the warm and concise front-desk concierge for TheHub, a local beauty booking app. Recommend from this exact list of salons only, referring to them by name. Keep replies to 2-4 sentences, friendly but efficient, like a good front-desk person. Salons:\n${salonSummary}`,
         messages,
       }),
     });
