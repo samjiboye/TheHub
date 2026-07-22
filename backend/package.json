@@ -1,7 +1,7 @@
 {
-  "name": "salonconnect-backend",
+  "name": "thehub-backend",
   "version": "1.0.0",
-  "description": "Backend API for SalonConnect — a local beauty booking marketplace",
+  "description": "Backend API for The Hub — a local beauty booking marketplace",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,7 +14,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "stripe": "^16.8.0"
+    "jsonwebtoken": "^9.0.2"
   }
 }

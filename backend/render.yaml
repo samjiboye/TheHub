@@ -1,27 +1,22 @@
 services:
   - type: web
-    name: salonconnect-api
+    name: thehub-api
     runtime: node
     plan: free
+    rootDir: backend
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: JWT_SECRET
         generateValue: true
-      - key: DB_PATH
-        value: /data/salonconnect.db
       - key: CORS_ORIGIN
-        value: "*" # tighten this to your frontend's URL after it's deployed
+        value: "*"
       - key: ANTHROPIC_API_KEY
-        sync: false # set this manually in Render's dashboard — don't commit real keys
-      - key: STRIPE_SECRET_KEY
         sync: false
-      - key: STRIPE_WEBHOOK_SECRET
+      - key: PAYSTACK_SECRET_KEY
         sync: false
+      - key: PAYSTACK_CURRENCY
+        value: "NGN"
       - key: FRONTEND_URL
-        value: "https://your-frontend.vercel.app" # update after the frontend is deployed
-    disk:
-      name: salonconnect-data
-      mountPath: /data
-      sizeGB: 1
+        value: "https://your-frontend.vercel.app"

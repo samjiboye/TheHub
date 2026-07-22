@@ -1,4 +1,4 @@
--- SalonConnect database schema (SQLite for local dev; port to Postgres for production)
+-- The Hub database schema (SQLite for local dev; port to Postgres for production)
 
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS salons (
   lat REAL,
   lng REAL,
   hours TEXT,
-  stripe_account_id TEXT,
-  stripe_payouts_enabled INTEGER NOT NULL DEFAULT 0,
+  paystack_subaccount_code TEXT,
+  paystack_payouts_enabled INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -46,8 +46,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   commission_amount REAL NOT NULL,
   payout_amount REAL NOT NULL,
   payment_status TEXT NOT NULL CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')) DEFAULT 'unpaid',
-  stripe_checkout_session_id TEXT,
-  stripe_payment_intent_id TEXT,
+  paystack_reference TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

@@ -8,18 +8,15 @@ const bookingRoutes = require("./routes/bookings");
 const reviewRoutes = require("./routes/reviews");
 const conciergeRoutes = require("./routes/concierge");
 const paymentRoutes = require("./routes/payments");
-const stripeWebhookRoutes = require("./routes/stripeWebhook");
+const paystackWebhookRoutes = require("./routes/paystackWebhook");
+const adminSeedRoutes = require("./routes/adminSeed");
 
 const app = express();
 
-// In production, set CORS_ORIGIN to your deployed frontend's URL (e.g. https://salonconnect.vercel.app).
-// Left as "*" by default so local development keeps working with no setup.
 const corsOrigin = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: corsOrigin }));
 
-// IMPORTANT: the Stripe webhook needs the raw, unparsed request body to verify its
-// signature — it must be mounted before express.json() below, not after.
-app.use("/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookRoutes);
+app.use("/webhooks/paystack", express.raw({ type: "application/json" }), paystackWebhookRoutes);
 
 app.use(express.json());
 
@@ -31,6 +28,7 @@ app.use("/bookings", bookingRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/concierge", conciergeRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/admin", adminSeedRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
@@ -38,4 +36,4 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`SalonConnect API running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`The Hub API running on http://localhost:${PORT}`));

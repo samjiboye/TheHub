@@ -1,77 +1,71 @@
 const express = require("express");
 const db = require("../db");
-const stripe = require("../lib/stripe");
+const paystack = require("../lib/paystack");
 const { requireAuth, requireRole } = require("../middleware/auth");
 
 const router = express.Router();
 
 const BOOKING_FEE = 2.5;
 const COMMISSION_RATE = 0.15;
+const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 
-// Where Stripe should send the owner back after onboarding. Set this to your real
-// frontend URL in production (e.g. https://salonconnect.vercel.app).
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-// POST /payments/connect — start (or resume) Stripe Express onboarding for the owner's salon
+router.get("/banks", async (req, res) => {
+  try {
+    const banks = await paystack.get(`/bank?country=nigeria&currency=${CURRENCY}`);
+    res.json(banks.map((b) => ({ name: b.name, code: b.code })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load bank list. Check PAYSTACK_SECRET_KEY is set." });
+  }
+});
+
+router.get("/resolve-account", requireAuth, requireRole("owner"), async (req, res) => {
+  const { account_number, bank_code } = req.query;
+  if (!account_number || !bank_code) {
+    return res.status(400).json({ error: "account_number and bank_code are required" });
+  }
+  try {
+    const result = await paystack.get(
+      `/bank/resolve?account_number=${encodeURIComponent(account_number)}&bank_code=${encodeURIComponent(bank_code)}`
+    );
+    res.json({ account_name: result.account_name });
+  } catch (err) {
+    res.status(400).json({ error: "Couldn't verify that account. Double-check the number and bank." });
+  }
+});
+
 router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
-  const { salon_id } = req.body;
+  const { salon_id, business_name, bank_code, account_number } = req.body;
+  if (!salon_id || !business_name || !bank_code || !account_number) {
+    return res.status(400).json({ error: "salon_id, business_name, bank_code, and account_number are required" });
+  }
+
   const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(salon_id);
   if (!salon) return res.status(404).json({ error: "Salon not found" });
   if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
   try {
-    let accountId = salon.stripe_account_id;
-
-    if (!accountId) {
-      const account = await stripe.accounts.create({
-        type: "express",
-        email: req.user.email,
-        business_type: "individual",
-        capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
-        },
-      });
-      accountId = account.id;
-      db.prepare("UPDATE salons SET stripe_account_id = ? WHERE id = ?").run(accountId, salon.id);
-    }
-
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${FRONTEND_URL}/?stripe_refresh=1`,
-      return_url: `${FRONTEND_URL}/?stripe_return=1`,
-      type: "account_onboarding",
+    const subaccount = await paystack.post("/subaccount", {
+      business_name,
+      bank_code,
+      account_number,
+      percentage_charge: COMMISSION_RATE * 100,
     });
 
-    res.json({ url: accountLink.url });
+    db.prepare("UPDATE salons SET paystack_subaccount_code = ?, paystack_payouts_enabled = 1 WHERE id = ?").run(
+      subaccount.subaccount_code,
+      salon.id
+    );
+
+    res.json({ ok: true, subaccount_code: subaccount.subaccount_code, account_name: subaccount.account_name });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Couldn't start Stripe onboarding. Check STRIPE_SECRET_KEY is set." });
+    res.status(400).json({ error: err.message || "Couldn't set up payouts for this salon." });
   }
 });
 
-// GET /payments/connect/status?salon_id=1 — check whether onboarding is complete
-router.get("/connect/status", requireAuth, requireRole("owner"), async (req, res) => {
-  const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(req.query.salon_id);
-  if (!salon) return res.status(404).json({ error: "Salon not found" });
-  if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
-
-  if (!salon.stripe_account_id) {
-    return res.json({ connected: false, payoutsEnabled: false });
-  }
-
-  try {
-    const account = await stripe.accounts.retrieve(salon.stripe_account_id);
-    const payoutsEnabled = !!account.payouts_enabled;
-    db.prepare("UPDATE salons SET stripe_payouts_enabled = ? WHERE id = ?").run(payoutsEnabled ? 1 : 0, salon.id);
-    res.json({ connected: true, payoutsEnabled });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Couldn't check Stripe status" });
-  }
-});
-
-// POST /payments/checkout — customer books + pays in one step via a Stripe Checkout Session
 router.post("/checkout", requireAuth, async (req, res) => {
   const { salon_id, service_id, time_slot } = req.body;
   if (!salon_id || !service_id || !time_slot) {
@@ -81,15 +75,13 @@ router.post("/checkout", requireAuth, async (req, res) => {
   const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(salon_id);
   const service = db.prepare("SELECT * FROM services WHERE id = ? AND salon_id = ?").get(service_id, salon_id);
   if (!salon || !service) return res.status(404).json({ error: "Salon or service not found" });
-  if (!salon.stripe_account_id || !salon.stripe_payouts_enabled) {
+  if (!salon.paystack_subaccount_code || !salon.paystack_payouts_enabled) {
     return res.status(400).json({ error: "This salon hasn't finished setting up payouts yet." });
   }
 
   const commission_amount = Math.round(service.price * COMMISSION_RATE * 100) / 100;
   const payout_amount = Math.round((service.price - commission_amount) * 100) / 100;
   const total = service.price + BOOKING_FEE;
-  // Our cut of the total charge: the commission on the service, plus the flat booking fee.
-  const applicationFeeCents = Math.round((commission_amount + BOOKING_FEE) * 100);
 
   const bookingInfo = db
     .prepare(
@@ -101,35 +93,23 @@ router.post("/checkout", requireAuth, async (req, res) => {
   const bookingId = bookingInfo.lastInsertRowid;
 
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer_email: req.user.email,
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: `${service.name} at ${salon.name}` },
-            unit_amount: Math.round(total * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      payment_intent_data: {
-        application_fee_amount: applicationFeeCents,
-        transfer_data: { destination: salon.stripe_account_id },
-        metadata: { booking_id: String(bookingId) },
-      },
-      metadata: { booking_id: String(bookingId) },
-      success_url: `${FRONTEND_URL}/?booking_success=1&booking_id=${bookingId}`,
-      cancel_url: `${FRONTEND_URL}/?booking_cancelled=1`,
+    const transaction = await paystack.post("/transaction/initialize", {
+      email: req.user.email,
+      amount: Math.round(total * 100),
+      currency: CURRENCY,
+      subaccount: salon.paystack_subaccount_code,
+      transaction_charge: Math.round((commission_amount + BOOKING_FEE) * 100),
+      bearer: "subaccount",
+      metadata: { booking_id: bookingId },
+      callback_url: `${FRONTEND_URL}/?booking_success=1&booking_id=${bookingId}`,
     });
 
-    db.prepare("UPDATE bookings SET stripe_checkout_session_id = ? WHERE id = ?").run(session.id, bookingId);
-    res.json({ url: session.url, booking_id: bookingId });
+    db.prepare("UPDATE bookings SET paystack_reference = ? WHERE id = ?").run(transaction.reference, bookingId);
+    res.json({ url: transaction.authorization_url, booking_id: bookingId });
   } catch (err) {
     console.error(err);
     db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(bookingId);
-    res.status(500).json({ error: "Couldn't start checkout. Check STRIPE_SECRET_KEY is set." });
+    res.status(500).json({ error: "Couldn't start checkout. Check PAYSTACK_SECRET_KEY is set." });
   }
 });
 
