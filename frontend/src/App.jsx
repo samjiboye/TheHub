@@ -820,7 +820,7 @@ function OwnerDashboard({ token }) {
               Customers can't pay you until you finish Stripe's setup — bank details, quick identity check.
             </p>
             <button
-              onClick={connectStripe}
+              onClick={connectpayouts}
               disabled={connecting}
               className="w-full mt-3 py-3.5 rounded-2xl text-base flex items-center justify-center gap-2"
               style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
