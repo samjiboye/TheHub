@@ -114,3 +114,9 @@ router.post("/checkout", requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+router.get("/connect/status", requireAuth, requireRole("owner"), (req, res) => {
+  const { salon_id } = req.query;
+  const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(salon_id);
+  if (!salon) return res.status(404).json({ error: "Salon not found" });
+  res.json({ payoutsEnabled: !!salon.paystack_payouts_enabled });
+});
