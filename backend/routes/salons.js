@@ -78,4 +78,93 @@ router.get("/:id", async (req, res) => {
     const { rows: services } = await db.query("SELECT * FROM services WHERE salon_id = $1", [salon.id]);
     const { rows: reviews } = await db.query(
       `SELECT r.*, u.name AS customer_name FROM reviews r JOIN users u ON u.id = r.customer_id
-       WHERE salon_id = $1
+       WHERE salon_id = $1 ORDER BY r.created_at DESC`,
+      [salon.id]
+    );
+    res.json({ ...salon, services, reviews });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load that salon." });
+  }
+});
+
+// POST /salons (owner creates a salon listing)
+router.post("/", requireAuth, requireRole("owner"), async (req, res) => {
+  const { name, category, bio, address, lat, lng, hours } = req.body;
+  if (!name || !category) return res.status(400).json({ error: "name and category are required" });
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [req.user.id, name, category, bio || null, address || null, lat || null, lng || null, hours || null]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't create that salon." });
+  }
+});
+
+// POST /salons/:id/services (owner adds a bookable service)
+router.post("/:id/services", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { name, duration_min, price } = req.body;
+    if (!name || !duration_min || price == null) {
+      return res.status(400).json({ error: "name, duration_min, and price are required" });
+    }
+    const { rows } = await db.query(
+      "INSERT INTO services (salon_id, name, duration_min, price) VALUES ($1, $2, $3, $4) RETURNING id",
+      [salon.id, name, duration_min, price]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't add that service." });
+  }
+});
+
+// GET /salons/:id/dashboard (owner earnings summary)
+router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows: totalsRows } = await db.query(
+      `SELECT
+        COALESCE(SUM(service_price), 0) AS gross,
+        COALESCE(SUM(commission_amount), 0) AS commission,
+        COALESCE(SUM(payout_amount), 0) AS payout,
+        COUNT(*) AS "bookingCount"
+       FROM bookings WHERE salon_id = $1 AND status IN ('confirmed', 'completed') AND payment_status = 'paid'`,
+      [salon.id]
+    );
+    const totals = totalsRows[0];
+    totals.gross = Number(totals.gross);
+    totals.commission = Number(totals.commission);
+    totals.payout = Number(totals.payout);
+    totals.bookingCount = Number(totals.bookingCount);
+
+    const { rows: upcoming } = await db.query(
+      `SELECT b.*, s.name AS service_name, u.name AS customer_name
+       FROM bookings b
+       JOIN services s ON s.id = b.service_id
+       JOIN users u ON u.id = b.customer_id
+       WHERE b.salon_id = $1 AND b.status = 'confirmed'
+       ORDER BY b.created_at DESC LIMIT 20`,
+      [salon.id]
+    );
+    res.json({ ...totals, upcoming });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load dashboard." });
+  }
+});
+
+module.exports = router;
