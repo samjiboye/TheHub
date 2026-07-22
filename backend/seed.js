@@ -2,10 +2,8 @@
 // Run with: node seed.js
 const bcrypt = require("bcryptjs");
 const db = require("./db");
-
-const DEMO_OWNER_EMAIL = "owner@salonconnect.demo";
+const DEMO_OWNER_EMAIL = "owner@thehub.demo";
 const DEMO_OWNER_PASSWORD = "demo1234";
-
 const SALONS = [
   {
     name: "Cutting Room", category: "Barbing", address: "14 Kelso Ave",
@@ -68,41 +66,52 @@ const SALONS = [
   },
 ];
 
-function run() {
-  let owner = db.prepare("SELECT * FROM users WHERE email = ?").get(DEMO_OWNER_EMAIL);
-  if (!owner) {
-    const password_hash = bcrypt.hashSync(DEMO_OWNER_PASSWORD, 10);
-    const info = db
-      .prepare("INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, 'owner', ?)")
-      .run("Demo Owner", DEMO_OWNER_EMAIL, password_hash);
-    owner = { id: info.lastInsertRowid };
-    console.log(`Created demo owner: ${DEMO_OWNER_EMAIL} / ${DEMO_OWNER_PASSWORD}`);
-  } else {
-    console.log("Demo owner already exists, reusing it.");
-  }
+async function run() {
+  try {
+    let owner;
+    const { rows: existingOwnerRows } = await db.query("SELECT * FROM users WHERE email = $1", [DEMO_OWNER_EMAIL]);
+    owner = existingOwnerRows[0];
 
-  const existingCount = db.prepare("SELECT COUNT(*) AS n FROM salons WHERE owner_id = ?").get(owner.id).n;
-  if (existingCount > 0) {
-    console.log(`Demo owner already has ${existingCount} salon(s). Skipping salon seed.`);
-    return;
-  }
-
-  const insertSalon = db.prepare(
-    "INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  );
-  const insertService = db.prepare(
-    "INSERT INTO services (salon_id, name, duration_min, price) VALUES (?, ?, ?, ?)"
-  );
-
-  for (const s of SALONS) {
-    const info = insertSalon.run(owner.id, s.name, s.category, s.bio, s.address, s.lat, s.lng, s.hours);
-    for (const svc of s.services) {
-      insertService.run(info.lastInsertRowid, svc.name, svc.duration_min, svc.price);
+    if (!owner) {
+      const password_hash = bcrypt.hashSync(DEMO_OWNER_PASSWORD, 10);
+      const { rows } = await db.query(
+        "INSERT INTO users (name, email, role, password_hash) VALUES ($1, $2, 'owner', $3) RETURNING id",
+        ["Demo Owner", DEMO_OWNER_EMAIL, password_hash]
+      );
+      owner = { id: rows[0].id };
+      console.log(`Created demo owner: ${DEMO_OWNER_EMAIL} / ${DEMO_OWNER_PASSWORD}`);
+    } else {
+      console.log("Demo owner already exists, reusing it.");
     }
-    console.log(`Seeded salon: ${s.name}`);
-  }
 
-  console.log("Done.");
+    const { rows: countRows } = await db.query("SELECT COUNT(*) AS n FROM salons WHERE owner_id = $1", [owner.id]);
+    const existingCount = Number(countRows[0].n);
+    if (existingCount > 0) {
+      console.log(`Demo owner already has ${existingCount} salon(s). Skipping salon seed.`);
+      return;
+    }
+
+    for (const s of SALONS) {
+      const { rows: salonRows } = await db.query(
+        "INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+        [owner.id, s.name, s.category, s.bio, s.address, s.lat, s.lng, s.hours]
+      );
+      const salonId = salonRows[0].id;
+      for (const svc of s.services) {
+        await db.query(
+          "INSERT INTO services (salon_id, name, duration_min, price) VALUES ($1, $2, $3, $4)",
+          [salonId, svc.name, svc.duration_min, svc.price]
+        );
+      }
+      console.log(`Seeded salon: ${s.name}`);
+    }
+    console.log("Done.");
+  } catch (err) {
+    console.error("Seeding failed:", err);
+    process.exitCode = 1;
+  } finally {
+    await db.end();
+  }
 }
 
 run();
