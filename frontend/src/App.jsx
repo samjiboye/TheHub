@@ -813,7 +813,7 @@ function OwnerDashboard({ token }) {
     <div className="pb-10">
       <Header title="Owner dashboard" />
       <div className="px-4">
-        {!salon.stripe_payouts_enabled && (
+        {!salon.paystack_payouts_enabled && (
           <div className="mb-5 px-4 py-4 rounded-2xl" style={{ border: `3px solid ${colors.hairline}` }}>
             <p className="text-base" style={{ color: colors.cream, fontWeight: 700 }}>Connect payouts to go live</p>
             <p className="text-sm mt-1" style={{ color: colors.creamDim }}>
