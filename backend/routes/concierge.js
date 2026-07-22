@@ -3,7 +3,6 @@ const db = require("../db");
 const router = express.Router();
 
 // POST /concierge — proxies chat messages to Claude, keeping the API key server-side.
-// Body: { messages: [{ role: "user"|"assistant", content: string }, ...] }
 router.post("/", async (req, res) => {
   const { messages } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
