@@ -1,17 +1,17 @@
--- The Hub database schema (SQLite for local dev; port to Postgres for production)
+-- TheHub database schema (Postgres)
 
 CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE,
   phone TEXT,
   role TEXT NOT NULL CHECK (role IN ('customer', 'owner')) DEFAULT 'customer',
   password_hash TEXT NOT NULL,
-  created_at TEXT DEFAULT (datetime('now'))
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS salons (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   owner_id INTEGER NOT NULL REFERENCES users(id),
   name TEXT NOT NULL,
   category TEXT NOT NULL CHECK (category IN ('Barbing', 'Hairdressing', 'Nails', 'Makeup', 'Spa')),
@@ -22,11 +22,11 @@ CREATE TABLE IF NOT EXISTS salons (
   hours TEXT,
   paystack_subaccount_code TEXT,
   paystack_payouts_enabled INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT DEFAULT (datetime('now'))
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS services (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   salon_id INTEGER NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   duration_min INTEGER NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS services (
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   customer_id INTEGER NOT NULL REFERENCES users(id),
   salon_id INTEGER NOT NULL REFERENCES salons(id),
   service_id INTEGER NOT NULL REFERENCES services(id),
@@ -47,17 +47,17 @@ CREATE TABLE IF NOT EXISTS bookings (
   payout_amount REAL NOT NULL,
   payment_status TEXT NOT NULL CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')) DEFAULT 'unpaid',
   paystack_reference TEXT,
-  created_at TEXT DEFAULT (datetime('now'))
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS reviews (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   salon_id INTEGER NOT NULL REFERENCES salons(id),
   customer_id INTEGER NOT NULL REFERENCES users(id),
   booking_id INTEGER REFERENCES bookings(id),
   rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
   comment TEXT,
-  created_at TEXT DEFAULT (datetime('now'))
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_salons_category ON salons(category);
