@@ -1,12 +1,9 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
-
 const router = express.Router();
-
 const DEMO_OWNER_EMAIL = "owner@thehub.demo";
 const DEMO_OWNER_PASSWORD = "demo1234";
-
 const SALONS = [
   {
     name: "Cutting Room", category: "Barbing", address: "14 Kelso Ave",
@@ -74,43 +71,52 @@ const SALONS = [
 // don't offer shell access. Reuses JWT_SECRET as a simple shared key so no new
 // environment variable is needed. Safe to leave in place — it's idempotent and
 // does nothing once the demo owner already has salons.
-router.get("/seed", (req, res) => {
+router.get("/seed", async (req, res) => {
   if (!process.env.JWT_SECRET || req.query.key !== process.env.JWT_SECRET) {
     return res.status(403).json({ error: "Missing or incorrect key" });
   }
+  try {
+    let owner;
+    const { rows: existingOwnerRows } = await db.query("SELECT * FROM users WHERE email = $1", [DEMO_OWNER_EMAIL]);
+    owner = existingOwnerRows[0];
 
-  let owner = db.prepare("SELECT * FROM users WHERE email = ?").get(DEMO_OWNER_EMAIL);
-  if (!owner) {
-    const password_hash = bcrypt.hashSync(DEMO_OWNER_PASSWORD, 10);
-    const info = db
-      .prepare("INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, 'owner', ?)")
-      .run("Demo Owner", DEMO_OWNER_EMAIL, password_hash);
-    owner = { id: info.lastInsertRowid };
-  }
-
-  const existingCount = db.prepare("SELECT COUNT(*) AS n FROM salons WHERE owner_id = ?").get(owner.id).n;
-  if (existingCount > 0) {
-    return res.json({ ok: true, message: `Demo owner already has ${existingCount} salon(s). Nothing to do.` });
-  }
-
-  const insertSalon = db.prepare(
-    "INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  );
-  const insertService = db.prepare(
-    "INSERT INTO services (salon_id, name, duration_min, price) VALUES (?, ?, ?, ?)"
-  );
-
-  for (const s of SALONS) {
-    const info = insertSalon.run(owner.id, s.name, s.category, s.bio, s.address, s.lat, s.lng, s.hours);
-    for (const svc of s.services) {
-      insertService.run(info.lastInsertRowid, svc.name, svc.duration_min, svc.price);
+    if (!owner) {
+      const password_hash = bcrypt.hashSync(DEMO_OWNER_PASSWORD, 10);
+      const { rows } = await db.query(
+        "INSERT INTO users (name, email, role, password_hash) VALUES ($1, $2, 'owner', $3) RETURNING id",
+        ["Demo Owner", DEMO_OWNER_EMAIL, password_hash]
+      );
+      owner = { id: rows[0].id };
     }
-  }
 
-  res.json({
-    ok: true,
-    message: `Seeded ${SALONS.length} salons. Demo owner login: ${DEMO_OWNER_EMAIL} / ${DEMO_OWNER_PASSWORD}`,
-  });
+    const { rows: countRows } = await db.query("SELECT COUNT(*) AS n FROM salons WHERE owner_id = $1", [owner.id]);
+    const existingCount = Number(countRows[0].n);
+    if (existingCount > 0) {
+      return res.json({ ok: true, message: `Demo owner already has ${existingCount} salon(s). Nothing to do.` });
+    }
+
+    for (const s of SALONS) {
+      const { rows: salonRows } = await db.query(
+        "INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+        [owner.id, s.name, s.category, s.bio, s.address, s.lat, s.lng, s.hours]
+      );
+      const salonId = salonRows[0].id;
+      for (const svc of s.services) {
+        await db.query(
+          "INSERT INTO services (salon_id, name, duration_min, price) VALUES ($1, $2, $3, $4)",
+          [salonId, svc.name, svc.duration_min, svc.price]
+        );
+      }
+    }
+
+    res.json({
+      ok: true,
+      message: `Seeded ${SALONS.length} salons. Demo owner login: ${DEMO_OWNER_EMAIL} / ${DEMO_OWNER_PASSWORD}`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Seeding failed." });
+  }
 });
 
 module.exports = router;
