@@ -2,13 +2,10 @@ const express = require("express");
 const db = require("../db");
 const paystack = require("../lib/paystack");
 const { requireAuth, requireRole } = require("../middleware/auth");
-
 const router = express.Router();
-
 const BOOKING_FEE = 2.5;
 const COMMISSION_RATE = 0.15;
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
-
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 router.get("/banks", async (req, res) => {
@@ -41,12 +38,12 @@ router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
   if (!salon_id || !business_name || !bank_code || !account_number) {
     return res.status(400).json({ error: "salon_id, business_name, bank_code, and account_number are required" });
   }
-
-  const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(salon_id);
-  if (!salon) return res.status(404).json({ error: "Salon not found" });
-  if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
-
   try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [salon_id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
     const subaccount = await paystack.post("/subaccount", {
       business_name,
       bank_code,
@@ -54,9 +51,9 @@ router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
       percentage_charge: COMMISSION_RATE * 100,
     });
 
-    db.prepare("UPDATE salons SET paystack_subaccount_code = ?, paystack_payouts_enabled = 1 WHERE id = ?").run(
-      subaccount.subaccount_code,
-      salon.id
+    await db.query(
+      "UPDATE salons SET paystack_subaccount_code = $1, paystack_payouts_enabled = 1 WHERE id = $2",
+      [subaccount.subaccount_code, salon.id]
     );
 
     res.json({ ok: true, subaccount_code: subaccount.subaccount_code, account_name: subaccount.account_name });
@@ -66,57 +63,58 @@ router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
   }
 });
 
+// GET /payments/connect/status?salon_id=
+router.get("/connect/status", requireAuth, requireRole("owner"), async (req, res) => {
+  const { salon_id } = req.query;
+  try {
+    const { rows } = await db.query("SELECT * FROM salons WHERE id = $1", [salon_id]);
+    const salon = rows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    res.json({ payoutsEnabled: !!salon.paystack_payouts_enabled });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't check payout status." });
+  }
+});
+
 router.post("/checkout", requireAuth, async (req, res) => {
   const { salon_id, service_id, time_slot } = req.body;
   if (!salon_id || !service_id || !time_slot) {
     return res.status(400).json({ error: "salon_id, service_id, and time_slot are required" });
   }
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [salon_id]);
+    const salon = salonRows[0];
+    const { rows: serviceRows } = await db.query(
+      "SELECT * FROM services WHERE id = $1 AND salon_id = $2",
+      [service_id, salon_id]
+    );
+    const service = serviceRows[0];
+    if (!salon || !service) return res.status(404).json({ error: "Salon or service not found" });
+    if (!salon.paystack_subaccount_code || !salon.paystack_payouts_enabled) {
+      return res.status(400).json({ error: "This salon hasn't finished setting up payouts yet." });
+    }
 
-  const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(salon_id);
-  const service = db.prepare("SELECT * FROM services WHERE id = ? AND salon_id = ?").get(service_id, salon_id);
-  if (!salon || !service) return res.status(404).json({ error: "Salon or service not found" });
-  if (!salon.paystack_subaccount_code || !salon.paystack_payouts_enabled) {
-    return res.status(400).json({ error: "This salon hasn't finished setting up payouts yet." });
-  }
+    const commission_amount = Math.round(service.price * COMMISSION_RATE * 100) / 100;
+    const payout_amount = Math.round((service.price - commission_amount) * 100) / 100;
+    const total = service.price + BOOKING_FEE;
 
-  const commission_amount = Math.round(service.price * COMMISSION_RATE * 100) / 100;
-  const payout_amount = Math.round((service.price - commission_amount) * 100) / 100;
-  const total = service.price + BOOKING_FEE;
-
-  const bookingInfo = db
-    .prepare(
+    const { rows: bookingRows } = await db.query(
       `INSERT INTO bookings
         (customer_id, salon_id, service_id, time_slot, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status)
-       VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, 'unpaid')`
-    )
-    .run(req.user.id, salon_id, service_id, time_slot, service.price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount);
-  const bookingId = bookingInfo.lastInsertRowid;
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, 'unpaid') RETURNING id`,
+      [req.user.id, salon_id, service_id, time_slot, service.price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount]
+    );
+    const bookingId = bookingRows[0].id;
 
-  try {
-    const transaction = await paystack.post("/transaction/initialize", {
-      email: req.user.email,
-      amount: Math.round(total * 100),
-      currency: CURRENCY,
-      subaccount: salon.paystack_subaccount_code,
-      transaction_charge: Math.round((commission_amount + BOOKING_FEE) * 100),
-      bearer: "subaccount",
-      metadata: { booking_id: bookingId },
-      callback_url: `${FRONTEND_URL}/?booking_success=1&booking_id=${bookingId}`,
-    });
-
-    db.prepare("UPDATE bookings SET paystack_reference = ? WHERE id = ?").run(transaction.reference, bookingId);
-    res.json({ url: transaction.authorization_url, booking_id: bookingId });
-  } catch (err) {
-    console.error(err);
-    db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(bookingId);
-    res.status(500).json({ error: "Couldn't start checkout. Check PAYSTACK_SECRET_KEY is set." });
-  }
-});
-
-module.exports = router;
-router.get("/connect/status", requireAuth, requireRole("owner"), (req, res) => {
-  const { salon_id } = req.query;
-  const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(salon_id);
-  if (!salon) return res.status(404).json({ error: "Salon not found" });
-  res.json({ payoutsEnabled: !!salon.paystack_payouts_enabled });
-});
+    try {
+      const transaction = await paystack.post("/transaction/initialize", {
+        email: req.user.email,
+        amount: Math.round(total * 100),
+        currency: CURRENCY,
+        subaccount: salon.paystack_subaccount_code,
+        transaction_charge: Math.round((commission_amount + BOOKING_FEE) * 100),
+        bearer: "subaccount",
+        metadata: { booking_id: bookingId },
+        callback_url: `${FRONTEND_URL}/?booking_success=1&booking_id=${bookingId}`,
+      });
