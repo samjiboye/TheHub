@@ -1050,8 +1050,22 @@ export default function App() {
   const [selectedSalon, setSelectedSalon] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
-  const [customerAuth, setCustomerAuth] = useState(null); // { token, user }
-  const [ownerAuth, setOwnerAuth] = useState(null); // { token, user }
+  const [customerAuth, setCustomerAuth] = useState(() => {
+    try {
+      const saved = localStorage.getItem("customerAuth");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  }); // { token, user }
+  const [ownerAuth, setOwnerAuth] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ownerAuth");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  }); // { token, user }
   const [salons, setSalons] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | ready | offline
   const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
@@ -1060,15 +1074,11 @@ export default function App() {
     setSelectedSalon(null);
     setSelectedService(null);
   };
-  // Salons are public to browse — load them regardless of who's logged in.
   useEffect(() => {
     apiFetch("/salons")
       .then((list) => { setSalons(list); setStatus("ready"); })
       .catch(() => setStatus("offline"));
   }, []);
-  // Paystack redirects back here after checkout (and after Connect onboarding). Since this
-  // is a full page navigation, any in-memory login is gone — read the result from the
-  // URL instead of relying on app state, then clean the URL up.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("booking_success")) {
@@ -1149,8 +1159,14 @@ export default function App() {
           {(role === "customer" ? customerAuth : ownerAuth) && (
             <button
               onClick={() => {
-                if (role === "customer") { setCustomerAuth(null); reset(); }
-                else setOwnerAuth(null);
+                if (role === "customer") {
+                  localStorage.removeItem("customerAuth");
+                  setCustomerAuth(null);
+                  reset();
+                } else {
+                  localStorage.removeItem("ownerAuth");
+                  setOwnerAuth(null);
+                }
               }}
               className="px-4 py-2.5 rounded-full text-sm"
               style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim, fontWeight: 700 }}
@@ -1172,7 +1188,14 @@ export default function App() {
           ownerAuth ? (
             <OwnerDashboard token={ownerAuth.token} />
           ) : (
-            <AuthGate role="owner" allowGuest={false} onAuthed={(token, user) => setOwnerAuth({ token, user })} />
+            <AuthGate
+              role="owner"
+              allowGuest={false}
+              onAuthed={(token, user) => {
+                localStorage.setItem("ownerAuth", JSON.stringify({ token, user }));
+                setOwnerAuth({ token, user });
+              }}
+            />
           )
         ) : status === "loading" ? (
           <div className="px-4 pt-16 flex justify-center">
@@ -1200,7 +1223,11 @@ export default function App() {
                 <AuthGate
                   role="customer"
                   allowGuest
-                  onAuthed={(token, user) => { setCustomerAuth({ token, user }); setView("booking"); }}
+                  onAuthed={(token, user) => {
+                    localStorage.setItem("customerAuth", JSON.stringify({ token, user }));
+                    setCustomerAuth({ token, user });
+                    setView("booking");
+                  }}
                 />
               </>
             )}
@@ -1234,4 +1261,3 @@ export default function App() {
     </div>
   );
 }
-
