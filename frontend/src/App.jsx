@@ -955,3 +955,283 @@ function OwnerDashboard({ token }) {
     </div>
   );
 }
+
+function Concierge({ open, onClose }) {
+  const [messages, setMessages] = useState([
+    { role: "assistant", text: "Hi, I'm Aria. Tell me what you're after — a service, a budget, how far you'll travel — and I'll point you to the right place." },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, open]);
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: "user", text: input };
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
+    setInput("");
+    setLoading(true);
+    try {
+      // The backend builds the live salon list and holds the Anthropic API key —
+      // the browser never talks to Anthropic directly.
+      const { text } = await apiFetch("/concierge", {
+        method: "POST",
+        body: JSON.stringify({
+          messages: nextMessages.map((m) => ({ role: m.role, content: m.text })),
+        }),
+      });
+      setMessages((prev) => [...prev, { role: "assistant", text }]);
+    } catch (e) {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Aria's having trouble connecting right now — try again in a moment." }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-30 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,7,9,0.6)" }} onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl flex flex-col"
+        style={{ background: colors.panel, border: `3px solid ${colors.hairline}`, height: "70vh", maxHeight: "600px" }}
+      >
+        <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: `3px solid ${colors.hairline}` }}>
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-full" style={{ border: `2px solid ${colors.hairline}` }}>
+              <Sparkles size={16} color={colors.hairline} />
+            </div>
+            <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700, fontSize: "1.1rem" }}>Ask Aria</span>
+          </div>
+          <button onClick={onClose}><X size={22} color={colors.creamDim} /></button>
+        </div>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+          {messages.map((m, i) => (
+            <div
+              key={i}
+              className="max-w-[85%] px-4 py-2.5 rounded-2xl text-base"
+              style={{
+                alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                background: m.role === "user" ? colors.hairline : colors.panelLight,
+                color: m.role === "user" ? "#FFFFFF" : colors.cream,
+                border: m.role === "user" ? "none" : `2px solid ${colors.hairline}`,
+                fontFamily: FONT_BODY,
+              }}
+            >
+              {m.text}
+            </div>
+          ))}
+          {loading && (
+            <div className="text-sm px-1" style={{ color: colors.creamDim }}>Aria is typing…</div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 px-3 py-3" style={{ borderTop: `3px solid ${colors.hairline}` }}>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            placeholder="I need a cut under $30..."
+            className="flex-1 bg-transparent outline-none text-base px-4 py-2.5 rounded-full"
+            style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontFamily: FONT_BODY }}
+          />
+          <button onClick={send} className="p-3 rounded-full" style={{ background: colors.hairline }}>
+            <Send size={18} color="#FFFFFF" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+export default function App() {
+  const [view, setView] = useState("home");
+  const [role, setRole] = useState("customer");
+  const [category, setCategory] = useState(null);
+  const [selectedSalon, setSelectedSalon] = useState(null);
+  const [selectedService, setSelectedService] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [customerAuth, setCustomerAuth] = useState(null); // { token, user }
+  const [ownerAuth, setOwnerAuth] = useState(null); // { token, user }
+  const [salons, setSalons] = useState([]);
+  const [status, setStatus] = useState("loading"); // loading | ready | offline
+  const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
+  const reset = () => {
+    setView("home");
+    setSelectedSalon(null);
+    setSelectedService(null);
+  };
+  // Salons are public to browse — load them regardless of who's logged in.
+  useEffect(() => {
+    apiFetch("/salons")
+      .then((list) => { setSalons(list); setStatus("ready"); })
+      .catch(() => setStatus("offline"));
+  }, []);
+  // Paystack redirects back here after checkout (and after Connect onboarding). Since this
+  // is a full page navigation, any in-memory login is gone — read the result from the
+  // URL instead of relying on app state, then clean the URL up.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("booking_success")) {
+      setCheckoutResult("success");
+      setRole("customer");
+    } else if (params.get("booking_cancelled")) {
+      setCheckoutResult("cancelled");
+      setRole("customer");
+    } else if (params.get("stripe_return") || params.get("stripe_refresh")) {
+      setRole("owner");
+    }
+    if (params.toString()) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+  if (checkoutResult) {
+    return (
+      <div className="min-h-screen w-full flex justify-center items-center" style={{ background: colors.bg, fontFamily: FONT_BODY }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');`}</style>
+        <div className="w-full max-w-md px-4 pt-16 pb-8 flex flex-col items-center text-center">
+          <div className="rounded-full p-6" style={{ border: `4px solid ${colors.hairline}` }}>
+            <CheckCircle2 size={64} color={colors.hairline} strokeWidth={2} />
+          </div>
+          <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "2rem", fontWeight: 700 }} className="mt-6">
+            {checkoutResult === "success" ? "Payment received!" : "No charge made"}
+          </h2>
+          <p className="text-lg mt-2" style={{ color: colors.creamDim }}>
+            {checkoutResult === "success"
+              ? "Your appointment is booked. The salon has been notified."
+              : "Checkout was cancelled — nothing was charged."}
+          </p>
+          <button
+            onClick={() => setCheckoutResult(null)}
+            className="mt-10 px-8 py-5 rounded-2xl text-xl w-full"
+            style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="min-h-screen w-full flex justify-center" style={{ background: colors.bg, fontFamily: FONT_BODY }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');
+        input::placeholder { color: ${colors.creamDim}; opacity: 0.7; }
+        * { -webkit-tap-highlight-color: transparent; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1s linear infinite; }
+      `}</style>
+      <div className="w-full max-w-md relative" style={{ minHeight: "100vh" }}>
+        <div className="flex px-4 pt-4 gap-2">
+          <button
+            onClick={() => { setRole("customer"); reset(); }}
+            className="flex-1 text-sm py-2.5 rounded-full"
+            style={{
+              background: role === "customer" ? colors.hairline : "transparent",
+              color: role === "customer" ? "#FFFFFF" : colors.creamDim,
+              border: `2px solid ${colors.hairline}`,
+              fontWeight: 700,
+            }}
+          >
+            Book
+          </button>
+          <button
+            onClick={() => { setRole("owner"); setView("owner"); }}
+            className="flex-1 text-sm py-2.5 rounded-full"
+            style={{
+              background: role === "owner" ? colors.hairline : "transparent",
+              color: role === "owner" ? "#FFFFFF" : colors.creamDim,
+              border: `2px solid ${colors.hairline}`,
+              fontWeight: 700,
+            }}
+          >
+            Owner
+          </button>
+          {(role === "customer" ? customerAuth : ownerAuth) && (
+            <button
+              onClick={() => {
+                if (role === "customer") { setCustomerAuth(null); reset(); }
+                else setOwnerAuth(null);
+              }}
+              className="px-4 py-2.5 rounded-full text-sm"
+              style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim, fontWeight: 700 }}
+            >
+              Log out
+            </button>
+          )}
+        </div>
+        {status === "offline" && (
+          <div className="mx-4 mt-4 px-4 py-3 rounded-2xl flex items-start gap-2" style={{ border: `3px solid ${colors.hairline}` }}>
+            <WifiOff size={20} color={colors.hairline} className="shrink-0 mt-0.5" />
+            <p className="text-sm" style={{ color: colors.cream }}>
+              Can't reach the SalonConnect server at {API_BASE}. Run <b>npm start</b> in the backend
+              folder, then reload this page.
+            </p>
+          </div>
+        )}
+        {role === "owner" ? (
+          ownerAuth ? (
+            <OwnerDashboard token={ownerAuth.token} />
+          ) : (
+            <AuthGate role="owner" allowGuest={false} onAuthed={(token, user) => setOwnerAuth({ token, user })} />
+          )
+        ) : status === "loading" ? (
+          <div className="px-4 pt-16 flex justify-center">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        ) : (
+          <>
+            {view === "home" && (
+              <HomeView
+                salons={salons}
+                category={category} setCategory={setCategory}
+                onSelectSalon={(s) => { setSelectedSalon(s); setView("profile"); }}
+              />
+            )}
+            {view === "profile" && selectedSalon && (
+              <ProfileView
+                salon={selectedSalon}
+                onBack={() => setView("home")}
+                onBook={(svc) => { setSelectedService(svc); setView(customerAuth ? "booking" : "auth"); }}
+              />
+            )}
+            {view === "auth" && (
+              <>
+                <Header title="Sign in to book" onBack={() => setView("profile")} />
+                <AuthGate
+                  role="customer"
+                  allowGuest
+                  onAuthed={(token, user) => { setCustomerAuth({ token, user }); setView("booking"); }}
+                />
+              </>
+            )}
+            {view === "booking" && selectedSalon && selectedService && customerAuth && (
+              <BookingView
+                salon={selectedSalon}
+                service={selectedService}
+                token={customerAuth.token}
+                onBack={() => setView("profile")}
+              />
+            )}
+          </>
+        )}
+        {role === "customer" && !chatOpen && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="fixed bottom-6 flex items-center gap-2 px-5 py-4 rounded-full shadow-lg"
+            style={{
+              background: colors.hairline,
+              color: "#FFFFFF",
+              right: "max(1.5rem, calc(50% - 14rem))",
+              fontWeight: 700,
+              fontSize: "1.05rem",
+            }}
+          >
+            <MessageCircle size={20} /> Ask Aria
+          </button>
+        )}
+        <Concierge open={chatOpen} onClose={() => setChatOpen(false)} />
+      </div>
+    </div>
+  );
+}
+
