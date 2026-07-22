@@ -732,7 +732,8 @@ function CreateSalonView({ token, onDone }) {
   );
 }
 
-function OwnerDashboard({ token }) {
+
+  function OwnerDashboard({ token }) {
   const [salon, setSalon] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -769,7 +770,7 @@ function OwnerDashboard({ token }) {
         setData(dashboard);
         if (connectStatus) setSalon((prev) => ({ ...prev, paystack_payouts_enabled: connectStatus.payoutsEnabled ? 1 : 0 }));
       } catch (e) {
-        if (!cancelled) setError("Couldn't reach the SalonConnect server.");
+        if (!cancelled) setError("Couldn't reach TheHub server.");
       }
     })();
     return () => { cancelled = true; };
@@ -1179,8 +1180,8 @@ export default function App() {
           <div className="mx-4 mt-4 px-4 py-3 rounded-2xl flex items-start gap-2" style={{ border: `3px solid ${colors.hairline}` }}>
             <WifiOff size={20} color={colors.hairline} className="shrink-0 mt-0.5" />
             <p className="text-sm" style={{ color: colors.cream }}>
-            Can't reach TheHub's server at {API_BASE}. Run <b>npm start</b> in the backend
-folder, then reload this page.
+              Can't reach TheHub's server at {API_BASE}. Run <b>npm start</b> in the backend
+              folder, then reload this page.
             </p>
           </div>
         )}
