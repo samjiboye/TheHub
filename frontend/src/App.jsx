@@ -11,8 +11,8 @@ const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
 // Fixed demo accounts so a kid tapping through the app never has to type an email or
 // password. The backend seed script (`npm run seed`) creates the owner account below.
-const DEMO_CUSTOMER = { name: "Guest", email: "guest@salonconnect.demo", password: "guest1234" };
-const DEMO_OWNER = { email: "owner@salonconnect.demo", password: "demo1234" };
+const DEMO_CUSTOMER = { name: "Guest", email: "guest@thehub.demo", password: "guest1234" };
+const DEMO_OWNER = { email: "owner@thehub.demo", password: "demo1234" };
 
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
