@@ -1,6 +1,6 @@
 # TheHub Backend
 
-A real API for the SalonConnect marketplace: users, salon listings, bookings with
+A real API for the TheHub marketplace: users, salon listings, bookings with
 automatic commission calculation, and reviews. Uses SQLite for zero-config local
 development — swap `db/index.js` for a Postgres client later without touching the routes.
 
@@ -138,7 +138,7 @@ This repo includes a `render.yaml` blueprint, so deployment is close to one clic
    SQLite file, and a random `JWT_SECRET` automatically.
 3. Once it's live, run the seed script against production by opening the Render shell
    for the service and running `npm run seed`.
-4. Note the URL Render gives you (e.g. `https://salonconnect-api.onrender.com`) — the
+4. Note the URL Render gives you (e.g. `https://TheHub-api.onrender.com`) — the
    frontend needs this next.
 5. After the frontend is deployed too, come back and set `CORS_ORIGIN` in Render's
    dashboard to that frontend's real URL instead of `*`.
