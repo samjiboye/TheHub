@@ -83,46 +83,26 @@ booking happens, so incentives stay aligned with salons and customers.
 - Add rate limiting and input validation (e.g. `zod`) before this touches the public internet
 - Show payout status in the owner dashboard so it's clear when a salon can accept paid bookings
 
-## Stripe Connect (real payments)
+## Paystack (real payments)
 
-This adds real money movement on top of the commission math that was already being
-calculated: salons connect a Stripe Express account, customers pay through Stripe
-Checkout, and Stripe splits the charge automatically — the salon's payout goes straight
-to their bank account, and your commission plus the booking fee stay with your platform
-account.
+This adds real money movement on top of the commission math that was already being calculated: salons connect a Paystack subaccount, customers pay through Paystack's hosted checkout, and Paystack splits the charge automatically — the salon's payout goes straight to their bank account, and your commission plus the booking fee stay with your platform account.
 
 ### One-time setup
 
-1. Create a [Stripe account](https://dashboard.stripe.com/register) (test mode is free,
-   no business details needed to start).
-2. Get your test secret key from **Developers → API keys** and set `STRIPE_SECRET_KEY`.
-3. Install the [Stripe CLI](https://stripe.com/docs/stripe-cli) and forward webhooks to
-   your local server:
-   ```bash
-   stripe listen --forward-to localhost:4000/webhooks/stripe
-   ```
-   It prints a `whsec_...` value — set that as `STRIPE_WEBHOOK_SECRET`.
+1. Create a [Paystack account](https://paystack.com) (test mode is free, no business details needed to start).
+2. Get your test secret key from Settings → API Keys & Webhooks and set `PAYSTACK_SECRET_KEY`.
+3. In the Paystack dashboard, set your webhook URL to `https://<your-backend>/webhooks/paystack`.
 4. Set `FRONTEND_URL` to wherever the frontend is running (`http://localhost:5173` locally).
 
 ### How the flow works
 
-- **Owner side**: `POST /payments/connect` creates a Stripe Express account for the
-  salon (once) and returns an onboarding link. The owner fills out Stripe's hosted form
-  (bank details, identity). `GET /payments/connect/status` checks whether that's done.
-- **Customer side**: `POST /payments/checkout` creates a `pending` booking and a Stripe
-  Checkout Session in one call, splitting the charge via `application_fee_amount`
-  (commission + booking fee, kept by you) and `transfer_data.destination` (the rest,
-  sent straight to the salon's connected account). The response includes a `url` —
-  redirect the browser there.
-- **Webhook**: `checkout.session.completed` flips the booking to `status: confirmed`,
-  `payment_status: paid`. Only paid, confirmed bookings count toward the owner
-  dashboard's gross/commission/payout totals.
+- **Owner side:** the owner fills in their business name, bank, and account number in the app. `POST /payments/connect` creates a Paystack subaccount for the salon (once). `GET /payments/connect/status` checks whether that's done.
+- **Customer side:** `POST /payments/checkout` creates a `pending` booking and initializes a Paystack transaction in one call, splitting the charge via the subaccount's `percentage_charge` (commission) and a `transaction_charge` (commission + booking fee, kept by the platform) — the rest goes straight to the salon's subaccount. The response includes a `url` — redirect the browser there.
+- **Webhook:** Paystack calls `/webhooks/paystack` on successful payment, which flips the booking to `payment_status: paid`. Only paid bookings count toward the owner dashboard's gross/commission/payout totals.
 
 ### Testing without real money
 
-Stripe's test mode uses fake cards — `4242 4242 4242 4242`, any future expiry, any CVC —
-and Express accounts can be onboarded with Stripe's test-mode fake identity/bank details
-(the onboarding form tells you what to enter). No real charges or transfers happen.
+Paystack's test mode accepts fake bank details for subaccount setup — e.g. Zenith Bank, account number `0000000000` — and test card numbers for checkout, so you can test the entire flow without any real money changing hands.
 
 ### Next step once this is live
 Switch from test keys to live keys, and add each salon's payout status to their
