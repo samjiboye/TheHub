@@ -65,13 +65,16 @@ booking happens, so incentives stay aligned with salons and customers.
 | GET | `/bookings/me` | any logged-in user | Your booking history |
 | PATCH | `/bookings/:id/cancel` | booking owner | Cancels a booking |
 
-### Payments (Stripe)
+## Payments (Paystack)
+
 | Method | Route | Auth | Notes |
 |---|---|---|---|
-| POST | `/payments/connect` | owner (must own salon) | `salon_id` — creates/resumes Stripe Express onboarding, returns `url` |
+| GET | `/payments/banks` | any logged-in owner | Lists Nigerian banks for the account-setup form |
+| GET | `/payments/resolve-account` | owner | Verifies an account number against a bank code |
+| POST | `/payments/connect` | owner (must own salon) | `salon_id`, `business_name`, `bank_code`, `account_number` — creates a Paystack subaccount |
 | GET | `/payments/connect/status?salon_id=` | owner (must own salon) | Whether payouts are enabled yet |
-| POST | `/payments/checkout` | any logged-in user | `salon_id, service_id, time_slot` — creates a booking + Checkout Session, returns `url` |
-| POST | `/webhooks/stripe` | Stripe only (signed) | Confirms payment, updates account status |
+| POST | `/payments/checkout` | any logged-in user | `salon_id`, `service_id`, `time_slot` — creates a booking + Paystack transaction, returns `url` |
+| POST | `/webhooks/paystack` | Paystack only (signed) | Confirms payment, updates booking status |
 
 ### Reviews
 | Method | Route | Auth | Notes |
