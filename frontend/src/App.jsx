@@ -759,7 +759,7 @@ function OwnerDashboard({ token }) {
         ]);
         if (cancelled) return;
         setData(dashboard);
-        if (connectStatus) setSalon((prev) => ({ ...prev, stripe_payouts_enabled: connectStatus.payoutsEnabled ? 1 : 0 }));
+        if (connectStatus) setSalon((prev) => ({ ...prev, paystack_payouts_enabled connectStatus.payoutsEnabled ? 1 : 0 }));
       } catch (e) {
         if (!cancelled) setError("Couldn't reach the SalonConnect server.");
       }
