@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
-  Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus
+  Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
@@ -469,6 +469,12 @@ function AuthGate({ role, onAuthed, allowGuest }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState(null);
+  const [resetSent, setResetSent] = useState(false);
+  const [showResetForm, setShowResetForm] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -500,6 +506,24 @@ function AuthGate({ role, onAuthed, allowGuest }) {
       setError("Couldn't reach the server.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const requestReset = async (e) => {
+    e.preventDefault();
+    if (resetLoading) return;
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      await apiFetch("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      setResetSent(true);
+    } catch (err) {
+      setResetError(err.message || "Something went wrong.");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -561,15 +585,75 @@ function AuthGate({ role, onAuthed, allowGuest }) {
           className="px-4 py-3 rounded-xl text-base outline-none"
           style={inputStyle}
         />
-        <input
-          required
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          className="px-4 py-3 rounded-xl text-base outline-none"
-          style={inputStyle}
-        />
+        <div className="relative">
+          <input
+            required
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full px-4 py-3 rounded-xl text-base outline-none"
+            style={inputStyle}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2"
+            style={{ color: colors.creamDim }}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {mode === "login" && !showResetForm && (
+          <button
+            type="button"
+            onClick={() => setShowResetForm(true)}
+            className="text-sm text-right"
+            style={{ color: colors.creamDim }}
+          >
+            Forgot password?
+          </button>
+        )}
+
+        {mode === "login" && showResetForm && (
+          resetSent ? (
+            <p className="text-sm text-center" style={{ color: colors.creamDim }}>
+              If that email exists, we've sent a reset link.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2 mt-1">
+              <input
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="Your account email"
+                className="px-4 py-3 rounded-xl text-base outline-none"
+                style={inputStyle}
+              />
+              {resetError && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{resetError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={resetLoading}
+                  onClick={requestReset}
+                  className="flex-1 py-2.5 rounded-full text-sm"
+                  style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
+                >
+                  {resetLoading ? <Loader2 size={16} className="animate-spin" /> : "Send reset link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowResetForm(false)}
+                  className="flex-1 py-2.5 rounded-full text-sm"
+                  style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim, fontWeight: 600 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )
+        )}
 
         {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
 
