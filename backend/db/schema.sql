@@ -64,3 +64,6 @@ CREATE INDEX IF NOT EXISTS idx_salons_category ON salons(category);
 CREATE INDEX IF NOT EXISTS idx_bookings_salon ON bookings(salon_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_salon ON reviews(salon_id);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;
