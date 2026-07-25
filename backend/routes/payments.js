@@ -39,44 +39,54 @@ router.post("/checkout", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "salon_id, service_id, and time_slot are required" });
   }
 
-  const salon = db.prepare("SELECT * FROM salons WHERE id = ?").get(salon_id);
-  const service = db.prepare("SELECT * FROM services WHERE id = ? AND salon_id = ?").get(service_id, salon_id);
-  if (!salon || !service) return res.status(404).json({ error: "Salon or service not found" });
-  if (!salon.paystack_subaccount_code || !salon.paystack_payouts_enabled) {
-    return res.status(400).json({ error: "This salon hasn't finished setting up payouts yet." });
-  }
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [salon_id]);
+    const salon = salonRows[0];
+    const { rows: serviceRows } = await db.query(
+      "SELECT * FROM services WHERE id = $1 AND salon_id = $2",
+      [service_id, salon_id]
+    );
+    const service = serviceRows[0];
 
-  const commission_amount = Math.round(service.price * COMMISSION_RATE * 100) / 100;
-  const payout_amount = Math.round((service.price - commission_amount) * 100) / 100;
-  const total = service.price + BOOKING_FEE;
+    if (!salon || !service) return res.status(404).json({ error: "Salon or service not found" });
+    if (!salon.paystack_subaccount_code || !salon.paystack_payouts_enabled) {
+      return res.status(400).json({ error: "This salon hasn't finished setting up payouts yet." });
+    }
 
-  const bookingInfo = db
-    .prepare(
+    const commission_amount = Math.round(service.price * COMMISSION_RATE * 100) / 100;
+    const payout_amount = Math.round((service.price - commission_amount) * 100) / 100;
+    const total = service.price + BOOKING_FEE;
+
+    const { rows: bookingRows } = await db.query(
       `INSERT INTO bookings
         (customer_id, salon_id, service_id, time_slot, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status)
-       VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, 'unpaid')`
-    )
-    .run(req.user.id, salon_id, service_id, time_slot, service.price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount);
-  const bookingId = bookingInfo.lastInsertRowid;
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, 'unpaid') RETURNING id`,
+      [req.user.id, salon_id, service_id, time_slot, service.price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount]
+    );
+    const bookingId = bookingRows[0].id;
 
-  try {
-    const transaction = await paystack.post("/transaction/initialize", {
-      email: req.user.email,
-      amount: Math.round(total * 100),
-      currency: CURRENCY,
-      subaccount: salon.paystack_subaccount_code,
-      transaction_charge: Math.round((commission_amount + BOOKING_FEE) * 100),
-      bearer: "subaccount",
-      metadata: { booking_id: bookingId },
-      callback_url: `${FRONTEND_URL}/?booking_success=1&booking_id=${bookingId}`,
-    });
+    try {
+      const transaction = await paystack.post("/transaction/initialize", {
+        email: req.user.email,
+        amount: Math.round(total * 100),
+        currency: CURRENCY,
+        subaccount: salon.paystack_subaccount_code,
+        transaction_charge: Math.round((commission_amount + BOOKING_FEE) * 100),
+        bearer: "subaccount",
+        metadata: { booking_id: bookingId },
+        callback_url: `${FRONTEND_URL}/?booking_success=1&booking_id=${bookingId}`,
+      });
 
-    db.prepare("UPDATE bookings SET paystack_reference = ? WHERE id = ?").run(transaction.reference, bookingId);
-    res.json({ url: transaction.authorization_url, booking_id: bookingId });
+      await db.query("UPDATE bookings SET paystack_reference = $1 WHERE id = $2", [transaction.reference, bookingId]);
+      res.json({ url: transaction.authorization_url, booking_id: bookingId });
+    } catch (err) {
+      console.error(err);
+      await db.query("UPDATE bookings SET status = 'cancelled' WHERE id = $1", [bookingId]);
+      res.status(500).json({ error: "Couldn't start checkout. Check PAYSTACK_SECRET_KEY is set." });
+    }
   } catch (err) {
     console.error(err);
-    db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(bookingId);
-    res.status(500).json({ error: "Couldn't start checkout. Check PAYSTACK_SECRET_KEY is set." });
+    res.status(500).json({ error: "Something went wrong starting checkout." });
   }
 });
 
