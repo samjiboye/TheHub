@@ -80,4 +80,47 @@ router.post("/checkout", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
+  const { salon_id, business_name, bank_code, account_number } = req.body;
+  if (!salon_id || !business_name || !bank_code || !account_number) {
+    return res.status(400).json({ error: "salon_id, business_name, bank_code, and account_number are required" });
+  }
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [salon_id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const subaccount = await paystack.post("/subaccount", {
+      business_name,
+      bank_code,
+      account_number,
+      percentage_charge: COMMISSION_RATE * 100,
+    });
+
+    await db.query(
+      "UPDATE salons SET paystack_subaccount_code = $1, paystack_payouts_enabled = 1 WHERE id = $2",
+      [subaccount.subaccount_code, salon.id]
+    );
+
+    res.json({ ok: true, subaccount_code: subaccount.subaccount_code, account_name: subaccount.account_name });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message || "Couldn't set up payouts for this salon." });
+  }
+});
+
+router.get("/connect/status", requireAuth, requireRole("owner"), async (req, res) => {
+  const { salon_id } = req.query;
+  try {
+    const { rows } = await db.query("SELECT * FROM salons WHERE id = $1", [salon_id]);
+    const salon = rows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    res.json({ payoutsEnabled: !!salon.paystack_payouts_enabled });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't check payout status." });
+  }
+});
+
 module.exports = router;
