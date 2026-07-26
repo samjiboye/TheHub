@@ -112,4 +112,74 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+// GET /auth/google - redirect to Google consent screen
+router.get("/google", (req, res) => {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: `${process.env.BACKEND_URL}/auth/google/callback`,
+    response_type: "code",
+    scope: "openid email profile",
+    prompt: "select_account",
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+
+// GET /auth/google/callback - handle Google's redirect back
+router.get("/google/callback", async (req, res) => {
+  const { code } = req.query;
+  if (!code) {
+    return res.redirect(`${process.env.FRONTEND_URL}/?error=google_auth_failed`);
+  }
+
+  try {
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: `${process.env.BACKEND_URL}/auth/google/callback`,
+        grant_type: "authorization_code",
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) {
+      console.error("Google token exchange failed:", tokenData);
+      return res.redirect(`${process.env.FRONTEND_URL}/?error=google_auth_failed`);
+    }
+
+    const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const profile = await profileRes.json();
+    const { email, name } = profile;
+
+    if (!email) {
+      return res.redirect(`${process.env.FRONTEND_URL}/?error=google_auth_failed`);
+    }
+
+    let result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+    let row = result.rows[0];
+
+    if (!row) {
+      const randomPassword = require("crypto").randomBytes(32).toString("hex");
+      const password_hash = bcrypt.hashSync(randomPassword, 10);
+      const insertResult = await db.query(
+        "INSERT INTO users (name, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role",
+        [name || email.split("@")[0], email, null, "customer", password_hash]
+      );
+      row = insertResult.rows[0];
+    }
+
+    const user = { id: row.id, name: row.name, email: row.email, role: row.role };
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+
+    res.redirect(`${process.env.FRONTEND_URL}/?token=${token}`);
+  } catch (err) {
+    console.error(err);
+    res.redirect(`${process.env.FRONTEND_URL}/?error=google_auth_failed`);
+  }
+});
+
 module.exports = router;
