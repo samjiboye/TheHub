@@ -1228,14 +1228,17 @@ const ONBOARDING_SLIDES = [
   {
     title: "Find what you're looking for",
     body: "Aim to efficiently attract specific individuals or groups likely to be interested in a product or service through focused marketing strategies.",
+    photo: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
   },
   {
     title: "Targeted User Acquisition Campaigns",
     body: "Aim to efficiently attract specific individuals or groups likely to be interested in a product or service through focused marketing strategies.",
+    photo: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80",
   },
   {
     title: "Building Trust and Credibility",
     body: "Emphasizing security measures, highlighting positive user experiences or reviews, and providing transparent information about the sellers and their products/services.",
+    photo: "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=800&q=80",
   },
 ];
 
@@ -1255,8 +1258,12 @@ function OnboardingView({ onDone }) {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col justify-between px-6 pt-10 pb-10"
-      style={{ background: `linear-gradient(160deg, ${colors.hairline}, #A6532A)` }}
+      className="min-h-screen w-full flex flex-col justify-between px-6 pt-10 pb-10 relative overflow-hidden"
+      style={{
+        backgroundImage: `linear-gradient(160deg, rgba(201,122,61,0.75), rgba(166,83,42,0.85)), url(${current.photo})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
     >
       <div className="flex justify-between items-center">
         <div
