@@ -575,7 +575,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
-            className="px-4 py-3 rounded-xl text-base outline-none"
+            className="pb-2 text-base outline-none"
             style={inputStyle}
           />
         )}
@@ -585,7 +585,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
-          className="px-4 py-3 rounded-xl text-base outline-none"
+          className="pb-2 text-base outline-none"
           style={inputStyle}
         />
         <div className="relative">
@@ -595,7 +595,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full px-4 py-3 rounded-xl text-base outline-none"
+            className="w-full pb-2 text-base outline-none"
             style={inputStyle}
           />
           <button
@@ -631,7 +631,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
                 placeholder="Your account email"
-                className="px-4 py-3 rounded-xl text-base outline-none"
+                className="pb-2 text-base outline-none"
                 style={inputStyle}
               />
               {resetError && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{resetError}</p>}
@@ -750,13 +750,13 @@ function CreateSalonView({ token, onDone }) {
         </h2>
         <form onSubmit={createSalon} className="flex flex-col gap-3">
           <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Salon name"
-            className="px-4 py-3 rounded-xl text-base outline-none" style={inputStyle} />
+            className="pb-2 text-base outline-none" style={inputStyle} />
           <select value={category} onChange={(e) => setCategory(e.target.value)}
-            className="px-4 py-3 rounded-xl text-base outline-none" style={inputStyle}>
+            className="pb-2 text-base outline-none" style={inputStyle}>
             {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
           </select>
           <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address"
-            className="px-4 py-3 rounded-xl text-base outline-none" style={inputStyle} />
+            className="pb-2 text-base outline-none" style={inputStyle} />
           {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
           <button type="submit" disabled={loading}
             className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2"
@@ -788,12 +788,12 @@ function CreateSalonView({ token, onDone }) {
 
       <form onSubmit={addService} className="flex flex-col gap-3">
         <input value={svcName} onChange={(e) => setSvcName(e.target.value)} placeholder="Service name (e.g. Skin Fade)"
-          className="px-4 py-3 rounded-xl text-base outline-none" style={inputStyle} />
+          className="pb-2 text-base outline-none" style={inputStyle} />
         <div className="flex gap-3">
           <input value={svcDuration} onChange={(e) => setSvcDuration(e.target.value)} type="number" placeholder="Minutes"
-            className="flex-1 px-4 py-3 rounded-xl text-base outline-none" style={inputStyle} />
+            className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
           <input value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} type="number" placeholder="Price $"
-            className="flex-1 px-4 py-3 rounded-xl text-base outline-none" style={inputStyle} />
+            className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
         </div>
         {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
         <button type="submit" disabled={loading}
@@ -1189,7 +1189,7 @@ function ResetPasswordView({ token, onDone }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="New password"
-              className="w-full px-4 py-3 rounded-xl text-base outline-none"
+              className="w-full pb-2 text-base outline-none"
               style={inputStyle}
             />
             <button
@@ -1207,7 +1207,7 @@ function ResetPasswordView({ token, onDone }) {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Confirm new password"
-            className="px-4 py-3 rounded-xl text-base outline-none"
+            className="pb-2 text-base outline-none"
             style={inputStyle}
           />
 
