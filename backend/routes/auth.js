@@ -70,7 +70,7 @@ router.post("/forgot-password", async (req, res) => {
         "UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3",
         [token, expires, user.id]
       );
-      const resetLink = `${FRONTEND_URL}/reset-password?token=${token}`;
+      const resetLink = `${FRONTEND_URL}/?token=${token}`;
       await sendPasswordResetEmail(email, resetLink);
     }
 
