@@ -42,13 +42,13 @@ const colors = {
   bg: "#FFFFFF",
   panel: "#FFFFFF",
   panelLight: "#F2F2F2",
-  hairline: "#111111",
-  cream: "#111111",
-  creamDim: "#555555",
-  gold: "#111111",
-  goldDim: "#111111",
-  rose: "#111111",
-  green: "#111111",
+  hairline: "#E5DDD5",
+  cream: "#FDF6F0",
+  creamDim: "#8A7B6C",
+  gold: "#C97A3D",
+  goldDim: "#A6532A",
+  rose: "#4FA89C",
+  green: "#4FA89C",
 };
 
 const FONT_DISPLAY = "'Baloo 2', sans-serif";
