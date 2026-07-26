@@ -456,10 +456,13 @@ function ConfirmationView({ salon, service, time, onDone }) {
 }
 
 const inputStyle = {
-  border: `3px solid ${colors.hairline}`,
+  border: "none",
+  borderBottom: `3px solid ${colors.hairline}`,
+  borderRadius: 0,
   color: colors.cream,
   fontFamily: FONT_BODY,
-  background: colors.bg,
+  background: "transparent",
+  paddingLeft: 0,
 };
 
 function AuthGate({ role, onAuthed, allowGuest }) {
