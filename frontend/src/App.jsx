@@ -692,6 +692,14 @@ function AuthGate({ role, onAuthed, allowGuest }) {
         </button>
       </form>
 
+      <a
+        href="https://thehub-api.onrender.com/auth/google"
+        className="w-full mt-4 py-3 rounded-2xl text-base flex items-center justify-center gap-2"
+        style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontWeight: 600, textDecoration: "none" }}
+      >
+        Sign in with Google
+      </a>
+
       {allowGuest && (
         <button
           onClick={guest}
@@ -1407,6 +1415,21 @@ export default function App() {
     apiFetch("/salons")
       .then((list) => { setSalons(list); setStatus("ready"); })
       .catch(() => setStatus("offline"));
+  }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleToken = params.get("token");
+    if (googleToken) {
+      try {
+        const payload = JSON.parse(atob(googleToken.split(".")[1]));
+        const user = { name: payload.name, email: payload.email, role: payload.role };
+        localStorage.setItem("customerAuth", JSON.stringify({ token: googleToken, user }));
+        setCustomerAuth({ token: googleToken, user });
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch (e) {
+        console.error("Failed to parse Google auth token", e);
+      }
+    }
   }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
