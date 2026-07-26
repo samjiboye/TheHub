@@ -1256,10 +1256,6 @@ export default function App() {
     setSelectedSalon(null);
     setSelectedService(null);
   };
-  if (view === "resetPassword") {
-    return <ResetPasswordView token={resetToken} onDone={() => setView("home")} />;
-  }
-
   useEffect(() => {
     apiFetch("/salons")
       .then((list) => { setSalons(list); setStatus("ready"); })
@@ -1283,6 +1279,10 @@ export default function App() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+  if (view === "resetPassword") {
+    return <ResetPasswordView token={resetToken} onDone={() => setView("home")} />;
+  }
+
   if (checkoutResult) {
     return (
       <div className="min-h-screen w-full flex justify-center items-center" style={{ background: colors.bg, fontFamily: FONT_BODY }}>
