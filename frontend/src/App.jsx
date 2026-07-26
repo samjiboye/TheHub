@@ -1383,6 +1383,7 @@ export default function App() {
   const [status, setStatus] = useState("loading"); // loading | ready | offline
   const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
   const [resetToken, setResetToken] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const reset = () => {
     setView("home");
     setSelectedSalon(null);
@@ -1415,13 +1416,11 @@ export default function App() {
     return <ResetPasswordView token={resetToken} onDone={() => setView("home")} />;
   }
 
-  if (!localStorage.getItem("onboardingSeen")) {
+  if (showOnboarding) {
     return (
       <OnboardingView
         onDone={() => {
-          try {
-            localStorage.setItem("onboardingSeen", "true");
-          } catch (e) {}
+          setShowOnboarding(false);
           setView("home");
         }}
       />
