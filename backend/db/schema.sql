@@ -67,3 +67,14 @@ CREATE INDEX IF NOT EXISTS idx_reviews_salon ON reviews(salon_id);
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS salon_media (
+  id SERIAL PRIMARY KEY,
+  salon_id INTEGER NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+  media_type TEXT NOT NULL CHECK (media_type IN ('image', 'video')),
+  url TEXT NOT NULL,
+  public_id TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_salon_media_salon ON salon_media(salon_id);

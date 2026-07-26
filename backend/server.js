@@ -4,6 +4,7 @@ const cors = require("cors");
 
 const authRoutes = require("./routes/auth");
 const salonRoutes = require("./routes/salons");
+const mediaRoutes = require("./routes/media");
 const bookingRoutes = require("./routes/bookings");
 const reviewRoutes = require("./routes/reviews");
 const conciergeRoutes = require("./routes/concierge");
@@ -24,6 +25,7 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.use("/auth", authRoutes);
 app.use("/salons", salonRoutes);
+app.use("/salons", mediaRoutes);
 app.use("/bookings", bookingRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/concierge", conciergeRoutes);
