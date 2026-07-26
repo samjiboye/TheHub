@@ -533,12 +533,14 @@ function AuthGate({ role, onAuthed, allowGuest }) {
   return (
     <div className="px-4 pt-6 pb-10">
       <div className="flex justify-center mb-5">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ border: `3px solid ${colors.hairline}` }}>
-          {role === "owner" ? <Store size={28} color={colors.hairline} /> : <User size={28} color={colors.hairline} />}
+        <div
+          className="px-6 py-4 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-lg"
+          style={{ background: colors.hairline }}>
+          <span className="text-lg font-extrabold" style={{ color: "#FFFFFF", fontFamily: FONT_DISPLAY }}>TheHub</span>
         </div>
       </div>
       <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.6rem", fontWeight: 700 }} className="text-center">
-        {role === "owner" ? "Salon owner sign in" : "Welcome"}
+        "Hello there!"
       </h2>
 
       <div className="flex gap-2 mt-6 mb-4">
