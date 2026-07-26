@@ -610,16 +610,30 @@ function AuthGate({ role, onAuthed, allowGuest }) {
           </button>
         </div>
 
-        {mode === "login" && !showResetForm && (
-          <button
-            type="button"
-            onClick={() => setShowResetForm(true)}
-            className="text-sm text-right"
-            style={{ color: colors.creamDim }}
-          >
-            Forgot password?
-          </button>
-        )}
+            {mode === "login" && !showResetForm && (
+              <div className="flex items-center justify-between">
+                <label
+                  className="flex items-center gap-2 text-sm cursor-pointer"
+                  style={{ color: colors.creamDim }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={savePassword}
+                    onChange={(e) => setSavePassword(e.target.checked)}
+                    style={{ accentColor: colors.gold }}
+                  />
+                  Save Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowResetForm(true)}
+                  className="text-sm text-right"
+                  style={{ color: colors.creamDim }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
         {mode === "login" && showResetForm && (
           resetSent ? (
