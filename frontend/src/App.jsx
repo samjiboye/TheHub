@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
-  Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff
+  Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
@@ -325,6 +325,8 @@ function ProfileView({ salon, onBack, onBook }) {
             <MapPin size={18} />{salon.distance} mi away
           </div>
         )}
+
+        <MediaGallery salonId={salon.id} />
 
         <h3 className="mt-7 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
           Pick a service
@@ -845,7 +847,184 @@ function CreateSalonView({ token, onDone }) {
 }
 
 
-  function OwnerDashboard({ token }) {
+  
+function MediaManager({ salonId, token }) {
+  const [media, setMedia] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const loadMedia = () => {
+    setLoading(true);
+    apiFetch(`/salons/${salonId}/media`)
+      .then((data) => setMedia(Array.isArray(data) ? data : (data.media || [])))
+      .catch(() => setError("Couldn't load photos/videos."))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!salonId) return;
+    loadMedia();
+  }, [salonId]);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE}/salons/${salonId}/media`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      loadMedia();
+    } catch (err) {
+      setError(err.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (mediaId) => {
+    try {
+      await apiFetch(`/salons/${salonId}/media/${mediaId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMedia((prev) => prev.filter((m) => m.id !== mediaId));
+    } catch (err) {
+      setError("Couldn't delete that item.");
+    }
+  };
+
+  return (
+    <div className="mt-6">
+      <h3 className="mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_DISPLAY }}>
+        Photos & Videos
+      </h3>
+      {error && (
+        <p className="text-xs mb-2" style={{ color: '#E07A5F' }}>{error}</p>
+      )}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {media.map((m) => (
+          <div key={m.id} className="relative rounded-xl overflow-hidden aspect-square" style={{ background: colors.panelLight }}>
+            {m.media_type === 'video' ? (
+              <>
+                <video src={m.url} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Play size={20} color="#FFFFFF" fill="#FFFFFF" />
+                </div>
+              </>
+            ) : (
+              <img src={m.url} alt="" className="w-full h-full object-cover" />
+            )}
+            <button
+              onClick={() => handleDelete(m.id)}
+              className="absolute top-1 right-1 p-1 rounded-full"
+              style={{ background: 'rgba(0,0,0,0.5)' }}
+            >
+              <Trash2 size={14} color="#FFFFFF" />
+            </button>
+          </div>
+        ))}
+        {loading && <p className="text-xs col-span-3" style={{ color: colors.creamDim }}>Loading...</p>}
+        {!loading && media.length === 0 && (
+          <p className="text-xs col-span-3 py-2" style={{ color: colors.creamDim }}>No photos or videos yet.</p>
+        )}
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
+      <button
+        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+        disabled={uploading}
+        className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold"
+        style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+      >
+        {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+        {uploading ? 'Uploading...' : 'Add photo or video'}
+      </button>
+    </div>
+  );
+}
+
+function MediaGallery({ salonId }) {
+  const [media, setMedia] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState(null);
+
+  useEffect(() => {
+    if (!salonId) return;
+    apiFetch(`/salons/${salonId}/media`)
+      .then((data) => setMedia(Array.isArray(data) ? data : (data.media || [])))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [salonId]);
+
+  if (loading || media.length === 0) return null;
+
+  return (
+    <div className="mt-7">
+      <h3 className="mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
+        Gallery
+      </h3>
+      <div className="grid grid-cols-3 gap-2">
+        {media.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setActive(m)}
+            className="relative rounded-xl overflow-hidden aspect-square"
+            style={{ background: colors.panelLight }}
+          >
+            {m.media_type === 'video' ? (
+              <>
+                <video src={m.url} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Play size={20} color="#FFFFFF" fill="#FFFFFF" />
+                </div>
+              </>
+            ) : (
+              <img src={m.url} alt="" className="w-full h-full object-cover" />
+            )}
+          </button>
+        ))}
+      </div>
+      {active && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.85)' }}
+          onClick={() => setActive(null)}
+        >
+          {active.media_type === 'video' ? (
+            <video src={active.url} controls autoPlay className="max-w-full max-h-full rounded-xl" onClick={(e) => e.stopPropagation()} />
+          ) : (
+            <img src={active.url} alt="" className="max-w-full max-h-full rounded-xl" onClick={(e) => e.stopPropagation()} />
+          )}
+          <button
+            onClick={() => setActive(null)}
+            className="absolute top-4 right-4 p-2 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.15)' }}
+          >
+            <X size={20} color="#FFFFFF" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OwnerDashboard({ token }) {
   const [salon, setSalon] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -1042,6 +1221,8 @@ function CreateSalonView({ token, onDone }) {
           <ShieldCheck size={13} />
           Commission is only taken on completed bookings — no charge for empty chairs.
         </div>
+        <MediaManager salonId={salon.id} token={token} />
+
         <h3 className="mt-6 mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_MONO }}>
           Upcoming appointments
         </h3>
