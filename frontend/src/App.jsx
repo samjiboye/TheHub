@@ -1224,6 +1224,126 @@ function ResetPasswordView({ token, onDone }) {
   );
 }
 
+const ONBOARDING_SLIDES = [
+  {
+    title: "Find what you're looking for",
+    body: "Aim to efficiently attract specific individuals or groups likely to be interested in a product or service through focused marketing strategies.",
+  },
+  {
+    title: "Targeted User Acquisition Campaigns",
+    body: "Aim to efficiently attract specific individuals or groups likely to be interested in a product or service through focused marketing strategies.",
+  },
+  {
+    title: "Building Trust and Credibility",
+    body: "Emphasizing security measures, highlighting positive user experiences or reviews, and providing transparent information about the sellers and their products/services.",
+  },
+];
+
+function OnboardingView({ onDone }) {
+  const [slide, setSlide] = useState(0);
+  const isLast = slide === ONBOARDING_SLIDES.length - 1;
+  const current = ONBOARDING_SLIDES[slide];
+
+  const next = () => {
+    if (isLast) onDone();
+    else setSlide((s) => s + 1);
+  };
+
+  const prev = () => {
+    if (slide > 0) setSlide((s) => s - 1);
+  };
+
+  return (
+    <div
+      className="min-h-screen w-full flex flex-col justify-between px-6 pt-10 pb-10"
+      style={{ background: `linear-gradient(160deg, ${colors.hairline}, #A6532A)` }}
+    >
+      <div className="flex justify-between items-center">
+        <div
+          className="px-5 py-4 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-lg"
+          style={{ background: "#FFFFFF" }}
+        >
+          <span
+            className="text-sm font-extrabold tracking-wide"
+            style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
+          >
+            TheHub
+          </span>
+        </div>
+        {!isLast && (
+          <button onClick={onDone} className="text-white text-base font-semibold">
+            Skip
+          </button>
+        )}
+      </div>
+
+      <div className="mt-8">
+        <h1
+          className="text-3xl font-extrabold text-white leading-tight mb-4"
+          style={{ fontFamily: FONT_DISPLAY }}
+        >
+          {current.title}
+        </h1>
+        <p className="text-white text-base leading-relaxed" style={{ opacity: 0.9 }}>
+          {current.body}
+        </p>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center py-10">
+        <div
+          className="w-44 h-36 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-2xl"
+          style={{ background: "#FFFFFF" }}
+        >
+          <span
+            className="text-2xl font-extrabold"
+            style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
+          >
+            TheHub
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        {slide > 0 ? (
+          <button onClick={prev} className="text-white text-base font-semibold">
+            Prev
+          </button>
+        ) : (
+          <span />
+        )}
+
+        <div className="flex gap-2">
+          {ONBOARDING_SLIDES.map((_, i) => (
+            <div
+              key={i}
+              className={i === slide ? "w-6 h-2 rounded-full" : "w-2 h-2 rounded-full"}
+              style={{ background: i === slide ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}
+            />
+          ))}
+        </div>
+
+        {isLast ? (
+          <button
+            onClick={onDone}
+            className="px-6 py-3 rounded-full text-base font-bold"
+            style={{ background: "#4FA89C", color: "#FFFFFF" }}
+          >
+            Get Started
+          </button>
+        ) : (
+          <button
+            onClick={next}
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+            style={{ background: "#4FA89C" }}
+          >
+            <ArrowRight size={20} color="#FFFFFF" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState("home");
   const [role, setRole] = useState("customer");
@@ -1281,6 +1401,19 @@ export default function App() {
   }, []);
   if (view === "resetPassword") {
     return <ResetPasswordView token={resetToken} onDone={() => setView("home")} />;
+  }
+
+  if (!localStorage.getItem("onboardingSeen")) {
+    return (
+      <OnboardingView
+        onDone={() => {
+          try {
+            localStorage.setItem("onboardingSeen", "true");
+          } catch (e) {}
+          setView("home");
+        }}
+      />
+    );
   }
 
   if (checkoutResult) {
