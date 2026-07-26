@@ -1128,6 +1128,102 @@ function Concierge({ open, onClose }) {
     </div>
   );
 }
+function ResetPasswordView({ token, onDone }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await apiFetch("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, password }),
+      });
+      setDone(true);
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="px-4 pt-6 pb-10 flex flex-col items-center">
+      <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.6rem", fontWeight: 700 }} className="mb-6">
+        Reset your password
+      </h2>
+
+      {done ? (
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-base text-center" style={{ color: colors.creamDim }}>
+            Your password has been reset. You can now log in.
+          </p>
+          <button
+            onClick={onDone}
+            className="py-3 px-6 rounded-2xl text-lg"
+            style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
+          >
+            Go to login
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="flex flex-col gap-3 w-full max-w-sm">
+          <div className="relative">
+            <input
+              required
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="New password"
+              className="w-full px-4 py-3 rounded-xl text-base outline-none"
+              style={inputStyle}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: colors.creamDim }}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          <input
+            required
+            type={showPassword ? "text" : "password"}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder="Confirm new password"
+            className="px-4 py-3 rounded-xl text-base outline-none"
+            style={inputStyle}
+          />
+
+          {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2"
+            style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
+          >
+            {loading ? <Loader2 size={20} className="animate-spin" /> : "Reset password"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState("home");
   const [role, setRole] = useState("customer");
@@ -1154,11 +1250,16 @@ export default function App() {
   const [salons, setSalons] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | ready | offline
   const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
+  const [resetToken, setResetToken] = useState(null);
   const reset = () => {
     setView("home");
     setSelectedSalon(null);
     setSelectedService(null);
   };
+  if (view === "resetPassword") {
+    return <ResetPasswordView token={resetToken} onDone={() => setView("home")} />;
+  }
+
   useEffect(() => {
     apiFetch("/salons")
       .then((list) => { setSalons(list); setStatus("ready"); })
@@ -1174,6 +1275,9 @@ export default function App() {
       setRole("customer");
     } else if (params.get("stripe_return") || params.get("stripe_refresh")) {
       setRole("owner");
+    } else if (params.get("token")) {
+      setResetToken(params.get("token"));
+      setView("resetPassword");
     }
     if (params.toString()) {
       window.history.replaceState({}, "", window.location.pathname);
