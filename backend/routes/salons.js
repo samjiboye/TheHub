@@ -1,5 +1,6 @@
 const express = require("express");
 const db = require("../db");
+const { geocodeAddress } = require("../lib/geocode");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const router = express.Router();
 
@@ -27,7 +28,7 @@ router.get("/", async (req, res) => {
     }
     if (q) {
       params.push(`%${q}%`);
-      sql += ` AND name ILIKE $${params.length}`;
+      sql += ` AND (name ILIKE $${params.length} OR address ILIKE $${params.length})`;
     }
     const { rows: salons } = await db.query(sql, params);
 
@@ -93,10 +94,17 @@ router.post("/", requireAuth, requireRole("owner"), async (req, res) => {
   const { name, category, bio, address, lat, lng, hours, service_type } = req.body;
   if (!name || !category) return res.status(400).json({ error: "name and category are required" });
   try {
+    let finalLat = lat || null;
+    let finalLng = lng || null;
+    if ((!finalLat || !finalLng) && address) {
+      const geocoded = await geocodeAddress(address);
+      finalLat = geocoded.lat;
+      finalLng = geocoded.lng;
+    }
     const { rows } = await db.query(
       `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours, service_type)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [req.user.id, name, category, bio || null, address || null, lat || null, lng || null, hours || null, service_type || 'unisex']
+      [req.user.id, name, category, bio || null, address || null, finalLat, finalLng, hours || null, service_type || 'unisex']
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {

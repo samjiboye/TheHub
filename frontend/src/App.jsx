@@ -229,7 +229,7 @@ function Header({ title, onBack, right }) {
   );
 }
 
-function HomeView({ salons, category, setCategory, onSelectSalon }) {
+function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, onSelectSalon }) {
   const filtered = salons
     .filter((s) => (category ? s.category === category : true))
     .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
@@ -243,6 +243,13 @@ function HomeView({ salons, category, setCategory, onSelectSalon }) {
         >
           What do you want today?
         </h2>
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name or location"
+                className="w-full mb-5 px-4 py-3 rounded-xl text-base outline-none"
+                style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+              />
         <div className="grid grid-cols-2 gap-4">
           {CATEGORIES.map((c) => {
             const Icon = c.icon;
@@ -1601,10 +1608,25 @@ export default function App() {
     setSelectedService(null);
   };
   useEffect(() => {
-    apiFetch("/salons")
-      .then((list) => { setSalons(list); setStatus("ready"); })
-      .catch(() => setStatus("offline"));
-  }, []);
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { timeout: 8000 }
+      );
+    }, []);
+    useEffect(() => {
+      const params = new URLSearchParams();
+      if (userLocation) {
+        params.set("lat", userLocation.lat);
+        params.set("lng", userLocation.lng);
+      }
+      if (searchQuery) params.set("q", searchQuery);
+      const qs = params.toString();
+      apiFetch(`/salons${qs ? `?${qs}` : ""}`)
+        .then((list) => { setSalons(list); setStatus("ready"); })
+        .catch(() => setStatus("offline"));
+    }, [userLocation, searchQuery]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const googleToken = params.get("token");
@@ -1766,6 +1788,7 @@ export default function App() {
               <HomeView
                 salons={salons}
                 category={category} setCategory={setCategory}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery}
                 onSelectSalon={(s) => { setSelectedSalon(s); setView("profile"); }}
               />
             )}
