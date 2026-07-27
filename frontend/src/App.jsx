@@ -1598,6 +1598,8 @@ export default function App() {
     }
   }); // { token, user }
   const [salons, setSalons] = useState([]);
+    const [userLocation, setUserLocation] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
   const [status, setStatus] = useState("loading"); // loading | ready | offline
   const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
   const [resetToken, setResetToken] = useState(null);
