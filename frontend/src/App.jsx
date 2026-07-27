@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
@@ -229,76 +230,70 @@ function Header({ title, onBack, right }) {
   );
 }
 
-function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, onSelectSalon }) {
+function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, onSelectSalon }) {
   const filtered = salons
     .filter((s) => (category ? s.category === category : true))
-    .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+    .sort((a, b) => (a.distance ?? 999) - (b.distance ?? 999));
 
-  if (!category) {
-    return (
-      <div className="px-4 pt-2 pb-10">
-        <h2
-          style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.9rem", fontWeight: 700 }}
-          className="mt-2 mb-5 text-center"
-        >
-          What do you want today?
-        </h2>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name or location"
-                className="w-full mb-5 px-4 py-3 rounded-xl text-base outline-none"
-                style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-              />
-        <div className="grid grid-cols-2 gap-4">
-          {CATEGORIES.map((c) => {
-            const Icon = c.icon;
-            return (
-              <button
-                key={c.name}
-                onClick={() => setCategory(c.name)}
-                className="flex flex-col items-center justify-center gap-3 rounded-3xl py-8 transition-transform active:scale-95"
-                style={{ border: `3px solid ${colors.hairline}`, background: colors.panelLight }}
-              >
-                <Icon size={44} strokeWidth={1.8} color={colors.hairline} />
-                <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg">
-                  {c.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const cat = CATEGORIES.find((c) => c.name === category);
-  const Icon = cat.icon;
+  const citiesForState = (NIGERIA_LOCATIONS.find((s) => s.state === searchState)?.cities) || [];
 
   return (
-    <div className="pb-24">
-      <div className="px-4 pt-2 pb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ border: `3px solid ${colors.hairline}` }}
-          >
-            <Icon size={22} color={colors.hairline} />
-          </div>
-          <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.4rem", fontWeight: 700 }}>
-            {category}
-          </h2>
-        </div>
-        <button
-          onClick={() => setCategory(null)}
-          className="w-12 h-12 rounded-full flex items-center justify-center"
-          style={{ border: `3px solid ${colors.hairline}` }}
+    <div className="px-4 pt-2 pb-10">
+      <h2
+        style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.9rem", fontWeight: 700 }}
+        className="mt-2 mb-4 text-center"
+      >
+        What do you want today?
+      </h2>
+
+      <input
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search by name or location"
+        className="w-full mb-3 px-4 py-3 rounded-xl text-base outline-none"
+        style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+      />
+
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        <select
+          value={searchState}
+          onChange={(e) => { setSearchState(e.target.value); setSearchCity(""); }}
+          className="px-3 py-3 rounded-xl text-sm outline-none"
+          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
         >
-          <X size={20} color={colors.cream} />
-        </button>
+          <option value="">All states</option>
+          {NIGERIA_LOCATIONS.map((s) => <option key={s.state} value={s.state}>{s.state}</option>)}
+        </select>
+        <select
+          value={searchCity}
+          onChange={(e) => setSearchCity(e.target.value)}
+          disabled={!searchState}
+          className="px-3 py-3 rounded-xl text-sm outline-none"
+          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+        >
+          <option value="">All cities</option>
+          {citiesForState.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
       </div>
 
-      <div className="px-4 grid grid-cols-1 gap-5 mt-1">
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.name}
+            onClick={() => setCategory(category === c.name ? null : c.name)}
+            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap"
+            style={{
+              background: category === c.name ? colors.gold : colors.panelLight,
+              color: category === c.name ? "#FFFFFF" : colors.cream,
+              border: `2px solid ${category === c.name ? colors.gold : colors.hairline}`,
+            }}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-5">
         {filtered.length === 0 && (
           <p className="text-lg text-center py-10" style={{ color: colors.creamDim }}>
             No one here yet.
@@ -311,7 +306,6 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
     </div>
   );
 }
-
 function ProfileView({ salon, onBack, onBook }) {
   const cat = CATEGORIES.find((c) => c.name === salon.category);
   return (
@@ -731,6 +725,8 @@ function CreateSalonView({ token, onDone }) {
   const [category, setCategory] = useState(CATEGORIES[0].name);
   const [serviceType, setServiceType] = useState("unisex");
   const [address, setAddress] = useState("");
+  const [salonState, setSalonState] = useState("");
+  const [salonCity, setSalonCity] = useState("");
   const [services, setServices] = useState([]);
   const [svcName, setSvcName] = useState("");
   const [svcDuration, setSvcDuration] = useState("");
@@ -746,7 +742,7 @@ function CreateSalonView({ token, onDone }) {
       const { id } = await apiFetch("/salons", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, category, address, service_type: serviceType }),
+        body: JSON.stringify({ name, category, address, service_type: serviceType, state: salonState, city: salonCity }),
       });
       setSalonId(id);
       setStep("services");
@@ -798,6 +794,27 @@ function CreateSalonView({ token, onDone }) {
               </select>
           <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address"
             className="pb-2 text-base outline-none" style={inputStyle} />
+              <select
+                value={salonState}
+                onChange={(e) => { setSalonState(e.target.value); setSalonCity(""); }}
+                className="pb-2 text-base outline-none"
+                style={inputStyle}
+              >
+                <option value="">Select state</option>
+                {NIGERIA_LOCATIONS.map((s) => <option key={s.state} value={s.state}>{s.state}</option>)}
+              </select>
+              <select
+                value={salonCity}
+                onChange={(e) => setSalonCity(e.target.value)}
+                disabled={!salonState}
+                className="pb-2 text-base outline-none"
+                style={inputStyle}
+              >
+                <option value="">Select city</option>
+                {(NIGERIA_LOCATIONS.find((s) => s.state === salonState)?.cities || []).map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
           {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
           <button type="submit" disabled={loading}
             className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2"
@@ -1600,6 +1617,8 @@ export default function App() {
   const [salons, setSalons] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [searchState, setSearchState] = useState("");
+    const [searchCity, setSearchCity] = useState("");
   const [status, setStatus] = useState("loading"); // loading | ready | offline
   const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
   const [resetToken, setResetToken] = useState(null);
@@ -1624,11 +1643,13 @@ export default function App() {
         params.set("lng", userLocation.lng);
       }
       if (searchQuery) params.set("q", searchQuery);
+      if (searchState) params.set("state", searchState);
+      if (searchCity) params.set("city", searchCity);
       const qs = params.toString();
       apiFetch(`/salons${qs ? `?${qs}` : ""}`)
         .then((list) => { setSalons(list); setStatus("ready"); })
         .catch(() => setStatus("offline"));
-    }, [userLocation, searchQuery]);
+    }, [userLocation, searchQuery, searchState, searchCity]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const googleToken = params.get("token");
@@ -1791,6 +1812,8 @@ export default function App() {
                 salons={salons}
                 category={category} setCategory={setCategory}
                 searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+                searchState={searchState} setSearchState={setSearchState}
+                searchCity={searchCity} setSearchCity={setSearchCity}
                 onSelectSalon={(s) => { setSelectedSalon(s); setView("profile"); }}
               />
             )}

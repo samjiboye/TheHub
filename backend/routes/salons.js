@@ -18,13 +18,21 @@ function distanceMiles(lat1, lng1, lat2, lng2) {
 
 // GET /salons?category=Barbing&lat=..&lng=..&q=fade
 router.get("/", async (req, res) => {
-  const { category, lat, lng, q } = req.query;
+  const { category, lat, lng, q, state, city } = req.query;
   try {
     let sql = "SELECT * FROM salons WHERE 1=1";
     const params = [];
     if (category) {
       params.push(category);
       sql += ` AND category = $${params.length}`;
+    }
+    if (state) {
+      params.push(state);
+      sql += ` AND state = $${params.length}`;
+    }
+    if (city) {
+      params.push(city);
+      sql += ` AND city = $${params.length}`;
     }
     if (q) {
       params.push(`%${q}%`);
@@ -91,20 +99,21 @@ router.get("/:id", async (req, res) => {
 
 // POST /salons (owner creates a salon listing)
 router.post("/", requireAuth, requireRole("owner"), async (req, res) => {
-  const { name, category, bio, address, lat, lng, hours, service_type } = req.body;
+  const { name, category, bio, address, lat, lng, hours, service_type, state, city } = req.body;
   if (!name || !category) return res.status(400).json({ error: "name and category are required" });
   try {
     let finalLat = lat || null;
     let finalLng = lng || null;
-    if ((!finalLat || !finalLng) && address) {
-      const geocoded = await geocodeAddress(address);
+    const fullAddress = [address, city, state].filter(Boolean).join(", ");
+    if ((!finalLat || !finalLng) && fullAddress) {
+      const geocoded = await geocodeAddress(fullAddress);
       finalLat = geocoded.lat;
       finalLng = geocoded.lng;
     }
     const { rows } = await db.query(
-      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours, service_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [req.user.id, name, category, bio || null, address || null, finalLat, finalLng, hours || null, service_type || 'unisex']
+      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours, service_type, state, city)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+      [req.user.id, name, category, bio || null, address || null, finalLat, finalLng, hours || null, service_type || 'unisex', state || null, city || null]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
