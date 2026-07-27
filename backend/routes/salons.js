@@ -90,13 +90,13 @@ router.get("/:id", async (req, res) => {
 
 // POST /salons (owner creates a salon listing)
 router.post("/", requireAuth, requireRole("owner"), async (req, res) => {
-  const { name, category, bio, address, lat, lng, hours } = req.body;
+  const { name, category, bio, address, lat, lng, hours, service_type } = req.body;
   if (!name || !category) return res.status(400).json({ error: "name and category are required" });
   try {
     const { rows } = await db.query(
-      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [req.user.id, name, category, bio || null, address || null, lat || null, lng || null, hours || null]
+      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours, service_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [req.user.id, name, category, bio || null, address || null, lat || null, lng || null, hours || null, service_type || 'unisex']
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {

@@ -67,6 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_reviews_salon ON reviews(salon_id);
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS service_type TEXT DEFAULT 'unisex';
 
 CREATE TABLE IF NOT EXISTS salon_media (
   id SERIAL PRIMARY KEY,

@@ -722,6 +722,7 @@ function CreateSalonView({ token, onDone }) {
   const [salonId, setSalonId] = useState(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0].name);
+  const [serviceType, setServiceType] = useState("unisex");
   const [address, setAddress] = useState("");
   const [services, setServices] = useState([]);
   const [svcName, setSvcName] = useState("");
@@ -738,7 +739,7 @@ function CreateSalonView({ token, onDone }) {
       const { id } = await apiFetch("/salons", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, category, address }),
+        body: JSON.stringify({ name, category, address, service_type: serviceType }),
       });
       setSalonId(id);
       setStep("services");
@@ -782,6 +783,12 @@ function CreateSalonView({ token, onDone }) {
             className="pb-2 text-base outline-none" style={inputStyle}>
             {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
           </select>
+              <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}
+                className="pb-2 text-base outline-none" style={inputStyle}>
+                <option value="unisex">Unisex — all genders</option>
+                <option value="male">Male only</option>
+                <option value="female">Female only</option>
+              </select>
           <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address"
             className="pb-2 text-base outline-none" style={inputStyle} />
           {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
