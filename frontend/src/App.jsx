@@ -1850,6 +1850,7 @@ export default function App() {
   const [selectedSalon, setSelectedSalon] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [customerAuth, setCustomerAuth] = useState(() => {
     try {
       const saved = localStorage.getItem("customerAuth");
