@@ -1352,6 +1352,187 @@ function OwnerDashboard({ token }) {
   );
 }
 
+const CUSTOMER_CANCEL_REASONS = [
+  "Schedule conflict",
+  "Found another appointment",
+  "No longer needed",
+  "Booked by mistake",
+  "Change of plans",
+  "Other",
+];
+
+function MyBookingsView({ token, onBack }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    apiFetch("/bookings/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.json())
+      .then((rows) => {
+        setBookings(rows);
+        setError(null);
+      })
+      .catch(() => setError("Couldn't load your bookings."))
+      .finally(() => setLoading(false));
+  }, [token, refreshKey]);
+
+  async function submitCancel(bookingId) {
+    if (!cancelReason) {
+      setCancelError("Please select a reason.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: cancelReason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCancelError(err.error || "Failed to cancel booking.");
+        return;
+      }
+      setCancellingId(null);
+      setCancelReason("");
+      setCancelError(null);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setCancelError("Network error. Please try again.");
+    }
+  }
+
+  return (
+    <div className="pb-8">
+      <Header title="My bookings" onBack={onBack} />
+      <div className="px-4">
+        {loading && (
+          <div className="flex justify-center pt-8">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && (
+          <p className="text-sm text-center mt-4" style={{ color: colors.creamDim }}>{error}</p>
+        )}
+        {!loading && !error && bookings.length === 0 && (
+          <p className="text-sm py-4" style={{ color: colors.creamDim }}>
+            No bookings yet — go find a salon and book something.
+          </p>
+        )}
+        <div className="flex flex-col gap-2 mt-2">
+          {bookings.map((b) => (
+            <div
+              key={b.id}
+              className="flex flex-col px-4 py-3 rounded-xl"
+              style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
+                  <p className="text-xs" style={{ color: colors.creamDim }}>{b.salon_name}</p>
+                </div>
+                <span className="text-xs" style={{ color: colors.creamDim }}>{b.time_slot}</span>
+              </div>
+
+              {b.status === "cancelled" && (
+                <p className="text-xs mt-2" style={{ color: "#E07A5F" }}>
+                  Cancelled by {b.cancelled_by === "owner" ? "salon" : "you"}
+                  {b.cancel_reason ? ` — ${b.cancel_reason}` : ""}
+                </p>
+              )}
+
+              {(b.status === "pending" || b.status === "confirmed") && cancellingId !== b.id && (
+                <button
+                  onClick={() => { setCancellingId(b.id); setCancelReason(""); setCancelError(null); }}
+                  className="mt-2 self-start text-xs font-semibold px-3 py-1 rounded-full"
+                  style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                >
+                  Cancel
+                </button>
+              )}
+
+              {cancellingId === b.id && (
+                <div className="mt-2 flex flex-col gap-2">
+                  <select
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="px-3 py-2 rounded-xl text-sm outline-none"
+                    style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+                  >
+                    <option value="">Select a reason</option>
+                    {CUSTOMER_CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  {cancelError && <p className="text-xs" style={{ color: "#E07A5F" }}>{cancelError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => submitCancel(b.id)}
+                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      style={{ background: colors.hairline, color: "#FFFFFF" }}
+                    >
+                      Confirm cancel
+                    </button>
+                    <button
+                      onClick={() => setCancellingId(null)}
+                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                    >
+                      Keep booking
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsView({ onBack }) {
+  const savedCustomer = JSON.parse(localStorage.getItem("customerAuth") || "null");
+  const savedOwner = JSON.parse(localStorage.getItem("ownerAuth") || "null");
+  const user = savedCustomer?.user || savedOwner?.user || {};
+
+  return (
+    <div className="pb-8">
+      <Header title="Settings" onBack={onBack} />
+      <div className="px-4 mt-4 flex flex-col gap-3">
+        <div
+          className="px-4 py-3 rounded-xl"
+          style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+        >
+          <p className="text-xs mb-1" style={{ color: colors.creamDim }}>Name</p>
+          <p className="text-sm" style={{ color: colors.cream }}>{user.name || "—"}</p>
+        </div>
+        <div
+          className="px-4 py-3 rounded-xl"
+          style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+        >
+          <p className="text-xs mb-1" style={{ color: colors.creamDim }}>Email</p>
+          <p className="text-sm" style={{ color: colors.cream }}>{user.email || "—"}</p>
+        </div>
+        <div
+          className="px-4 py-3 rounded-xl"
+          style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+        >
+          <p className="text-xs mb-1" style={{ color: colors.creamDim }}>Phone</p>
+          <p className="text-sm" style={{ color: colors.cream }}>{user.phone || "—"}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Concierge({ open, onClose }) {
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hi, I'm Aria. Tell me what you're after — a service, a budget, how far you'll travel — and I'll point you to the right place." },
@@ -1948,6 +2129,17 @@ export default function App() {
                 service={selectedService}
                 token={customerAuth.token}
                 onBack={() => setView("profile")}
+              />
+            )}
+            {view === "myBookings" && customerAuth && (
+              <MyBookingsView
+                token={customerAuth.token}
+                onBack={() => setView("home")}
+              />
+            )}
+            {view === "settings" && (
+              <SettingsView
+                onBack={() => setView("home")}
               />
             )}
           </>
