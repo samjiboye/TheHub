@@ -3,7 +3,7 @@ import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
-  Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload
+  Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
