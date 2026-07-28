@@ -1282,7 +1282,7 @@ function OwnerDashboard({ token }) {
                     Cancel
                   </button>
                 )}
-              </div>
+              
               {cancellingId === a.id && (
                 <div className="mt-2 flex flex-col gap-2">
                   <select
