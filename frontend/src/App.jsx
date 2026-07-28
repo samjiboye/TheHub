@@ -1061,6 +1061,37 @@ function OwnerDashboard({ token }) {
   const [error, setError] = useState(null);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState(null);
+
+  async function submitCancel(bookingId) {
+    if (!cancelReason) {
+      setCancelError("Please select a reason.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: cancelReason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCancelError(err.error || "Failed to cancel booking.");
+        return;
+      }
+      setCancellingId(null);
+      setCancelReason("");
+      setCancelError(null);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setCancelError("Network error. Please try again.");
+    }
+  }
   const [connecting, setConnecting] = useState(false);
 
   const [banks, setBanks] = useState([]);
