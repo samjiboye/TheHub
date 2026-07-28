@@ -1832,22 +1832,55 @@ export default function App() {
             Owner
           </button>
           {(role === "customer" ? customerAuth : ownerAuth) && (
-            <button
-              onClick={() => {
-                if (role === "customer") {
-                  localStorage.removeItem("customerAuth");
-                  setCustomerAuth(null);
-                  reset();
-                } else {
-                  localStorage.removeItem("ownerAuth");
-                  setOwnerAuth(null);
-                }
-              }}
-              className="px-4 py-2.5 rounded-full text-sm"
-              style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim, fontWeight: 700 }}
-            >
-              Log out
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                className="p-2.5 rounded-full"
+                style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+              >
+                <Menu size={20} />
+              </button>
+              {menuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-48 rounded-2xl shadow-lg z-50 overflow-hidden"
+                  style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+                >
+                  {role === "customer" && (
+                    <button
+                      onClick={() => { setMenuOpen(false); setView("myBookings"); }}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                      style={{ color: colors.cream }}
+                    >
+                      <CalendarCheck size={16} /> My bookings
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setMenuOpen(false); setView("settings"); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: colors.cream }}
+                  >
+                    <Settings size={16} /> Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (role === "customer") {
+                        localStorage.removeItem("customerAuth");
+                        setCustomerAuth(null);
+                        reset();
+                      } else {
+                        localStorage.removeItem("ownerAuth");
+                        setOwnerAuth(null);
+                      }
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: "#E07A5F" }}
+                  >
+                    <LogOut size={16} /> Log out
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
         {status === "offline" && (
