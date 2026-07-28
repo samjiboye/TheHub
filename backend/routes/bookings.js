@@ -58,14 +58,67 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 // PATCH /bookings/:id/cancel
+const CANCEL_REASONS = [
+  "Client no-show",
+  "Owner unavailable",
+  "Schedule conflict",
+  "Emergency",
+  "Other",
+];
+
+function parseAppointmentDateTime(booking) {
+  // time_slot is a time-of-day string like "9:00 AM"; the appointment is always
+  // on the same calendar day the booking was created.
+  const created = new Date(booking.created_at);
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(booking.time_slot.trim());
+  if (!match) return created;
+  let [, hourStr, minuteStr, period] = match;
+  let hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
+  if (/PM/i.test(period) && hour !== 12) hour += 12;
+  if (/AM/i.test(period) && hour === 12) hour = 0;
+  const appt = new Date(created);
+  appt.setHours(hour, minute, 0, 0);
+  return appt;
+}
+
 router.patch("/:id/cancel", requireAuth, async (req, res) => {
+  const { reason, note } = req.body;
+  if (!reason || !CANCEL_REASONS.includes(reason)) {
+    return res.status(400).json({ error: `reason is required and must be one of: ${CANCEL_REASONS.join(", ")}` });
+  }
   try {
     const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
     const booking = bookingRows[0];
     if (!booking) return res.status(404).json({ error: "Booking not found" });
-    if (booking.customer_id !== req.user.id) return res.status(403).json({ error: "Not your booking" });
 
-    await db.query("UPDATE bookings SET status = 'cancelled' WHERE id = $1", [booking.id]);
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+
+    const isCustomer = booking.customer_id === req.user.id;
+    const isOwner = salon && salon.owner_id === req.user.id;
+    if (!isCustomer && !isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    if (booking.status !== "pending" && booking.status !== "confirmed") {
+      return res.status(400).json({ error: "This booking can no longer be cancelled." });
+    }
+
+    const appointmentTime = parseAppointmentDateTime(booking);
+    if (Date.now() >= appointmentTime.getTime()) {
+      return res.status(400).json({ error: "This appointment time has already passed and can no longer be cancelled." });
+    }
+
+    const cancelledBy = isOwner ? "owner" : "customer";
+
+    await db.query(
+      "UPDATE bookings SET status = 'cancelled', cancelled_by = $1, cancel_reason = $2, cancel_note = $3 WHERE id = $4",
+      [cancelledBy, reason, note || null, booking.id]
+    );
+
+    if (cancelledBy === "owner") {
+      await db.query("UPDATE salons SET cancellation_count = cancellation_count + 1 WHERE id = $1", [booking.salon_id]);
+    }
+
     res.json({ ok: true });
   } catch (err) {
     console.error(err);

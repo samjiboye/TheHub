@@ -1273,7 +1273,46 @@ function OwnerDashboard({ token }) {
                 </div>
               </div>
               <span className="text-xs" style={{ color: colors.creamDim }}>{a.time_slot}</span>
-            </div>
+                {cancellingId !== a.id && (
+                  <button
+                    onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
+                    className="ml-3 text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+              {cancellingId === a.id && (
+                <div className="mt-2 flex flex-col gap-2">
+                  <select
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="px-3 py-2 rounded-xl text-sm outline-none"
+                    style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+                  >
+                    <option value="">Select a reason</option>
+                    {CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  {cancelError && <p className="text-xs" style={{ color: "#E07A5F" }}>{cancelError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => submitCancel(a.id)}
+                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      style={{ background: colors.hairline, color: "#FFFFFF" }}
+                    >
+                      Confirm cancel
+                    </button>
+                    <button
+                      onClick={() => setCancellingId(null)}
+                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                    >
+                      Keep booking
+                    </button>
+                  </div>
+                </div>
+              )}
           ))}
         </div>
       </div>
