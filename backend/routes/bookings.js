@@ -58,11 +58,20 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 // PATCH /bookings/:id/cancel
-const CANCEL_REASONS = [
+const OWNER_CANCEL_REASONS = [
   "Client no-show",
   "Owner unavailable",
   "Schedule conflict",
   "Emergency",
+  "Other",
+];
+
+const CUSTOMER_CANCEL_REASONS = [
+  "Schedule conflict",
+  "Found another appointment",
+  "No longer needed",
+  "Booked by mistake",
+  "Change of plans",
   "Other",
 ];
 
@@ -84,9 +93,6 @@ function parseAppointmentDateTime(booking) {
 
 router.patch("/:id/cancel", requireAuth, async (req, res) => {
   const { reason, note } = req.body;
-  if (!reason || !CANCEL_REASONS.includes(reason)) {
-    return res.status(400).json({ error: `reason is required and must be one of: ${CANCEL_REASONS.join(", ")}` });
-  }
   try {
     const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
     const booking = bookingRows[0];
@@ -98,6 +104,11 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
     const isCustomer = booking.customer_id === req.user.id;
     const isOwner = salon && salon.owner_id === req.user.id;
     if (!isCustomer && !isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    const allowedReasons = isOwner ? OWNER_CANCEL_REASONS : CUSTOMER_CANCEL_REASONS;
+    if (!reason || !allowedReasons.includes(reason)) {
+      return res.status(400).json({ error: `reason is required and must be one of: ${allowedReasons.join(", ")}` });
+    }
 
     if (booking.status !== "pending" && booking.status !== "confirmed") {
       return res.status(400).json({ error: "This booking can no longer be cancelled." });
