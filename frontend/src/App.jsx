@@ -1060,6 +1060,72 @@ function MediaGallery({ salonId }) {
   );
 }
 
+function SwipeToComplete({ onComplete }) {
+  const trackRef = useRef(null);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [done, setDone] = useState(false);
+  const startXRef = useRef(0);
+  const trackWidthRef = useRef(0);
+  const handleSize = 36;
+
+  function handlePointerDown(e) {
+    if (done) return;
+    e.target.setPointerCapture?.(e.pointerId);
+    setDragging(true);
+    trackWidthRef.current = trackRef.current.offsetWidth;
+    startXRef.current = e.clientX - dragX;
+  }
+  function handlePointerMove(e) {
+    if (!dragging) return;
+    const maxX = trackWidthRef.current - handleSize;
+    let next = e.clientX - startXRef.current;
+    next = Math.max(0, Math.min(next, maxX));
+    setDragX(next);
+  }
+  function handlePointerUp() {
+    if (!dragging) return;
+    setDragging(false);
+    const maxX = trackWidthRef.current - handleSize;
+    if (maxX > 0 && dragX >= maxX * 0.8) {
+      setDragX(maxX);
+      setDone(true);
+      onComplete();
+    } else {
+      setDragX(0);
+    }
+  }
+
+  return (
+    <div
+      ref={trackRef}
+      className="relative rounded-full overflow-hidden select-none"
+      style={{ width: 160, height: 36, background: colors.panelLight, border: `2px solid ${colors.hairline}`, touchAction: "none" }}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
+      <div
+        className="absolute inset-y-0 left-0 rounded-full"
+        style={{ width: dragX + handleSize, background: colors.green, opacity: 0.35, transition: dragging ? "none" : "width 0.2s ease" }}
+      />
+      <div
+        className="absolute inset-0 flex items-center justify-center text-xs font-semibold pointer-events-none"
+        style={{ color: colors.creamDim }}
+      >
+        {done ? "Completed" : "Slide to complete"}
+      </div>
+      <div
+        onPointerDown={handlePointerDown}
+        className="absolute top-0 flex items-center justify-center rounded-full cursor-pointer"
+        style={{ left: dragX, width: handleSize, height: handleSize, background: colors.green, transition: dragging ? "none" : "left 0.2s ease" }}
+      >
+        <CheckCircle2 size={18} color="#FFFFFF" />
+      </div>
+    </div>
+  );
+}
+
 function OwnerDashboard({ token }) {
   const [salon, setSalon] = useState(null);
   const [data, setData] = useState(null);
@@ -1069,6 +1135,7 @@ function OwnerDashboard({ token }) {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState(null);
+  const [completeError, setCompleteError] = useState(null);
 
   async function submitCancel(bookingId) {
     if (!cancelReason) {
@@ -1095,6 +1162,24 @@ function OwnerDashboard({ token }) {
       setRefreshKey((k) => k + 1);
     } catch (e) {
       setCancelError("Network error. Please try again.");
+    }
+  }
+
+  async function submitComplete(bookingId) {
+    setCompleteError(null);
+    try {
+      const res = await fetch(`${API_BASE}/bookings/${bookingId}/complete`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCompleteError(err.error || "Failed to mark as completed.");
+        return;
+      }
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setCompleteError("Network error. Please try again.");
     }
   }
   const [connecting, setConnecting] = useState(false);
@@ -1318,6 +1403,7 @@ function OwnerDashboard({ token }) {
                     Cancel
                   </button>
                 )}
+                <SwipeToComplete onComplete={() => submitComplete(a.id)} />
               
               {cancellingId === a.id && (
                 <div className="mt-2 flex flex-col gap-2">

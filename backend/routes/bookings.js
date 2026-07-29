@@ -137,4 +137,38 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
   }
 });
 
+
+router.patch("/:id/complete", requireAuth, async (req, res) => {
+  try {
+    const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+
+    const isOwner = salon && salon.owner_id === req.user.id;
+    if (!isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    if (booking.status !== "confirmed") {
+      return res.status(400).json({ error: "Only confirmed bookings can be marked as completed." });
+    }
+
+    const appointmentTime = parseAppointmentDateTime(booking);
+    if (Date.now() < appointmentTime.getTime()) {
+      return res.status(400).json({ error: "This appointment hasn't happened yet." });
+    }
+
+    await db.query(
+      "UPDATE bookings SET status = 'completed' WHERE id = $1",
+      [booking.id]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't mark booking as completed." });
+  }
+});
+
 module.exports = router;
