@@ -1126,6 +1126,74 @@ function SwipeToComplete({ onComplete }) {
   );
 }
 
+function CompletedAppointmentsView({ token, onBack }) {
+  const [completed, setCompleted] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const mine = await apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } });
+        const salon = mine[0];
+        if (!salon) {
+          setError("No salon found.");
+          setLoading(false);
+          return;
+        }
+        const data = await apiFetch(`/salons/${salon.id}/completed-bookings`, { headers: { Authorization: `Bearer ${token}` } });
+        setCompleted(data.completed);
+      } catch (e) {
+        setError("Couldn't load completed appointments.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  return (
+    <div className="pb-8">
+      <Header title="Completed Appointments" onBack={onBack} />
+      <div className="px-4">
+        {loading && (
+          <div className="flex justify-center pt-8">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && (
+          <p className="text-sm text-center mt-4" style={{ color: colors.creamDim }}>{error}</p>
+        )}
+        {!loading && !error && completed.length === 0 && (
+          <p className="text-sm py-4" style={{ color: colors.creamDim }}>
+            No completed appointments yet.
+          </p>
+        )}
+        <div className="flex flex-col gap-2 mt-2">
+          {completed.map((b) => (
+            <div
+              key={b.id}
+              className="flex items-center justify-between px-4 py-3 rounded-xl"
+              style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full" style={{ background: colors.panelLight }}>
+                  <Users size={14} color={colors.hairline} />
+                </div>
+                <div>
+                  <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
+                  <p className="text-xs" style={{ color: colors.creamDim }}>{b.customer_name}</p>
+                </div>
+              </div>
+              <span className="text-xs" style={{ color: colors.creamDim }}>{b.time_slot}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OwnerDashboard({ token }) {
   const [salon, setSalon] = useState(null);
   const [data, setData] = useState(null);
@@ -1547,6 +1615,11 @@ function MyBookingsView({ token, onBack }) {
                   {b.cancel_reason ? ` — ${b.cancel_reason}` : ""}
                 </p>
               )}
+                {b.status === "completed" && (
+                  <p className="text-xs mt-2" style={{ color: colors.green }}>
+                    Completed
+                  </p>
+                )}
 
               {(b.status === "pending" || b.status === "confirmed") && cancellingId !== b.id && (
                 <button
@@ -1943,6 +2016,7 @@ function OnboardingView({ onDone }) {
 
 export default function App() {
   const [view, setView] = useState("home");
+  const [ownerPage, setOwnerPage] = useState("dashboard");
   const [role, setRole] = useState("customer");
   const [category, setCategory] = useState(null);
   const [selectedSalon, setSelectedSalon] = useState(null);
@@ -2141,6 +2215,14 @@ export default function App() {
                   >
                     <Settings size={16} /> Settings
                   </button>
+                {role === "owner" && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setOwnerPage("completed"); }}
+                    className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
+                  >
+                    <CheckCircle size={16} /> Completed Appointments
+                  </button>
+                )}
                   <button
                     onClick={() => {
                       setMenuOpen(false);
@@ -2174,7 +2256,11 @@ export default function App() {
         )}
         {role === "owner" ? (
           ownerAuth ? (
-            <OwnerDashboard token={ownerAuth.token} />
+            ownerPage === "completed" ? (
+              <CompletedAppointmentsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+            ) : (
+              <OwnerDashboard token={ownerAuth.token} />
+            )
           ) : (
             <AuthGate
               role="owner"
