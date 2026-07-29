@@ -188,6 +188,8 @@ router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res)
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load dashboard." });
+  }
+});
 
 // GET /salons/:id/completed-bookings (owner's completed appointment history)
 router.get("/:id/completed-bookings", requireAuth, requireRole("owner"), async (req, res) => {
@@ -210,8 +212,6 @@ router.get("/:id/completed-bookings", requireAuth, requireRole("owner"), async (
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load completed appointments." });
-  }
-});
   }
 });
 
