@@ -1374,7 +1374,6 @@ function MyBookingsView({ token, onBack }) {
     if (!token) return;
     setLoading(true);
     apiFetch("/bookings/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.json())
       .then((rows) => {
         setBookings(rows);
         setError(null);
