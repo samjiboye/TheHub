@@ -1323,7 +1323,7 @@ function OwnerDashboard({ token }) {
                     style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
                   >
                     <option value="">Select a reason</option>
-                    {CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                    {OWNER_CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                   {cancelError && <p className="text-xs" style={{ color: "#E07A5F" }}>{cancelError}</p>}
                   <div className="flex gap-2">
@@ -1351,6 +1351,14 @@ function OwnerDashboard({ token }) {
     </div>
   );
 }
+
+const OWNER_CANCEL_REASONS = [
+  "Client no-show",
+  "Owner unavailable",
+  "Schedule conflict",
+  "Emergency",
+  "Other",
+];
 
 const CUSTOMER_CANCEL_REASONS = [
   "Schedule conflict",
