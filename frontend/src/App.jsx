@@ -2220,7 +2220,7 @@ export default function App() {
                     onClick={() => { setMenuOpen(false); setOwnerPage("completed"); }}
                     className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
                   >
-                    <CheckCircle size={16} /> Completed Appointments
+                    <CheckCircle2 size={16} /> Completed Appointments
                   </button>
                 )}
                   <button
