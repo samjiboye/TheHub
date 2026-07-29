@@ -48,11 +48,18 @@ router.get("/", async (req, res) => {
           [s.id]
         );
         const reviewStats = statRows[0];
+
+      const { rows: bookingStatRows } = await db.query(
+        "SELECT COUNT(*) AS count FROM bookings WHERE salon_id = $1 AND status = 'completed'",
+        [s.id]
+      );
+      const completedCount = Number(bookingStatRows[0].count);
         return {
           ...s,
           services,
           rating: reviewStats.avg ? Math.round(Number(reviewStats.avg) * 10) / 10 : null,
           reviewCount: Number(reviewStats.count),
+        completedCount,
           distance: lat && lng ? Math.round(distanceMiles(+lat, +lng, s.lat, s.lng) * 10) / 10 : null,
         };
       })

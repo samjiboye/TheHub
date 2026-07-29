@@ -321,6 +321,11 @@ function ProfileView({ salon, onBack, onBook }) {
           </div>
         </div>
 
+        {salon.completedCount > 0 && (
+          <p className="text-sm mt-1" style={{ color: colors.creamDim }}>
+            {salon.completedCount} clients served
+          </p>
+        )}
         {salon.distance != null && (
           <div className="flex items-center gap-2 mt-3 text-base" style={{ color: colors.creamDim }}>
             <MapPin size={18} />{salon.distance} mi away
