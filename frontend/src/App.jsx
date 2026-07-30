@@ -1528,6 +1528,191 @@ const CUSTOMER_CANCEL_REASONS = [
   "Other",
 ];
 
+function RatingPopup({ booking, token, onDone, onLater }) {
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.5)", zIndex: 50 }}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl p-5"
+        style={{ background: colors.bg, border: `2px solid ${colors.hairline}` }}
+      >
+        <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.2rem", fontWeight: 700 }}>
+          How was your visit?
+        </h3>
+        <p className="text-sm mt-1" style={{ color: colors.creamDim }}>
+          {booking.salon_name} \u2014 {booking.service_name}
+        </p>
+        <div className="mt-4">
+          <StarSlideRating booking={booking} token={token} onDone={onDone} />
+        </div>
+        <button
+          onClick={onLater}
+          className="mt-4 text-xs underline"
+          style={{ color: colors.creamDim }}
+        >
+          Later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+function StarSlideRating({ booking, token, onDone }) {
+  const [stars, setStars] = useState(5);
+  const [dragging, setDragging] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [phase, setPhase] = useState("slide"); // slide | comment | done
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const trackRef = useRef(null);
+  const trackWidthRef = useRef(0);
+  const handleSize = 28;
+  const numStars = 5;
+
+  function xFromStars(s, maxX) {
+    if (maxX <= 0) return 0;
+    return ((s - 1) / (numStars - 1)) * maxX;
+  }
+
+  function starsFromX(x, maxX) {
+    if (maxX <= 0) return 5;
+    const ratio = Math.max(0, Math.min(1, x / maxX));
+    return Math.max(1, Math.min(5, Math.round(ratio * (numStars - 1)) + 1));
+  }
+
+  useEffect(() => {
+    if (trackRef.current) {
+      trackWidthRef.current = trackRef.current.offsetWidth;
+      setDragX(xFromStars(5, trackWidthRef.current - handleSize));
+    }
+  }, []);
+
+  function handlePointerDown() {
+    setDragging(true);
+  }
+
+  function handlePointerMove(e) {
+    if (!dragging) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - handleSize / 2;
+    const maxX = trackWidthRef.current - handleSize;
+    const clampedX = Math.max(0, Math.min(maxX, x));
+    setDragX(clampedX);
+    setStars(starsFromX(clampedX, maxX));
+  }
+
+  function handlePointerUp() {
+    if (!dragging) return;
+    setDragging(false);
+    const maxX = trackWidthRef.current - handleSize;
+    setDragX(xFromStars(stars, maxX));
+    setPhase("comment");
+  }
+
+  async function submitRating(finalComment) {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiFetch("/reviews", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          salon_id: booking.salon_id,
+          booking_id: booking.id,
+          rating: stars,
+          comment: finalComment || undefined,
+        }),
+      });
+      setPhase("done");
+      onDone && onDone(stars);
+    } catch (e) {
+      setError("Couldn't save that rating. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (phase === "done") {
+    return (
+      <p className="text-xs mt-2" style={{ color: colors.green }}>
+        Thanks for rating {booking.salon_name}! You gave {stars} star{stars !== 1 ? "s" : ""}.
+      </p>
+    );
+  }
+
+  if (phase === "comment") {
+    return (
+      <div className="mt-2">
+        <p className="text-xs mb-1" style={{ color: colors.creamDim }}>
+          You rated {booking.salon_name} {stars} star{stars !== 1 ? "s" : ""}. Add a comment? (optional)
+        </p>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          className="w-full text-xs p-2 rounded-lg"
+          style={{ border: `2px solid ${colors.hairline}` }}
+          rows={2}
+          placeholder="Write a review..."
+        />
+        {error && (
+          <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{error}</p>
+        )}
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => submitRating(comment)}
+            disabled={submitting}
+            className="text-xs font-semibold px-3 py-1 rounded-full"
+            style={{ background: colors.green, color: "#FFFFFF" }}
+          >
+            Submit
+          </button>
+          <button
+            onClick={() => submitRating("")}
+            disabled={submitting}
+            className="text-xs font-semibold px-3 py-1 rounded-full"
+            style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+          >
+            Skip
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <p className="text-xs mb-1" style={{ color: colors.creamDim }}>
+        Rate {booking.salon_name}: {"★".repeat(stars)}{"☆".repeat(5 - stars)}
+      </p>
+      <div
+        ref={trackRef}
+        className="relative rounded-full overflow-hidden select-none"
+        style={{ width: 160, height: 36, background: colors.panelLight, border: `2px solid ${colors.hairline}`, touchAction: "none" }}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      >
+        <div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{ width: dragX + handleSize, background: colors.green, opacity: 0.35, transition: dragging ? "none" : "width 0.2s ease" }}
+        />
+        <div
+          onPointerDown={handlePointerDown}
+          className="absolute top-0 flex items-center justify-center rounded-full cursor-pointer"
+          style={{ left: dragX, width: handleSize, height: handleSize, background: colors.green, transition: dragging ? "none" : "left 0.2s ease" }}
+        >
+          <Star size={16} color="#FFFFFF" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function MyBookingsView({ token, onBack }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1615,10 +1800,17 @@ function MyBookingsView({ token, onBack }) {
                   {b.cancel_reason ? ` — ${b.cancel_reason}` : ""}
                 </p>
               )}
-                {b.status === "completed" && (
+                {b.status === "completed" && b.already_rated && (
                   <p className="text-xs mt-2" style={{ color: colors.green }}>
-                    Completed
+                    Completed — you rated it {"★".repeat(b.given_rating)}{"☆".repeat(5 - b.given_rating)}
                   </p>
+                )}
+                {b.status === "completed" && !b.already_rated && (
+                  <StarSlideRating
+                    booking={b}
+                    token={token}
+                    onDone={() => setBookings((prev) => prev.map((x) => (x.id === b.id ? { ...x, already_rated: true } : x)))}
+                  />
                 )}
 
               {(b.status === "pending" || b.status === "confirmed") && cancellingId !== b.id && (
@@ -2031,6 +2223,16 @@ export default function App() {
       return null;
     }
   }); // { token, user }
+  const [unratedQueue, setUnratedQueue] = useState([]);
+  const [ratingPopupDismissed, setRatingPopupDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!customerAuth?.token) return;
+    apiFetch("/reviews/unrated", { headers: { Authorization: `Bearer ${customerAuth.token}` } })
+      .then((data) => setUnratedQueue(data.unrated || []))
+      .catch(() => {});
+  }, [customerAuth?.token]);
+
   const [ownerAuth, setOwnerAuth] = useState(() => {
     try {
       const saved = localStorage.getItem("ownerAuth");
@@ -2345,6 +2547,14 @@ export default function App() {
           </button>
         )}
         <Concierge open={chatOpen} onClose={() => setChatOpen(false)} />
+        {customerAuth && unratedQueue.length > 0 && !ratingPopupDismissed && (
+          <RatingPopup
+            booking={unratedQueue[0]}
+            token={customerAuth.token}
+            onDone={() => setUnratedQueue((prev) => prev.slice(1))}
+            onLater={() => setRatingPopupDismissed(true)}
+          />
+        )}
       </div>
     </div>
   );
