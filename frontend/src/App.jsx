@@ -313,7 +313,10 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
         {CATEGORIES.map((c) => (
           <button
             key={c.name}
-            onClick={() => setCategory(category === c.name ? null : c.name)}
+            onClick={(e) => {
+              setCategory(category === c.name ? null : c.name);
+              e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+            }}
             className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap tap-glass"
             style={{
               background: category === c.name ? colors.gold : colors.panelLight,
@@ -2621,21 +2624,51 @@ export default function App() {
         .tap-glass {
           position: relative;
           overflow: hidden;
-          backdrop-filter: blur(10px) saturate(160%);
-          -webkit-backdrop-filter: blur(10px) saturate(160%);
+          isolation: isolate;
+          backdrop-filter: blur(6px) saturate(180%);
+          -webkit-backdrop-filter: blur(6px) saturate(180%);
           transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 220ms ease;
-          box-shadow: 0 4px 14px rgba(36,27,20,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.06);
+          box-shadow:
+            0 6px 16px rgba(36,27,20,0.16),
+            inset 0 1px 0 rgba(255,255,255,0.85),
+            inset 0 -3px 6px rgba(0,0,0,0.10),
+            inset 0 0 0 1px rgba(255,255,255,0.35);
         }
         .tap-glass::before {
           content: "";
           position: absolute;
-          inset: 0;
-          background: linear-gradient(160deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 100%);
+          left: 8%;
+          right: 8%;
+          top: 6%;
+          height: 42%;
+          border-radius: 999px;
+          background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.25) 60%, rgba(255,255,255,0) 100%);
+          filter: blur(0.5px);
           pointer-events: none;
+          z-index: 1;
+        }
+        .tap-glass::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          box-shadow: inset 0 0 0 1px rgba(120,200,255,0.18), inset 0 0 6px rgba(255,140,180,0.12);
+          pointer-events: none;
+          z-index: 1;
+        }
+        .tap-glass > * {
+          position: relative;
+          z-index: 2;
         }
         .tap-glass:active {
           transform: scale(0.86);
-          box-shadow: 0 1px 4px rgba(36,27,20,0.12), inset 0 1px 3px rgba(0,0,0,0.15);
+          box-shadow:
+            0 1px 4px rgba(36,27,20,0.14),
+            inset 0 1px 3px rgba(0,0,0,0.2),
+            inset 0 0 0 1px rgba(255,255,255,0.5);
+        }
+        .tap-glass:active::before {
+          opacity: 0.5;
         }
       `}</style>
       <div className="w-full max-w-md relative" style={{ minHeight: "100vh" }}>
