@@ -80,4 +80,58 @@ router.delete("/:id/media/:mediaId", requireAuth, requireRole("owner"), async (r
   }
 });
 
+// POST /salons/:id/profile-picture - owner uploads/replaces the salon's profile picture
+router.post("/:id/profile-picture", requireAuth, requireRole("owner"), upload.single("file"), async (req, res) => {
+  const salonId = req.params.id;
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+  try {
+    const { rows } = await db.query("SELECT * FROM salons WHERE id = $1", [salonId]);
+    const salon = rows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const result = await uploadToCloudinary(req.file.buffer, "image");
+
+    if (salon.profile_image_public_id) {
+      await cloudinary.uploader.destroy(salon.profile_image_public_id, { resource_type: "image" }).catch(() => {});
+    }
+
+    const updateResult = await db.query(
+      "UPDATE salons SET profile_image_url = $1, profile_image_public_id = $2 WHERE id = $3 RETURNING *",
+      [result.secure_url, result.public_id, salonId]
+    );
+
+    res.status(201).json(updateResult.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't upload profile picture." });
+  }
+});
+
+// DELETE /salons/:id/profile-picture - owner removes the salon's profile picture
+router.delete("/:id/profile-picture", requireAuth, requireRole("owner"), async (req, res) => {
+  const salonId = req.params.id;
+  try {
+    const { rows } = await db.query("SELECT * FROM salons WHERE id = $1", [salonId]);
+    const salon = rows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    if (salon.profile_image_public_id) {
+      await cloudinary.uploader.destroy(salon.profile_image_public_id, { resource_type: "image" }).catch(() => {});
+    }
+
+    const updateResult = await db.query(
+      "UPDATE salons SET profile_image_url = NULL, profile_image_public_id = NULL WHERE id = $1 RETURNING *",
+      [salonId]
+    );
+
+    res.json(updateResult.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't remove profile picture." });
+  }
+});
+
 module.exports = router;

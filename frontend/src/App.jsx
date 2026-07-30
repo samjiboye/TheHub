@@ -4,6 +4,7 @@ import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
+  UserCircle,
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
@@ -136,13 +137,17 @@ const TIME_SLOTS = ["9:00 AM", "10:30 AM", "12:00 PM", "1:30 PM", "3:00 PM", "4:
 const BOOKING_FEE = 2.5;
 const COMMISSION_RATE = 0.15;
 
-function SalonPhoto({ hue, icon: Icon, size = "h-40" }) {
+function SalonPhoto({ hue, icon: Icon, size = "h-40", imageUrl }) {
   return (
     <div
       className={`${size} w-full rounded-t-2xl relative overflow-hidden flex items-center justify-center`}
       style={{ background: colors.panelLight, border: `3px solid ${colors.hairline}`, borderBottom: "none" }}
     >
-      <Icon size={64} strokeWidth={1.6} color={colors.hairline} />
+      {imageUrl ? (
+        <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <Icon size={64} strokeWidth={1.6} color={colors.hairline} />
+      )}
     </div>
   );
 }
@@ -169,7 +174,7 @@ function SalonCard({ salon, onClick }) {
       className="text-left rounded-3xl overflow-hidden w-full transition-transform active:scale-[0.97]"
       style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}
     >
-      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-32" />
+      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-32" imageUrl={salon.profile_image_url} />
       <div className="relative px-4 pt-5 pb-4">
         <TicketNotch top />
         <div className="flex items-center justify-between gap-2">
@@ -310,7 +315,7 @@ function ProfileView({ salon, onBack, onBook }) {
   return (
     <div className="pb-8">
       <Header title={salon.name} onBack={onBack} />
-      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-44" />
+      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-44" imageUrl={salon.profile_image_url} />
       <div className="px-4 pt-5">
         <div className="flex items-center justify-between">
           <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.7rem", fontWeight: 700 }}>{salon.name}</h2>
@@ -1576,6 +1581,116 @@ function TierStars({ fiveStarCount = 0, size = 20 }) {
 }
 
 
+function OwnerProfileView({ token, onBack }) {
+  const [salon, setSalon] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const loadSalon = () => {
+    setLoading(true);
+    apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => setSalon(data[0] || null))
+      .catch(() => setError("Couldn't load your profile."))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    loadSalon();
+  }, [token]);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !salon) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API_BASE}/salons/${salon.id}/profile-picture`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setSalon((prev) => ({ ...prev, profile_image_url: data.profile_image_url }));
+    } catch (err) {
+      setError(err.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!salon) return;
+    try {
+      await apiFetch(`/salons/${salon.id}/profile-picture`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSalon((prev) => ({ ...prev, profile_image_url: null }));
+    } catch (err) {
+      setError("Couldn't remove photo.");
+    }
+  };
+
+  return (
+    <div className="pb-8">
+      <Header title="My Profile" onBack={onBack} />
+      <div className="px-4">
+        {loading && (
+          <div className="flex justify-center pt-8">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && (
+          <p className="text-sm mt-4" style={{ color: "#E07A5F" }}>{error}</p>
+        )}
+        {!loading && salon && (
+          <div className="mt-4 flex flex-col items-center">
+            <div
+              className="w-32 h-32 rounded-full overflow-hidden flex items-center justify-center mb-4"
+              style={{ background: colors.panelLight, border: `3px solid ${colors.hairline}` }}
+            >
+              {salon.profile_image_url ? (
+                <img src={salon.profile_image_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle size={64} strokeWidth={1.6} color={colors.hairline} />
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              style={{ display: "none" }}
+            />
+            <button
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold"
+              style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+            >
+              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {uploading ? "Uploading..." : salon.profile_image_url ? "Change photo" : "Add photo"}
+            </button>
+            {salon.profile_image_url && (
+              <button onClick={handleRemove} className="mt-3 text-xs" style={{ color: "#E07A5F" }}>
+                Remove photo
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function RatingsReviewsView({ token, onBack }) {
   const [stats, setStats] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -2525,6 +2640,14 @@ export default function App() {
                 <Star size={16} /> Ratings &amp; Reviews
               </button>
             )}
+            {role === "owner" && (
+              <button
+                onClick={() => { setMenuOpen(false); setOwnerPage("profile"); }}
+                className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
+              >
+                <UserCircle size={16} /> My Profile
+              </button>
+            )}
                   <button
                     onClick={() => {
                       setMenuOpen(false);
@@ -2562,6 +2685,8 @@ export default function App() {
               <CompletedAppointmentsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : ownerPage === "ratings" ? (
               <RatingsReviewsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+            ) : ownerPage === "profile" ? (
+              <OwnerProfileView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : (
               <OwnerDashboard token={ownerAuth.token} />
             )
