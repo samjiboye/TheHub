@@ -177,8 +177,7 @@ function SalonCard({ salon, onClick }) {
             {salon.name}
           </h3>
           <div className="flex items-center gap-1 shrink-0">
-            <Star size={20} fill={colors.gold} color={colors.gold} />
-            <span className="text-lg font-bold" style={{ color: colors.cream }}>{salon.rating ?? "New"}</span>
+            <TierStars fiveStarCount={salon.fiveStarCount} size={16} />
           </div>
         </div>
         <div className="flex items-center justify-between mt-4">
@@ -316,8 +315,7 @@ function ProfileView({ salon, onBack, onBook }) {
         <div className="flex items-center justify-between">
           <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.7rem", fontWeight: 700 }}>{salon.name}</h2>
           <div className="flex items-center gap-1">
-            <Star size={22} fill={colors.gold} color={colors.gold} />
-            <span className="text-xl font-bold" style={{ color: colors.cream }}>{salon.rating ?? "New"}</span>
+            <TierStars fiveStarCount={salon.fiveStarCount} size={18} />
           </div>
         </div>
 
@@ -1560,6 +1558,174 @@ function RatingPopup({ booking, token, onDone, onLater }) {
 }
 
 
+function TierStars({ fiveStarCount = 0, size = 20 }) {
+  const tiers = [20, 50, 100, 200, 400];
+  const filled = tiers.filter((t) => fiveStarCount >= t).length;
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          size={size}
+          fill={i <= filled ? colors.gold : "none"}
+          color={i <= filled ? colors.gold : colors.hairline}
+        />
+      ))}
+    </div>
+  );
+}
+
+
+function RatingsReviewsView({ token, onBack }) {
+  const [stats, setStats] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const mine = await apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } });
+        const salon = mine[0];
+        if (!salon) {
+          setError("No salon found.");
+          setLoading(false);
+          return;
+        }
+        const data = await apiFetch(`/salons/${salon.id}/reviews`, { headers: { Authorization: `Bearer ${token}` } });
+        setStats({ rating: data.rating, reviewCount: data.reviewCount, fiveStarCount: data.fiveStarCount });
+        setReviews(data.reviews);
+      } catch (e) {
+        setError("Couldn't load ratings.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  return (
+    <div className="pb-8">
+      <Header title="Ratings & Reviews" onBack={onBack} />
+      <div className="px-4">
+        {loading && (
+          <div className="flex justify-center pt-8">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && (
+          <p className="text-sm mt-4" style={{ color: "#E07A5F" }}>{error}</p>
+        )}
+        {stats && (
+          <div className="mt-4 rounded-2xl p-4" style={{ border: `2px solid ${colors.hairline}` }}>
+            <TierStars fiveStarCount={stats.fiveStarCount} size={26} />
+            <p className="text-sm mt-2" style={{ color: colors.creamDim }}>
+              {stats.fiveStarCount} five-star rating{stats.fiveStarCount !== 1 ? "s" : ""} received
+            </p>
+            <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
+              Your real average: {stats.rating ?? "No ratings yet"} {stats.rating ? `(${stats.reviewCount} review${stats.reviewCount !== 1 ? "s" : ""})` : ""}
+            </p>
+          </div>
+        )}
+        {!loading && !error && reviews.length === 0 && (
+          <p className="text-sm mt-6" style={{ color: colors.creamDim }}>No reviews yet.</p>
+        )}
+        <div className="mt-4 flex flex-col gap-3">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-xl p-3" style={{ border: `2px solid ${colors.hairline}` }}>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold" style={{ color: colors.cream }}>{r.customer_name}</span>
+                <span className="text-xs" style={{ color: colors.gold }}>
+                  {"\u2605".repeat(r.rating)}{"\u2606".repeat(5 - r.rating)}
+                </span>
+              </div>
+              {r.comment && (
+                <p className="text-sm mt-1" style={{ color: colors.creamDim }}>{r.comment}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function RatingsReviewsView({ token, onBack }) {
+  const [stats, setStats] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const mine = await apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } });
+        const salon = mine[0];
+        if (!salon) {
+          setError("No salon found.");
+          setLoading(false);
+          return;
+        }
+        const data = await apiFetch(`/salons/${salon.id}/reviews`, { headers: { Authorization: `Bearer ${token}` } });
+        setStats({ rating: data.rating, reviewCount: data.reviewCount, fiveStarCount: data.fiveStarCount });
+        setReviews(data.reviews);
+      } catch (e) {
+        setError("Couldn't load ratings.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  return (
+    <div className="pb-8">
+      <Header title="Ratings & Reviews" onBack={onBack} />
+      <div className="px-4">
+        {loading && (
+          <div className="flex justify-center pt-8">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && (
+          <p className="text-sm mt-4" style={{ color: "#E07A5F" }}>{error}</p>
+        )}
+        {stats && (
+          <div className="mt-4 rounded-2xl p-4" style={{ border: `2px solid ${colors.hairline}` }}>
+            <TierStars fiveStarCount={stats.fiveStarCount} size={26} />
+            <p className="text-sm mt-2" style={{ color: colors.creamDim }}>
+              {stats.fiveStarCount} five-star rating{stats.fiveStarCount !== 1 ? "s" : ""} received
+            </p>
+            <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
+              Your real average: {stats.rating ?? "No ratings yet"} {stats.rating ? `(${stats.reviewCount} review${stats.reviewCount !== 1 ? "s" : ""})` : ""}
+            </p>
+          </div>
+        )}
+        {!loading && !error && reviews.length === 0 && (
+          <p className="text-sm mt-6" style={{ color: colors.creamDim }}>No reviews yet.</p>
+        )}
+        <div className="mt-4 flex flex-col gap-3">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-xl p-3" style={{ border: `2px solid ${colors.hairline}` }}>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold" style={{ color: colors.cream }}>{r.customer_name}</span>
+                <span className="text-xs" style={{ color: colors.gold }}>
+                  {"\u2605".repeat(r.rating)}{"\u2606".repeat(5 - r.rating)}
+                </span>
+              </div>
+              {r.comment && (
+                <p className="text-sm mt-1" style={{ color: colors.creamDim }}>{r.comment}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function StarSlideRating({ booking, token, onDone }) {
   const [stars, setStars] = useState(5);
   const [dragging, setDragging] = useState(false);
@@ -2425,6 +2591,14 @@ export default function App() {
                     <CheckCircle2 size={16} /> Completed Appointments
                   </button>
                 )}
+            {role === "owner" && (
+              <button
+                onClick={() => { setMenuOpen(false); setOwnerPage("ratings"); }}
+                className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
+              >
+                <Star size={16} /> Ratings &amp; Reviews
+              </button>
+            )}
                   <button
                     onClick={() => {
                       setMenuOpen(false);
@@ -2460,6 +2634,8 @@ export default function App() {
           ownerAuth ? (
             ownerPage === "completed" ? (
               <CompletedAppointmentsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+            ) : ownerPage === "ratings" ? (
+              <RatingsReviewsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : (
               <OwnerDashboard token={ownerAuth.token} />
             )
