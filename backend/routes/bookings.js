@@ -42,10 +42,12 @@ router.post("/", requireAuth, async (req, res) => {
 router.get("/me", requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT b.*, s.name AS salon_name, sv.name AS service_name
+      `SELECT b.*, s.name AS salon_name, sv.name AS service_name,
+              (r.id IS NOT NULL) AS already_rated, r.rating AS given_rating
        FROM bookings b
        JOIN salons s ON s.id = b.salon_id
        JOIN services sv ON sv.id = b.service_id
+       LEFT JOIN reviews r ON r.booking_id = b.id
        WHERE b.customer_id = $1
        ORDER BY b.created_at DESC`,
       [req.user.id]

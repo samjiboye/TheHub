@@ -20,4 +20,38 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
+// GET /reviews/booking/:bookingId (check if a booking already has a review)
+router.get("/booking/:bookingId", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT * FROM reviews WHERE booking_id = $1",
+      [req.params.bookingId]
+    );
+    res.json({ review: rows[0] || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't check review status." });
+  }
+});
+
+// GET /reviews/unrated (customer's completed bookings that have no review yet)
+router.get("/unrated", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT b.*, s.name AS salon_name, sv.name AS service_name
+       FROM bookings b
+       JOIN salons s ON s.id = b.salon_id
+       JOIN services sv ON sv.id = b.service_id
+       LEFT JOIN reviews r ON r.booking_id = b.id
+       WHERE b.customer_id = $1 AND b.status = 'completed' AND r.id IS NULL
+       ORDER BY b.created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ unrated: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load unrated bookings." });
+  }
+});
+
 module.exports = router;
