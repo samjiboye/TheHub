@@ -65,6 +65,19 @@ const CATEGORIES = [
   { name: "Spa", icon: Flower2 },
 ];
 
+// Category-specific hero background treatments — used behind the search screen
+// and salon profile pages so each service type feels distinct. No external
+// images are loaded here (kept to CSS gradients + a large watermark icon) so
+// there's nothing to break if network access to an image host is unavailable.
+const CATEGORY_THEMES = {
+  Barbing: { gradient: "linear-gradient(160deg, #1B140F 0%, #4A2E1A 50%, #C97A34 100%)" },
+  Hairdressing: { gradient: "linear-gradient(160deg, #241019 0%, #5C2740 50%, #D98CA6 100%)" },
+  Nails: { gradient: "linear-gradient(160deg, #241214 0%, #6B333B 50%, #E7A9A0 100%)" },
+  Makeup: { gradient: "linear-gradient(160deg, #180E20 0%, #451D54 50%, #C9A0DC 100%)" },
+  Spa: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
+};
+const NEUTRAL_HERO_GRADIENT = "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)";
+
 const SALONS = [
   {
     id: 1, name: "Cutting Room", category: "Barbing", rating: 4.8, reviews: 212,
@@ -240,12 +253,25 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
     .sort((a, b) => (a.distance ?? 999) - (b.distance ?? 999));
 
   const citiesForState = (NIGERIA_LOCATIONS.find((s) => s.state === searchState)?.cities) || [];
+  const heroTheme = category ? CATEGORY_THEMES[category] : null;
+  const HeroIcon = category ? CATEGORIES.find((c) => c.name === category)?.icon : null;
 
   return (
-    <div className="px-4 pt-2 pb-10">
+    <div
+      className="px-4 pt-2 pb-10 relative overflow-hidden rounded-b-[2.5rem] transition-[background] duration-500"
+      style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
+    >
+      {HeroIcon && (
+        <HeroIcon
+          size={220}
+          strokeWidth={1}
+          color="#FFFFFF"
+          style={{ position: "absolute", right: -36, top: 4, opacity: 0.14, pointerEvents: "none" }}
+        />
+      )}
       <h2
-        style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.9rem", fontWeight: 700 }}
-        className="mt-2 mb-4 text-center"
+        style={{ fontFamily: FONT_DISPLAY, color: heroTheme ? "#FFFFFF" : colors.cream, fontSize: "1.9rem", fontWeight: 700 }}
+        className="mt-2 mb-4 text-center relative transition-colors duration-500"
       >
         What do you want today?
       </h2>
@@ -312,10 +338,22 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
 }
 function ProfileView({ salon, onBack, onBook }) {
   const cat = CATEGORIES.find((c) => c.name === salon.category);
+  const heroTheme = CATEGORY_THEMES[salon.category] || null;
   return (
     <div className="pb-8">
       <Header title={salon.name} onBack={onBack} />
-      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-44" imageUrl={salon.profile_image_url} />
+      <div
+        className="relative overflow-hidden pt-3 pb-1 transition-[background] duration-500"
+        style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
+      >
+        <cat.icon
+          size={200}
+          strokeWidth={1}
+          color="#FFFFFF"
+          style={{ position: "absolute", right: -30, top: 6, opacity: 0.14, pointerEvents: "none" }}
+        />
+        <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-44" imageUrl={salon.profile_image_url} />
+      </div>
       <div className="px-4 pt-5">
         <div className="flex items-center justify-between">
           <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.7rem", fontWeight: 700 }}>{salon.name}</h2>
