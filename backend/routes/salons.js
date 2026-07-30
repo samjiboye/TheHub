@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
       salons.map(async (s) => {
         const { rows: services } = await db.query("SELECT * FROM services WHERE salon_id = $1", [s.id]);
         const { rows: statRows } = await db.query(
-          "SELECT COUNT(*) AS count, AVG(rating) AS avg FROM reviews WHERE salon_id = $1",
+          "SELECT COUNT(*) AS count, AVG(rating) AS avg, COUNT(*) FILTER (WHERE rating = 5) AS five_star_count FROM reviews WHERE salon_id = $1",
           [s.id]
         );
         const reviewStats = statRows[0];
@@ -59,6 +59,7 @@ router.get("/", async (req, res) => {
           services,
           rating: reviewStats.avg ? Math.round(Number(reviewStats.avg) * 10) / 10 : null,
           reviewCount: Number(reviewStats.count),
+          fiveStarCount: Number(reviewStats.five_star_count),
         completedCount,
           distance: lat && lng ? Math.round(distanceMiles(+lat, +lng, s.lat, s.lng) * 10) / 10 : null,
         };
@@ -97,7 +98,19 @@ router.get("/:id", async (req, res) => {
        WHERE salon_id = $1 ORDER BY r.created_at DESC`,
       [salon.id]
     );
-    res.json({ ...salon, services, reviews });
+    const { rows: statRows } = await db.query(
+      "SELECT COUNT(*) AS count, AVG(rating) AS avg, COUNT(*) FILTER (WHERE rating = 5) AS five_star_count FROM reviews WHERE salon_id = $1",
+      [salon.id]
+    );
+    const reviewStats = statRows[0];
+    res.json({
+      ...salon,
+      services,
+      reviews,
+      rating: reviewStats.avg ? Math.round(Number(reviewStats.avg) * 10) / 10 : null,
+      reviewCount: Number(reviewStats.count),
+      fiveStarCount: Number(reviewStats.five_star_count),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load that salon." });
@@ -212,6 +225,36 @@ router.get("/:id/completed-bookings", requireAuth, requireRole("owner"), async (
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load completed appointments." });
+  }
+});
+
+// GET /salons/:id/reviews (owner-only: full review list + ratings breakdown)
+router.get("/:id/reviews", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows: reviews } = await db.query(
+      `SELECT r.*, u.name AS customer_name FROM reviews r JOIN users u ON u.id = r.customer_id
+       WHERE r.salon_id = $1 ORDER BY r.created_at DESC`,
+      [salon.id]
+    );
+    const { rows: statRows } = await db.query(
+      "SELECT COUNT(*) AS count, AVG(rating) AS avg, COUNT(*) FILTER (WHERE rating = 5) AS five_star_count FROM reviews WHERE salon_id = $1",
+      [salon.id]
+    );
+    const reviewStats = statRows[0];
+    res.json({
+      reviews,
+      rating: reviewStats.avg ? Math.round(Number(reviewStats.avg) * 10) / 10 : null,
+      reviewCount: Number(reviewStats.count),
+      fiveStarCount: Number(reviewStats.five_star_count),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load reviews." });
   }
 });
 
