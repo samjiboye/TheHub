@@ -259,6 +259,20 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
   const heroTheme = category ? CATEGORY_THEMES[category] : null;
   const HeroIcon = category ? CATEGORIES.find((c) => c.name === category)?.icon : null;
 
+  // Sliding water-glass indicator that glides between category chips
+  const chipRowRef = useRef(null);
+  const chipRefs = useRef({});
+  const [chipIndicator, setChipIndicator] = useState({ left: 0, width: 0, opacity: 0 });
+
+  useEffect(() => {
+    const el = category ? chipRefs.current[category] : null;
+    if (el) {
+      setChipIndicator({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 });
+    } else {
+      setChipIndicator((prev) => ({ ...prev, opacity: 0 }));
+    }
+  }, [category]);
+
   return (
     <div
       className="px-4 pt-2 pb-10 relative overflow-hidden rounded-b-[2.5rem] transition-[background] duration-500"
@@ -309,15 +323,24 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
         </select>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+      <div ref={chipRowRef} className="flex gap-2 overflow-x-auto pb-2 mb-4 relative">
+        <div
+          className="water-slide"
+          style={{
+            left: chipIndicator.left,
+            width: chipIndicator.width,
+            opacity: chipIndicator.opacity,
+          }}
+        />
         {CATEGORIES.map((c) => (
           <button
             key={c.name}
+            ref={(el) => { chipRefs.current[c.name] = el; }}
             onClick={(e) => {
               setCategory(category === c.name ? null : c.name);
               e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
             }}
-            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap tap-glass"
+            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap tap-glass shrink-0 relative"
             style={{
               background: category === c.name ? colors.gold : colors.panelLight,
               color: category === c.name ? "#FFFFFF" : colors.cream,
@@ -391,7 +414,7 @@ function ProfileView({ salon, onBack, onBook }) {
             <button
               key={svc.id ?? svc.name}
               onClick={() => onBook(svc)}
-              className="flex items-center justify-between px-5 py-5 rounded-2xl transition-transform active:scale-[0.97]"
+              className="flex items-center justify-between px-5 py-5 rounded-2xl tap-glass"
               style={{ background: colors.panelLight, border: `3px solid ${colors.hairline}` }}
             >
               <div className="text-left">
@@ -452,7 +475,7 @@ function BookingView({ salon, service, onBack, token }) {
               <button
                 key={t}
                 onClick={() => setTime(t)}
-                className="py-4 rounded-2xl text-lg transition-transform active:scale-95"
+                className="py-4 rounded-2xl text-lg tap-glass"
                 style={{
                   background: active ? colors.hairline : colors.panelLight,
                   color: active ? "#FFFFFF" : colors.cream,
@@ -480,7 +503,7 @@ function BookingView({ salon, service, onBack, token }) {
         <button
           disabled={!time || submitting}
           onClick={handleBook}
-          className="w-full mt-6 py-5 rounded-2xl text-xl flex items-center justify-center gap-2 transition-transform active:scale-95"
+          className="w-full mt-6 py-5 rounded-2xl text-xl flex items-center justify-center gap-2 tap-glass"
           style={{
             background: time ? colors.hairline : colors.panelLight,
             color: time ? "#FFFFFF" : colors.creamDim,
@@ -720,7 +743,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
                   type="button"
                   disabled={resetLoading}
                   onClick={requestReset}
-                  className="flex-1 py-2.5 rounded-full text-sm"
+                  className="flex-1 py-2.5 rounded-full text-sm tap-glass"
                   style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
                 >
                   {resetLoading ? <Loader2 size={16} className="animate-spin" /> : "Send reset link"}
@@ -728,7 +751,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
                 <button
                   type="button"
                   onClick={() => setShowResetForm(false)}
-                  className="flex-1 py-2.5 rounded-full text-sm"
+                  className="flex-1 py-2.5 rounded-full text-sm tap-glass"
                   style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim, fontWeight: 600 }}
                 >
                   Cancel
@@ -743,7 +766,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2"
+          className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 tap-glass"
           style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
         >
           {loading ? (
@@ -768,7 +791,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
         <button
           onClick={guest}
           disabled={loading}
-          className="w-full mt-4 py-3 rounded-2xl text-base"
+          className="w-full mt-4 py-3 rounded-2xl text-base tap-glass"
           style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim, fontWeight: 600 }}
         >
           Continue as guest
@@ -877,7 +900,7 @@ function CreateSalonView({ token, onDone }) {
               </select>
           {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
           <button type="submit" disabled={loading}
-            className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2"
+            className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 tap-glass"
             style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}>
             {loading ? <Loader2 size={20} className="animate-spin" /> : <>Next <ArrowRight size={18} /></>}
           </button>
@@ -915,7 +938,7 @@ function CreateSalonView({ token, onDone }) {
         </div>
         {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
         <button type="submit" disabled={loading}
-          className="py-3.5 rounded-2xl text-base flex items-center justify-center gap-2"
+          className="py-3.5 rounded-2xl text-base flex items-center justify-center gap-2 tap-glass"
           style={{ border: `3px solid ${colors.hairline}`, color: colors.cream, fontWeight: 700 }}>
           <Plus size={18} /> Add service
         </button>
@@ -1040,7 +1063,7 @@ function MediaManager({ salonId, token }) {
       <button
         onClick={() => fileInputRef.current && fileInputRef.current.click()}
         disabled={uploading}
-        className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold"
+        className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold tap-glass"
         style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
       >
         {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
@@ -1464,7 +1487,7 @@ function OwnerDashboard({ token }) {
             <button
               onClick={connectPayouts}
               disabled={connecting}
-              className="w-full mt-3 py-3.5 rounded-2xl text-base flex items-center justify-center gap-2"
+              className="w-full mt-3 py-3.5 rounded-2xl text-base flex items-center justify-center gap-2 tap-glass"
               style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
             >
               {connecting ? <Loader2 size={18} className="animate-spin" /> : "Save bank details"}
@@ -1520,7 +1543,7 @@ function OwnerDashboard({ token }) {
                 {cancellingId !== a.id && (
                   <button
                     onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
-                    className="ml-3 text-xs font-semibold px-3 py-1 rounded-full"
+                    className="ml-3 text-xs font-semibold px-3 py-1 rounded-full tap-glass"
                     style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
                   >
                     Cancel
@@ -1543,14 +1566,14 @@ function OwnerDashboard({ token }) {
                   <div className="flex gap-2">
                     <button
                       onClick={() => submitCancel(a.id)}
-                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
                       style={{ background: colors.hairline, color: "#FFFFFF" }}
                     >
                       Confirm cancel
                     </button>
                     <button
                       onClick={() => setCancellingId(null)}
-                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
                       style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
                     >
                       Keep booking
@@ -1724,7 +1747,7 @@ function OwnerProfileView({ token, onBack }) {
             <button
               onClick={() => fileInputRef.current && fileInputRef.current.click()}
               disabled={uploading}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold tap-glass"
               style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
             >
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
@@ -2075,7 +2098,7 @@ function MyBookingsView({ token, onBack }) {
               {(b.status === "pending" || b.status === "confirmed") && cancellingId !== b.id && (
                 <button
                   onClick={() => { setCancellingId(b.id); setCancelReason(""); setCancelError(null); }}
-                  className="mt-2 self-start text-xs font-semibold px-3 py-1 rounded-full"
+                  className="mt-2 self-start text-xs font-semibold px-3 py-1 rounded-full tap-glass"
                   style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
                 >
                   Cancel
@@ -2097,14 +2120,14 @@ function MyBookingsView({ token, onBack }) {
                   <div className="flex gap-2">
                     <button
                       onClick={() => submitCancel(b.id)}
-                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
                       style={{ background: colors.hairline, color: "#FFFFFF" }}
                     >
                       Confirm cancel
                     </button>
                     <button
                       onClick={() => setCancellingId(null)}
-                      className="px-4 py-2 rounded-full text-xs font-semibold"
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
                       style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
                     >
                       Keep booking
@@ -2234,7 +2257,7 @@ function Concierge({ open, onClose }) {
             className="flex-1 bg-transparent outline-none text-base px-4 py-2.5 rounded-full"
             style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontFamily: FONT_BODY }}
           />
-          <button onClick={send} className="p-3 rounded-full" style={{ background: colors.hairline }}>
+          <button onClick={send} className="p-3 rounded-full tap-glass" style={{ background: colors.hairline }}>
             <Send size={18} color="#FFFFFF" />
           </button>
         </div>
@@ -2327,7 +2350,7 @@ function ResetPasswordView({ token, onDone }) {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2"
+            className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 tap-glass"
             style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
           >
             {loading ? <Loader2 size={20} className="animate-spin" /> : "Reset password"}
@@ -2602,7 +2625,7 @@ export default function App() {
           </p>
           <button
             onClick={() => setCheckoutResult(null)}
-            className="mt-10 px-8 py-5 rounded-2xl text-xl w-full"
+            className="mt-10 px-8 py-5 rounded-2xl text-xl w-full tap-glass"
             style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
           >
             Continue
@@ -2620,30 +2643,31 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
 
-        /* Glassy, springy tap treatment for the app's main nav controls */
+        /* Glassy, springy, water-like tap treatment used across the app's buttons */
         .tap-glass {
           position: relative;
           overflow: hidden;
           isolation: isolate;
-          backdrop-filter: blur(6px) saturate(180%);
-          -webkit-backdrop-filter: blur(6px) saturate(180%);
+          backdrop-filter: blur(6px) saturate(200%) brightness(1.04);
+          -webkit-backdrop-filter: blur(6px) saturate(200%) brightness(1.04);
           transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 220ms ease;
           box-shadow:
-            0 6px 16px rgba(36,27,20,0.16),
-            inset 0 1px 0 rgba(255,255,255,0.85),
-            inset 0 -3px 6px rgba(0,0,0,0.10),
-            inset 0 0 0 1px rgba(255,255,255,0.35);
+            0 8px 20px rgba(36,27,20,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.9),
+            inset 0 -4px 8px rgba(0,0,0,0.12),
+            inset 0 0 0 1px rgba(255,255,255,0.4);
         }
         .tap-glass::before {
           content: "";
           position: absolute;
-          left: 8%;
-          right: 8%;
-          top: 6%;
-          height: 42%;
+          left: 5%;
+          right: 5%;
+          top: 3%;
+          height: 55%;
           border-radius: 999px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.25) 60%, rgba(255,255,255,0) 100%);
-          filter: blur(0.5px);
+          background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.4) 55%, rgba(255,255,255,0) 100%);
+          filter: blur(1.5px);
+          mix-blend-mode: screen;
           pointer-events: none;
           z-index: 1;
         }
@@ -2652,7 +2676,11 @@ export default function App() {
           position: absolute;
           inset: 0;
           border-radius: inherit;
-          box-shadow: inset 0 0 0 1px rgba(120,200,255,0.18), inset 0 0 6px rgba(255,140,180,0.12);
+          background:
+            radial-gradient(130% 70% at 12% -10%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 55%),
+            radial-gradient(100% 70% at 105% 120%, rgba(140,190,255,0.3) 0%, rgba(140,190,255,0) 60%);
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), inset 0 -8px 12px rgba(0,0,0,0.08);
+          mix-blend-mode: overlay;
           pointer-events: none;
           z-index: 1;
         }
@@ -2663,12 +2691,33 @@ export default function App() {
         .tap-glass:active {
           transform: scale(0.86);
           box-shadow:
-            0 1px 4px rgba(36,27,20,0.14),
-            inset 0 1px 3px rgba(0,0,0,0.2),
-            inset 0 0 0 1px rgba(255,255,255,0.5);
+            0 1px 4px rgba(36,27,20,0.16),
+            inset 0 1px 3px rgba(0,0,0,0.22),
+            inset 0 0 0 1px rgba(255,255,255,0.55);
         }
         .tap-glass:active::before {
-          opacity: 0.5;
+          opacity: 0.6;
+        }
+
+        /* The floating water-glass blob that glides between selected category chips */
+        .water-slide {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          border-radius: 999px;
+          pointer-events: none;
+          z-index: 5;
+          transition: left 480ms cubic-bezier(0.22, 1, 0.36, 1), width 480ms cubic-bezier(0.22, 1, 0.36, 1), opacity 250ms ease;
+          backdrop-filter: blur(4px) saturate(220%) brightness(1.08);
+          -webkit-backdrop-filter: blur(4px) saturate(220%) brightness(1.08);
+          background:
+            radial-gradient(130% 80% at 18% 0%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 55%),
+            linear-gradient(160deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0) 100%);
+          box-shadow:
+            0 8px 20px rgba(0,0,0,0.2),
+            inset 0 1px 0 rgba(255,255,255,0.8),
+            inset 0 0 0 1.5px rgba(255,255,255,0.5),
+            inset 0 0 12px rgba(120,200,255,0.3);
         }
       `}</style>
       <div className="w-full max-w-md relative" style={{ minHeight: "100vh" }}>
