@@ -77,6 +77,9 @@ const CATEGORY_THEMES = {
   Spa: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
 };
 const NEUTRAL_HERO_GRADIENT = "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)";
+// A distinct, muted "business dashboard" gradient for the owner side of the app —
+// deliberately different in tone from the customer discovery screens above.
+const OWNER_THEME_GRADIENT = "linear-gradient(160deg, #F4F1EA 0%, #E4D9C4 50%, #C9AD7C 100%)";
 
 const SALONS = [
   {
@@ -1202,7 +1205,7 @@ function CompletedAppointmentsView({ token, onBack }) {
   }, [token]);
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="Completed Appointments" onBack={onBack} />
       <div className="px-4">
         {loading && (
@@ -1392,7 +1395,7 @@ function OwnerDashboard({ token }) {
   }
   if (error) {
     return (
-      <div className="pb-10">
+      <div className="pb-10 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
         <Header title="Owner dashboard" />
         <div className="px-4 pt-10 flex flex-col items-center text-center gap-3">
           <WifiOff size={36} color={colors.creamDim} />
@@ -1403,7 +1406,7 @@ function OwnerDashboard({ token }) {
   }
   if (!data || !salon) {
     return (
-      <div className="pb-10">
+      <div className="pb-10 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
         <Header title="Owner dashboard" />
         <div className="px-4 pt-10 flex justify-center">
           <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
@@ -1412,7 +1415,7 @@ function OwnerDashboard({ token }) {
     );
   }
   return (
-    <div className="pb-10">
+    <div className="pb-10 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="Owner dashboard" />
       <div className="px-4">
         {!salon.paystack_payouts_enabled && (
@@ -1685,7 +1688,7 @@ function OwnerProfileView({ token, onBack }) {
   };
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="My Profile" onBack={onBack} />
       <div className="px-4">
         {loading && (
@@ -1766,7 +1769,7 @@ function RatingsReviewsView({ token, onBack }) {
   }, [token]);
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="Ratings & Reviews" onBack={onBack} />
       <div className="px-4">
         {loading && (
@@ -2016,7 +2019,7 @@ function MyBookingsView({ token, onBack }) {
   }
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title="My bookings" onBack={onBack} />
       <div className="px-4">
         {loading && (
@@ -2120,7 +2123,7 @@ function SettingsView({ onBack }) {
   const user = savedCustomer?.user || savedOwner?.user || {};
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title="Settings" onBack={onBack} />
       <div className="px-4 mt-4 flex flex-col gap-3">
         <div
