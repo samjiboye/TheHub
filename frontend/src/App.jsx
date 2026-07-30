@@ -211,7 +211,7 @@ function SalonCard({ salon, onClick }) {
             </span>
           )}
           <span
-            className="w-14 h-14 rounded-full flex items-center justify-center ml-auto"
+            className="w-14 h-14 rounded-full flex items-center justify-center ml-auto tap-glass"
             style={{ background: colors.hairline }}
           >
             <ArrowRight size={24} color="#FFFFFF" />
@@ -314,7 +314,7 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
           <button
             key={c.name}
             onClick={() => setCategory(category === c.name ? null : c.name)}
-            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap"
+            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap tap-glass"
             style={{
               background: category === c.name ? colors.gold : colors.panelLight,
               color: category === c.name ? "#FFFFFF" : colors.cream,
@@ -2616,12 +2616,33 @@ export default function App() {
         * { -webkit-tap-highlight-color: transparent; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
+
+        /* Glassy, springy tap treatment for the app's main nav controls */
+        .tap-glass {
+          position: relative;
+          overflow: hidden;
+          backdrop-filter: blur(10px) saturate(160%);
+          -webkit-backdrop-filter: blur(10px) saturate(160%);
+          transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 220ms ease;
+          box-shadow: 0 4px 14px rgba(36,27,20,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.06);
+        }
+        .tap-glass::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(160deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 100%);
+          pointer-events: none;
+        }
+        .tap-glass:active {
+          transform: scale(0.86);
+          box-shadow: 0 1px 4px rgba(36,27,20,0.12), inset 0 1px 3px rgba(0,0,0,0.15);
+        }
       `}</style>
       <div className="w-full max-w-md relative" style={{ minHeight: "100vh" }}>
         <div className="flex px-4 pt-4 gap-2">
           <button
             onClick={() => { setRole("customer"); reset(); }}
-            className="flex-1 text-sm py-2.5 rounded-full"
+            className="flex-1 text-sm py-2.5 rounded-full tap-glass"
             style={{
               background: role === "customer" ? colors.hairline : "transparent",
               color: role === "customer" ? "#FFFFFF" : colors.creamDim,
@@ -2633,7 +2654,7 @@ export default function App() {
           </button>
           <button
             onClick={() => { setRole("owner"); setView("owner"); }}
-            className="flex-1 text-sm py-2.5 rounded-full"
+            className="flex-1 text-sm py-2.5 rounded-full tap-glass"
             style={{
               background: role === "owner" ? colors.hairline : "transparent",
               color: role === "owner" ? "#FFFFFF" : colors.creamDim,
@@ -2647,7 +2668,7 @@ export default function App() {
             <div className="relative">
               <button
                 onClick={() => setMenuOpen((o) => !o)}
-                className="p-2.5 rounded-full"
+                className="p-2.5 rounded-full tap-glass"
                 style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
               >
                 <Menu size={20} />
