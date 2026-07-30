@@ -339,43 +339,45 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
 function ProfileView({ salon, onBack, onBook }) {
   const cat = CATEGORIES.find((c) => c.name === salon.category);
   const heroTheme = CATEGORY_THEMES[salon.category] || null;
+  const textColor = heroTheme ? "#FFFFFF" : colors.cream;
+  const textColorDim = heroTheme ? "rgba(255,255,255,0.78)" : colors.creamDim;
   return (
-    <div className="pb-8">
+    <div
+      className="pb-8 relative overflow-hidden transition-[background] duration-500"
+      style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
+    >
+      <cat.icon
+        size={260}
+        strokeWidth={1}
+        color="#FFFFFF"
+        style={{ position: "absolute", right: -40, top: 70, opacity: 0.10, pointerEvents: "none" }}
+      />
       <Header title={salon.name} onBack={onBack} />
-      <div
-        className="relative overflow-hidden pt-3 pb-1 transition-[background] duration-500"
-        style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
-      >
-        <cat.icon
-          size={200}
-          strokeWidth={1}
-          color="#FFFFFF"
-          style={{ position: "absolute", right: -30, top: 6, opacity: 0.14, pointerEvents: "none" }}
-        />
+      <div className="pt-3 pb-1 relative">
         <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-44" imageUrl={salon.profile_image_url} />
       </div>
-      <div className="px-4 pt-5">
+      <div className="px-4 pt-5 relative">
         <div className="flex items-center justify-between">
-          <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.7rem", fontWeight: 700 }}>{salon.name}</h2>
+          <h2 style={{ fontFamily: FONT_DISPLAY, color: textColor, fontSize: "1.7rem", fontWeight: 700 }}>{salon.name}</h2>
           <div className="flex items-center gap-1">
             <TierStars fiveStarCount={salon.fiveStarCount} size={18} />
           </div>
         </div>
 
         {salon.completedCount > 0 && (
-          <p className="text-sm mt-1" style={{ color: colors.creamDim }}>
+          <p className="text-sm mt-1" style={{ color: textColorDim }}>
             {salon.completedCount} clients served
           </p>
         )}
         {salon.distance != null && (
-          <div className="flex items-center gap-2 mt-3 text-base" style={{ color: colors.creamDim }}>
+          <div className="flex items-center gap-2 mt-3 text-base" style={{ color: textColorDim }}>
             <MapPin size={18} />{salon.distance} mi away
           </div>
         )}
 
-        <MediaGallery salonId={salon.id} />
+        <MediaGallery salonId={salon.id} textColor={textColor} />
 
-        <h3 className="mt-7 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
+        <h3 className="mt-7 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
           Pick a service
         </h3>
         <div className="flex flex-col gap-3">
@@ -424,11 +426,17 @@ function BookingView({ salon, service, onBack, token }) {
     }
   };
 
+  const heroTheme = CATEGORY_THEMES[salon.category] || null;
+  const textColor = heroTheme ? "#FFFFFF" : colors.cream;
+
   return (
-    <div className="pb-8">
+    <div
+      className="pb-8 relative overflow-hidden transition-[background] duration-500"
+      style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
+    >
       <Header title={service.name} onBack={onBack} />
-      <div className="px-4">
-        <h3 className="mt-4 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
+      <div className="px-4 relative">
+        <h3 className="mt-4 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
           Pick a time
         </h3>
         <div className="grid grid-cols-2 gap-3">
@@ -452,7 +460,7 @@ function BookingView({ salon, service, onBack, token }) {
           })}
         </div>
 
-        <div className="mt-6 rounded-2xl px-5 py-4" style={{ border: `3px solid ${colors.hairline}` }}>
+        <div className="mt-6 rounded-2xl px-5 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
           <div className="flex justify-between text-lg" style={{ color: colors.cream }}>
             <span>Total</span>
             <span style={{ fontWeight: 700 }}>${total}</span>
@@ -460,7 +468,7 @@ function BookingView({ salon, service, onBack, token }) {
         </div>
 
         {error && (
-          <p className="text-base text-center mt-4" style={{ color: colors.creamDim }}>{error}</p>
+          <p className="text-base text-center mt-4" style={{ color: heroTheme ? "rgba(255,255,255,0.85)" : colors.creamDim }}>{error}</p>
         )}
 
         <button
@@ -1036,7 +1044,7 @@ function MediaManager({ salonId, token }) {
   );
 }
 
-function MediaGallery({ salonId }) {
+function MediaGallery({ salonId, textColor }) {
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState(null);
@@ -1053,7 +1061,7 @@ function MediaGallery({ salonId }) {
 
   return (
     <div className="mt-7">
-      <h3 className="mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
+      <h3 className="mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor || colors.cream, fontWeight: 700 }}>
         Gallery
       </h3>
       <div className="grid grid-cols-3 gap-2">
