@@ -70,11 +70,11 @@ const CATEGORIES = [
 // images are loaded here (kept to CSS gradients + a large watermark icon) so
 // there's nothing to break if network access to an image host is unavailable.
 const CATEGORY_THEMES = {
-  Barbing: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
+  Barbing: { gradient: "linear-gradient(160deg, #0D1B2A 0%, #1B4965 50%, #A9D6E5 100%)" },
   Hairdressing: { gradient: "linear-gradient(160deg, #241019 0%, #5C2740 50%, #D98CA6 100%)" },
   Nails: { gradient: "linear-gradient(160deg, #241214 0%, #6B333B 50%, #E7A9A0 100%)" },
   Makeup: { gradient: "linear-gradient(160deg, #180E20 0%, #451D54 50%, #C9A0DC 100%)" },
-  Spa: { gradient: "linear-gradient(160deg, #0D1B2A 0%, #1B4965 50%, #A9D6E5 100%)" },
+  Spa: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
 };
 const NEUTRAL_HERO_GRADIENT = "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)";
 // A distinct, muted "business dashboard" gradient for the owner side of the app —
@@ -287,10 +287,9 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
   }, [category]);
 
   return (
-    <div className="relative">
+    <div className="relative transition-[background] duration-500" style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}>
       <div
-        className="px-4 pt-2 pb-6 relative overflow-hidden rounded-b-[2.5rem] transition-[background] duration-500"
-        style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
+        className="px-4 pt-2 pb-6 relative overflow-hidden rounded-b-[2.5rem]"
       >
         {HeroIcon && (
           <HeroIcon
