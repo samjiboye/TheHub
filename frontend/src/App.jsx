@@ -2948,8 +2948,8 @@ function ResetPasswordView({ token, onDone }) {
 
 const ONBOARDING_SLIDES = [
   {
-    title: "Book any service, anywhere",
-    body: "Get a haircut, lashes, a manicure, or a full glam look — in the salon or at your own home. Anywhere in Nigeria.",
+    title: "Welcome to TheHub",
+    body: "Great hair, skin, and beauty care — booked in seconds. In the salon or at home, wherever suits you.",
     photo: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
   },
   {
