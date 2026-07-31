@@ -2965,10 +2965,10 @@ const ONBOARDING_SLIDES = [
   {
     type: "categories",
     title: "Explore what we offer",
-    photo: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800&q=80",
+    photo: "https://images.unsplash.com/photo-1587500154541-8ed925c8c5b4?w=800&q=80",
     categories: [
       { name: "Braids", photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
-      { name: "Barbing", photo: "https://images.unsplash.com/photo-1622287982376-94b47088e356?w=400&q=80" },
+      { name: "Barbing", photo: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400&q=80" },
       { name: "Nails", photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
       { name: "Makeup", photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
       { name: "Spa", photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
