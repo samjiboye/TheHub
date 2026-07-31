@@ -3116,7 +3116,7 @@ export default function App() {
   const [status, setStatus] = useState("loading"); // loading | ready | offline
   const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
   const [resetToken, setResetToken] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("onboardingSeen"));
+  const [showOnboarding, setShowOnboarding] = useState(() => !sessionStorage.getItem("onboardingSeen"));
   const reset = () => {
     setView("home");
     setSelectedSalon(null);
@@ -3185,7 +3185,7 @@ export default function App() {
     return (
       <OnboardingView
         onDone={() => {
-          localStorage.setItem("onboardingSeen", "1");
+          sessionStorage.setItem("onboardingSeen", "1");
           setShowOnboarding(false);
           setView("home");
         }}
