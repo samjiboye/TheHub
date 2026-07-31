@@ -398,7 +398,7 @@ function ProfileView({ salon, onBack, onBook }) {
       <div className="pt-3 pb-1 relative">
         <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-44" imageUrl={salon.profile_image_url} />
       </div>
-      <div className="px-4 pt-5 relative">
+      <div className="px-4 pt-5 relative max-w-xl mx-auto w-full">
         <div className="flex items-center justify-between">
           <h2 style={{ fontFamily: FONT_DISPLAY, color: textColor, fontSize: "1.7rem", fontWeight: 700 }}>{salon.name}</h2>
           <div className="flex items-center gap-1">
@@ -500,7 +500,7 @@ function BookingView({ salon, service, onBack, token }) {
       style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
     >
       <Header title={service.name} onBack={onBack} />
-      <div className="px-4 relative">
+      <div className="px-4 relative max-w-xl mx-auto w-full">
         {hasHomeOption && !homeOnly && (
           <>
             <h3 className="mt-4 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
@@ -726,7 +726,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
   };
 
   return (
-    <div className="px-4 pt-6 pb-10">
+    <div className="px-4 pt-6 pb-10 max-w-xl mx-auto w-full">
       <div className="flex justify-center mb-5">
         <div
           className="px-6 py-4 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-lg"
@@ -984,7 +984,7 @@ function CreateSalonView({ token, onDone }) {
 
   if (step === "salon") {
     return (
-      <div className="px-4 pt-6 pb-10">
+      <div className="px-4 pt-6 pb-10 max-w-xl mx-auto w-full">
         <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 700 }} className="text-center mb-6">
           Set up your salon
         </h2>
@@ -1036,7 +1036,7 @@ function CreateSalonView({ token, onDone }) {
   }
 
   return (
-    <div className="px-4 pt-6 pb-10">
+    <div className="px-4 pt-6 pb-10 max-w-xl mx-auto w-full">
       <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 700 }} className="text-center mb-2">
         Add your services
       </h2>
@@ -1389,7 +1389,7 @@ function CompletedAppointmentsView({ token, onBack }) {
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="Completed Appointments" onBack={onBack} />
-      <div className="px-4">
+      <div className="px-4 max-w-xl mx-auto w-full">
         {loading && (
           <div className="flex justify-center pt-8">
             <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
@@ -1605,7 +1605,7 @@ function OwnerDashboard({ token }) {
   return (
     <div className="pb-10 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="Owner dashboard" />
-      <div className="px-4">
+      <div className="px-4 max-w-xl mx-auto w-full">
         {!salon.paystack_payouts_enabled && (
           <div className="mb-5 px-4 py-4 rounded-2xl" style={{ border: `3px solid ${colors.hairline}` }}>
             <p className="text-base" style={{ color: colors.cream, fontWeight: 700 }}>Connect payouts to go live</p>
@@ -2027,7 +2027,7 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="My Profile" onBack={onBack} />
-      <div className="px-4">
+      <div className="px-4 max-w-xl mx-auto w-full">
         {loading && (
           <div className="flex justify-center pt-8">
             <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
@@ -2291,7 +2291,7 @@ function RatingsReviewsView({ token, onBack }) {
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="Ratings & Reviews" onBack={onBack} />
-      <div className="px-4">
+      <div className="px-4 max-w-xl mx-auto w-full">
         {loading && (
           <div className="flex justify-center pt-8">
             <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
@@ -2541,7 +2541,7 @@ function MyBookingsView({ token, onBack }) {
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title="My bookings" onBack={onBack} />
-      <div className="px-4">
+      <div className="px-4 max-w-xl mx-auto w-full">
         {loading && (
           <div className="flex justify-center pt-8">
             <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
@@ -2651,7 +2651,7 @@ function SettingsView({ onBack }) {
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title="Settings" onBack={onBack} />
-      <div className="px-4 mt-4 flex flex-col gap-3">
+      <div className="px-4 mt-4 flex flex-col gap-3 max-w-xl mx-auto w-full">
         <div
           className="px-4 py-3 rounded-xl"
           style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
@@ -2796,7 +2796,7 @@ function ResetPasswordView({ token, onDone }) {
   };
 
   return (
-    <div className="px-4 pt-6 pb-10 flex flex-col items-center">
+    <div className="px-4 pt-6 pb-10 flex flex-col items-center max-w-xl mx-auto w-full">
       <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.6rem", fontWeight: 700 }} className="mb-6">
         Reset your password
       </h2>
