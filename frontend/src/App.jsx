@@ -208,6 +208,12 @@ function SalonCard({ salon, onClick }) {
             <TierStars fiveStarCount={salon.fiveStarCount} size={16} />
           </div>
         </div>
+        {salon.services && salon.services.length > 0 && (
+          <p className="text-sm mt-1" style={{ color: colors.creamDim }}>
+            {salon.services.slice(0, 3).map((s) => s.name).join(" · ")}
+            {salon.services.length > 3 ? ` +${salon.services.length - 3} more` : ""}
+          </p>
+        )}
         <div className="flex items-center justify-between mt-4">
           {salon.distance != null && (
             <span
