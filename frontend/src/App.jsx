@@ -150,7 +150,7 @@ const SALONS = [
 ];
 
 const TIME_SLOTS = ["9:00 AM", "10:30 AM", "12:00 PM", "1:30 PM", "3:00 PM", "4:30 PM", "6:00 PM"];
-const BOOKING_FEE = 2.5;
+const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later — the UI already discloses it if so
 const COMMISSION_RATE = 0.15;
 
 function SalonPhoto({ hue, icon: Icon, size = "h-40", imageUrl }) {
@@ -494,10 +494,12 @@ function BookingView({ salon, service, onBack, token }) {
             <span>Service price</span>
             <span>${service.price.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm mt-1" style={{ color: colors.creamDim }}>
-            <span>Booking fee</span>
-            <span>${BOOKING_FEE.toFixed(2)}</span>
-          </div>
+          {BOOKING_FEE > 0 && (
+            <div className="flex justify-between text-sm mt-1" style={{ color: colors.creamDim }}>
+              <span>Booking fee</span>
+              <span>${BOOKING_FEE.toFixed(2)}</span>
+            </div>
+          )}
           <div className="mt-2 pt-2 flex justify-between text-lg" style={{ color: colors.cream, borderTop: `2px solid ${colors.hairline}` }}>
             <span>Total</span>
             <span style={{ fontWeight: 700 }}>${total}</span>
