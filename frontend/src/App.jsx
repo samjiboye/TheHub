@@ -365,9 +365,9 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.length === 0 && (
-          <p className="text-lg text-center py-10" style={{ color: colors.creamDim }}>
+          <p className="text-lg text-center py-10 sm:col-span-2 lg:col-span-3" style={{ color: colors.creamDim }}>
             No one here yet.
           </p>
         )}
@@ -3221,7 +3221,7 @@ export default function App() {
             inset 0 0 12px rgba(120,200,255,0.3);
         }
       `}</style>
-      <div className="w-full max-w-md relative" style={{ minHeight: "100vh", overflowX: "hidden" }}>
+      <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl relative" style={{ minHeight: "100vh", overflowX: "hidden" }}>
         <div className="flex px-4 pt-4 justify-between items-center">
           <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
             TheHub
