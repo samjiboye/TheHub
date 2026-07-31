@@ -2965,7 +2965,7 @@ const ONBOARDING_SLIDES = [
   {
     type: "categories",
     title: "Explore what we offer",
-    photo: "https://images.pexels.com/photos/4350096/pexels-photo-4350096.jpeg",
+    photo: "https://images.pexels.com/photos/7389077/pexels-photo-7389077.jpeg",
     categories: [
       { name: "Braids", photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
       { name: "Barbing", photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
@@ -2994,7 +2994,10 @@ function OnboardingView({ onDone }) {
     <div
       className="min-h-screen w-full flex flex-col justify-between px-6 pt-10 pb-10 relative overflow-hidden"
       style={{
-        backgroundImage: `linear-gradient(160deg, rgba(201,122,61,0.75), rgba(166,83,42,0.85)), url(${current.photo})`,
+        backgroundImage:
+          current.type === "categories"
+            ? `linear-gradient(160deg, rgba(201,122,61,0.35), rgba(166,83,42,0.4)), url(${current.photo})`
+            : `linear-gradient(160deg, rgba(201,122,61,0.75), rgba(166,83,42,0.85)), url(${current.photo})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
