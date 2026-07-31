@@ -2958,14 +2958,21 @@ const ONBOARDING_SLIDES = [
     photo: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
   },
   {
-    title: "Browse with confidence",
-    body: "Search by category, see real ratings from real clients, and know exactly what you're booking before you pay.",
+    title: "Built for clients and businesses alike",
+    body: "Search by category and see real reviews before you book. Salon or freelance owners get paid instantly via Paystack — no waiting around.",
     photo: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80",
   },
   {
-    title: "Own a business? Get paid instantly",
-    body: "List your services, set your prices, and get paid straight to your account through Paystack — no waiting around.",
-    photo: "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=800&q=80",
+    type: "categories",
+    title: "Explore what we offer",
+    photo: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800&q=80",
+    categories: [
+      { name: "Hairdressing", photo: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&q=80" },
+      { name: "Barbing", photo: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=80" },
+      { name: "Nails", photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
+      { name: "Makeup", photo: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&q=80" },
+      { name: "Spa", photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
+    ],
   },
 ];
 
@@ -3011,31 +3018,67 @@ function OnboardingView({ onDone }) {
         )}
       </div>
 
-      <div className="mt-8">
-        <h1
-          className="text-3xl font-extrabold text-white leading-tight mb-4"
-          style={{ fontFamily: FONT_DISPLAY }}
-        >
-          {current.title}
-        </h1>
-        <p className="text-white text-base leading-relaxed" style={{ opacity: 0.9 }}>
-          {current.body}
-        </p>
-      </div>
+      {current.type === "categories" ? (
+        <>
+          <div className="mt-8">
+            <h1
+              className="text-3xl font-extrabold text-white leading-tight mb-4"
+              style={{ fontFamily: FONT_DISPLAY }}
+            >
+              {current.title}
+            </h1>
+          </div>
 
-      <div className="flex-1 flex items-center justify-center py-10">
-        <div
-          className="w-44 h-36 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-2xl"
-          style={{ background: "#FFFFFF" }}
-        >
-          <span
-            className="text-2xl font-extrabold"
-            style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
-          >
-            TheHub
-          </span>
-        </div>
-      </div>
+          <div className="flex-1 overflow-y-auto py-6">
+            <div className="grid grid-cols-3 gap-x-4 gap-y-5">
+              {current.categories.map((cat) => (
+                <div key={cat.name} className="flex flex-col items-center gap-2">
+                  <div
+                    className="w-20 h-20 rounded-full shadow-lg"
+                    style={{
+                      backgroundImage: `url(${cat.photo})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      border: "3px solid rgba(255,255,255,0.8)",
+                    }}
+                  />
+                  <span className="text-white text-xs font-semibold text-center">{cat.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="mt-8">
+            <h1
+              className="text-3xl font-extrabold text-white leading-tight mb-4"
+              style={{ fontFamily: FONT_DISPLAY }}
+            >
+              {current.title}
+            </h1>
+            <p className="text-white text-base leading-relaxed" style={{ opacity: 0.9 }}>
+              {current.body}
+            </p>
+          </div>
+
+          <div className="flex-1 flex items-center justify-center py-10">
+            {slide === 0 && (
+              <div
+                className="w-44 h-36 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-2xl"
+                style={{ background: "#FFFFFF" }}
+              >
+                <span
+                  className="text-2xl font-extrabold"
+                  style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
+                >
+                  TheHub
+                </span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="flex items-center justify-between">
         {slide > 0 ? (
