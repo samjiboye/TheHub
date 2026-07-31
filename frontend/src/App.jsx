@@ -1824,12 +1824,31 @@ function TierStars({ fiveStarCount = 0, size = 20 }) {
 }
 
 
-function OwnerProfileView({ token, onBack }) {
+function OwnerProfileView({ token, onBack, onDeleted }) {
   const [salon, setSalon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [detailsForm, setDetailsForm] = useState(null);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState(null);
+
+  const [editingServiceId, setEditingServiceId] = useState(null);
+  const [serviceForm, setServiceForm] = useState(null);
+  const [savingService, setSavingService] = useState(false);
+  const [serviceError, setServiceError] = useState(null);
+  const [confirmDeleteServiceId, setConfirmDeleteServiceId] = useState(null);
+
+  const [addingService, setAddingService] = useState(false);
+  const [newSvc, setNewSvc] = useState({ name: "", duration_min: "", price: "", home_service_price: "", home_only: false });
+  const [savingNewSvc, setSavingNewSvc] = useState(false);
+
+  const [confirmDeleteSalon, setConfirmDeleteSalon] = useState(false);
+  const [deletingSalon, setDeletingSalon] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   const loadSalon = () => {
     setLoading(true);
@@ -1881,6 +1900,130 @@ function OwnerProfileView({ token, onBack }) {
     }
   };
 
+  const startEditDetails = () => {
+    setDetailsForm({
+      name: salon.name, category: salon.category, service_type: salon.service_type || "unisex",
+      address: salon.address || "", state: salon.state || "", city: salon.city || "",
+    });
+    setDetailsError(null);
+    setEditingDetails(true);
+  };
+
+  const saveDetails = async () => {
+    setSavingDetails(true);
+    setDetailsError(null);
+    try {
+      const updated = await apiFetch(`/salons/${salon.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(detailsForm),
+      });
+      setSalon((prev) => ({ ...prev, ...updated }));
+      setEditingDetails(false);
+    } catch (err) {
+      setDetailsError(err.message || "Couldn't save those changes.");
+    } finally {
+      setSavingDetails(false);
+    }
+  };
+
+  const startEditService = (svc) => {
+    setServiceForm({
+      name: svc.name, duration_min: svc.duration_min, price: svc.price,
+      home_service_price: svc.home_service_price ?? "", salon_service_available: svc.salon_service_available !== false,
+    });
+    setServiceError(null);
+    setEditingServiceId(svc.id);
+  };
+
+  const saveService = async () => {
+    setSavingService(true);
+    setServiceError(null);
+    try {
+      const updated = await apiFetch(`/salons/${salon.id}/services/${editingServiceId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          ...serviceForm,
+          duration_min: Number(serviceForm.duration_min),
+          price: Number(serviceForm.price),
+          home_service_price: serviceForm.home_service_price ? Number(serviceForm.home_service_price) : null,
+        }),
+      });
+      setSalon((prev) => ({ ...prev, services: prev.services.map((s) => (s.id === updated.id ? updated : s)) }));
+      setEditingServiceId(null);
+    } catch (err) {
+      setServiceError(err.message || "Couldn't save that service.");
+    } finally {
+      setSavingService(false);
+    }
+  };
+
+  const deleteService = async (id) => {
+    try {
+      await apiFetch(`/salons/${salon.id}/services/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSalon((prev) => ({ ...prev, services: prev.services.filter((s) => s.id !== id) }));
+      setConfirmDeleteServiceId(null);
+    } catch (err) {
+      setServiceError(err.message || "Couldn't remove that service.");
+    }
+  };
+
+  const addService = async () => {
+    if (!newSvc.name || !newSvc.duration_min || !newSvc.price) return;
+    if (newSvc.home_only && !newSvc.home_service_price) {
+      setServiceError("Add a home-visit price — this service is marked as home-visit only.");
+      return;
+    }
+    setSavingNewSvc(true);
+    setServiceError(null);
+    try {
+      const created = await apiFetch(`/salons/${salon.id}/services`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: newSvc.name,
+          duration_min: Number(newSvc.duration_min),
+          price: Number(newSvc.price),
+          home_service_price: newSvc.home_service_price ? Number(newSvc.home_service_price) : null,
+          salon_service_available: !newSvc.home_only,
+        }),
+      });
+      setSalon((prev) => ({
+        ...prev,
+        services: [...prev.services, {
+          id: created.id, name: newSvc.name, duration_min: Number(newSvc.duration_min), price: Number(newSvc.price),
+          home_service_price: newSvc.home_service_price ? Number(newSvc.home_service_price) : null,
+          salon_service_available: !newSvc.home_only,
+        }],
+      }));
+      setNewSvc({ name: "", duration_min: "", price: "", home_service_price: "", home_only: false });
+      setAddingService(false);
+    } catch (err) {
+      setServiceError(err.message || "Couldn't add that service.");
+    } finally {
+      setSavingNewSvc(false);
+    }
+  };
+
+  const handleDeleteSalon = async () => {
+    setDeletingSalon(true);
+    setDeleteError(null);
+    try {
+      await apiFetch(`/salons/${salon.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      onDeleted && onDeleted();
+    } catch (err) {
+      setDeleteError(err.message || "Couldn't delete this salon.");
+      setDeletingSalon(false);
+    }
+  };
+
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
       <Header title="My Profile" onBack={onBack} />
@@ -1894,39 +2037,222 @@ function OwnerProfileView({ token, onBack }) {
           <p className="text-sm mt-4" style={{ color: "#E07A5F" }}>{error}</p>
         )}
         {!loading && salon && (
-          <div className="mt-4 flex flex-col items-center">
-            <div
-              className="w-32 h-32 rounded-full overflow-hidden flex items-center justify-center mb-4"
-              style={{ background: colors.panelLight, border: `3px solid ${colors.hairline}` }}
-            >
-              {salon.profile_image_url ? (
-                <img src={salon.profile_image_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <UserCircle size={64} strokeWidth={1.6} color={colors.hairline} />
+          <>
+            <div className="mt-4 flex flex-col items-center">
+              <div
+                className="w-32 h-32 rounded-full overflow-hidden flex items-center justify-center mb-4"
+                style={{ background: colors.panelLight, border: `3px solid ${colors.hairline}` }}
+              >
+                {salon.profile_image_url ? (
+                  <img src={salon.profile_image_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <UserCircle size={64} strokeWidth={1.6} color={colors.hairline} />
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: "none" }} />
+              <button
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                disabled={uploading}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold tap-glass"
+                style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+              >
+                {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                {uploading ? "Uploading..." : salon.profile_image_url ? "Change photo" : "Add photo"}
+              </button>
+              {salon.profile_image_url && (
+                <button onClick={handleRemove} className="mt-3 text-xs" style={{ color: "#E07A5F" }}>
+                  Remove photo
+                </button>
               )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              style={{ display: "none" }}
-            />
-            <button
-              onClick={() => fileInputRef.current && fileInputRef.current.click()}
-              disabled={uploading}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold tap-glass"
-              style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-            >
-              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-              {uploading ? "Uploading..." : salon.profile_image_url ? "Change photo" : "Add photo"}
-            </button>
-            {salon.profile_image_url && (
-              <button onClick={handleRemove} className="mt-3 text-xs" style={{ color: "#E07A5F" }}>
-                Remove photo
-              </button>
-            )}
-          </div>
+
+            <div className="mt-8 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg">Business details</h3>
+                {!editingDetails && (
+                  <button onClick={startEditDetails} className="text-sm font-semibold" style={{ color: colors.hairline }}>Edit</button>
+                )}
+              </div>
+              {!editingDetails ? (
+                <div className="flex flex-col gap-1 text-sm" style={{ color: colors.creamDim }}>
+                  <p><b style={{ color: colors.cream }}>{salon.name}</b></p>
+                  <p>{salon.category} · {salon.service_type === "unisex" ? "Unisex" : salon.service_type === "male" ? "Male only" : "Female only"}</p>
+                  <p>{salon.address || "No address set"}{salon.city ? `, ${salon.city}` : ""}{salon.state ? `, ${salon.state}` : ""}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <input value={detailsForm.name} onChange={(e) => setDetailsForm({ ...detailsForm, name: e.target.value })}
+                    placeholder="Salon name" className="pb-2 text-base outline-none" style={inputStyle} />
+                  <select value={detailsForm.category} onChange={(e) => setDetailsForm({ ...detailsForm, category: e.target.value })}
+                    className="pb-2 text-base outline-none" style={inputStyle}>
+                    {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+                  </select>
+                  <select value={detailsForm.service_type} onChange={(e) => setDetailsForm({ ...detailsForm, service_type: e.target.value })}
+                    className="pb-2 text-base outline-none" style={inputStyle}>
+                    <option value="unisex">Unisex — all genders</option>
+                    <option value="male">Male only</option>
+                    <option value="female">Female only</option>
+                  </select>
+                  <input value={detailsForm.address} onChange={(e) => setDetailsForm({ ...detailsForm, address: e.target.value })}
+                    placeholder="Address" className="pb-2 text-base outline-none" style={inputStyle} />
+                  <select value={detailsForm.state} onChange={(e) => setDetailsForm({ ...detailsForm, state: e.target.value, city: "" })}
+                    className="pb-2 text-base outline-none" style={inputStyle}>
+                    <option value="">Select state</option>
+                    {NIGERIA_LOCATIONS.map((s) => <option key={s.state} value={s.state}>{s.state}</option>)}
+                  </select>
+                  <select value={detailsForm.city} onChange={(e) => setDetailsForm({ ...detailsForm, city: e.target.value })}
+                    disabled={!detailsForm.state} className="pb-2 text-base outline-none" style={inputStyle}>
+                    <option value="">Select city</option>
+                    {(NIGERIA_LOCATIONS.find((s) => s.state === detailsForm.state)?.cities || []).map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  {detailsError && <p className="text-sm" style={{ color: "#E07A5F" }}>{detailsError}</p>}
+                  <div className="flex gap-2">
+                    <button onClick={saveDetails} disabled={savingDetails}
+                      className="flex-1 py-2.5 rounded-full text-sm tap-glass"
+                      style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}>
+                      {savingDetails ? <Loader2 size={16} className="animate-spin" /> : "Save"}
+                    </button>
+                    <button onClick={() => setEditingDetails(false)}
+                      className="flex-1 py-2.5 rounded-full text-sm tap-glass"
+                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim, fontWeight: 600 }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+              <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg mb-3">Services & pricing</h3>
+              <div className="flex flex-col gap-2">
+                {salon.services.map((svc) => (
+                  <div key={svc.id} className="rounded-xl px-3 py-3" style={{ border: `2px solid ${colors.hairline}` }}>
+                    {editingServiceId === svc.id ? (
+                      <div className="flex flex-col gap-2">
+                        <input value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
+                          placeholder="Service name" className="pb-2 text-base outline-none" style={inputStyle} />
+                        <div className="flex gap-2">
+                          <input value={serviceForm.duration_min} onChange={(e) => setServiceForm({ ...serviceForm, duration_min: e.target.value })}
+                            type="number" placeholder="Minutes" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                          <input value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                            type="number" placeholder="Price $" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                        </div>
+                        <label className="flex items-center gap-2 text-sm" style={{ color: colors.creamDim }}>
+                          <input type="checkbox" checked={!serviceForm.salon_service_available}
+                            onChange={(e) => setServiceForm({ ...serviceForm, salon_service_available: !e.target.checked })} />
+                          Home-visit only (no shop)
+                        </label>
+                        <input value={serviceForm.home_service_price} onChange={(e) => setServiceForm({ ...serviceForm, home_service_price: e.target.value })}
+                          type="number" placeholder="Home visit price $ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
+                        {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
+                        <div className="flex gap-2">
+                          <button onClick={saveService} disabled={savingService}
+                            className="flex-1 py-2 rounded-full text-sm tap-glass"
+                            style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}>
+                            {savingService ? <Loader2 size={16} className="animate-spin" /> : "Save"}
+                          </button>
+                          <button onClick={() => setEditingServiceId(null)}
+                            className="flex-1 py-2 rounded-full text-sm tap-glass"
+                            style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
+                          <p className="text-sm" style={{ color: colors.creamDim }}>
+                            {svc.duration_min} min{svc.salon_service_available !== false ? ` · $${svc.price}` : ""}
+                          </p>
+                          {svc.home_service_price != null && (
+                            <p className="text-sm" style={{ color: colors.gold }}>
+                              🏠 ${svc.home_service_price}{svc.salon_service_available === false ? " (home only)" : ""}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => startEditService(svc)} className="text-sm font-semibold" style={{ color: colors.hairline }}>Edit</button>
+                          {confirmDeleteServiceId === svc.id ? (
+                            <button onClick={() => deleteService(svc.id)} className="text-sm font-semibold" style={{ color: "#E07A5F" }}>Confirm?</button>
+                          ) : (
+                            <button onClick={() => setConfirmDeleteServiceId(svc.id)} className="text-sm" style={{ color: colors.creamDim }}>Remove</button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {addingService ? (
+                <div className="flex flex-col gap-2 mt-3 rounded-xl px-3 py-3" style={{ border: `2px dashed ${colors.hairline}` }}>
+                  <input value={newSvc.name} onChange={(e) => setNewSvc({ ...newSvc, name: e.target.value })}
+                    placeholder="Service name" className="pb-2 text-base outline-none" style={inputStyle} />
+                  <div className="flex gap-2">
+                    <input value={newSvc.duration_min} onChange={(e) => setNewSvc({ ...newSvc, duration_min: e.target.value })}
+                      type="number" placeholder="Minutes" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                    <input value={newSvc.price} onChange={(e) => setNewSvc({ ...newSvc, price: e.target.value })}
+                      type="number" placeholder="Price $" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm" style={{ color: colors.creamDim }}>
+                    <input type="checkbox" checked={newSvc.home_only} onChange={(e) => setNewSvc({ ...newSvc, home_only: e.target.checked })} />
+                    I don't have a shop — home-visit only
+                  </label>
+                  <input value={newSvc.home_service_price} onChange={(e) => setNewSvc({ ...newSvc, home_service_price: e.target.value })}
+                    type="number" placeholder="Home visit price $ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
+                  {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
+                  <div className="flex gap-2">
+                    <button onClick={addService} disabled={savingNewSvc}
+                      className="flex-1 py-2 rounded-full text-sm tap-glass"
+                      style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}>
+                      {savingNewSvc ? <Loader2 size={16} className="animate-spin" /> : "Add"}
+                    </button>
+                    <button onClick={() => setAddingService(false)}
+                      className="flex-1 py-2 rounded-full text-sm tap-glass"
+                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setAddingService(true)} className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 tap-glass"
+                  style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
+                  <Plus size={16} /> Add a service
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-2xl px-4 py-4" style={{ border: `2px solid #E07A5F` }}>
+              <h3 style={{ fontFamily: FONT_DISPLAY, color: "#E07A5F", fontWeight: 700 }} className="text-lg mb-2">Danger zone</h3>
+              <p className="text-sm mb-3" style={{ color: colors.creamDim }}>
+                Permanently delete this salon listing. This only works if it has no booking history.
+              </p>
+              {deleteError && <p className="text-sm mb-3" style={{ color: "#E07A5F" }}>{deleteError}</p>}
+              {confirmDeleteSalon ? (
+                <div className="flex gap-2">
+                  <button onClick={handleDeleteSalon} disabled={deletingSalon}
+                    className="flex-1 py-2.5 rounded-full text-sm tap-glass"
+                    style={{ background: "#E07A5F", color: "#FFFFFF", fontWeight: 700 }}>
+                    {deletingSalon ? <Loader2 size={16} className="animate-spin" /> : "Yes, delete permanently"}
+                  </button>
+                  <button onClick={() => setConfirmDeleteSalon(false)}
+                    className="flex-1 py-2.5 rounded-full text-sm tap-glass"
+                    style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDeleteSalon(true)}
+                  className="w-full py-2.5 rounded-full text-sm font-semibold tap-glass"
+                  style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}>
+                  Delete my salon profile
+                </button>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -3017,7 +3343,14 @@ export default function App() {
             ) : ownerPage === "ratings" ? (
               <RatingsReviewsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : ownerPage === "profile" ? (
-              <OwnerProfileView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+              <OwnerProfileView
+              token={ownerAuth.token}
+              onBack={() => setOwnerPage("dashboard")}
+              onDeleted={() => {
+                localStorage.removeItem("ownerAuth");
+                setOwnerAuth(null);
+              }}
+            />
             ) : (
               <OwnerDashboard token={ownerAuth.token} />
             )
