@@ -490,7 +490,15 @@ function BookingView({ salon, service, onBack, token }) {
         </div>
 
         <div className="mt-6 rounded-2xl px-5 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
-          <div className="flex justify-between text-lg" style={{ color: colors.cream }}>
+          <div className="flex justify-between text-sm" style={{ color: colors.creamDim }}>
+            <span>Service price</span>
+            <span>${service.price.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm mt-1" style={{ color: colors.creamDim }}>
+            <span>Booking fee</span>
+            <span>${BOOKING_FEE.toFixed(2)}</span>
+          </div>
+          <div className="mt-2 pt-2 flex justify-between text-lg" style={{ color: colors.cream, borderTop: `2px solid ${colors.hairline}` }}>
             <span>Total</span>
             <span style={{ fontWeight: 700 }}>${total}</span>
           </div>
@@ -2531,7 +2539,7 @@ export default function App() {
   const [status, setStatus] = useState("loading"); // loading | ready | offline
   const [checkoutResult, setCheckoutResult] = useState(null); // "success" | "cancelled" | null
   const [resetToken, setResetToken] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("onboardingSeen"));
   const reset = () => {
     setView("home");
     setSelectedSalon(null);
@@ -2596,10 +2604,11 @@ export default function App() {
     return <ResetPasswordView token={resetToken} onDone={() => setView("home")} />;
   }
 
-  if (showOnboarding) {
+  if (showOnboarding && !checkoutResult) {
     return (
       <OnboardingView
         onDone={() => {
+          localStorage.setItem("onboardingSeen", "1");
           setShowOnboarding(false);
           setView("home");
         }}
@@ -2706,7 +2715,7 @@ export default function App() {
           bottom: 0;
           border-radius: 999px;
           pointer-events: none;
-          z-index: 5;
+          z-index: 0;
           transition: left 480ms cubic-bezier(0.22, 1, 0.36, 1), width 480ms cubic-bezier(0.22, 1, 0.36, 1), opacity 250ms ease;
           backdrop-filter: blur(4px) saturate(220%) brightness(1.08);
           -webkit-backdrop-filter: blur(4px) saturate(220%) brightness(1.08);
@@ -2721,54 +2730,56 @@ export default function App() {
         }
       `}</style>
       <div className="w-full max-w-md relative" style={{ minHeight: "100vh" }}>
-        <div className="flex px-4 pt-4 gap-2">
-          <button
-            onClick={() => { setRole("customer"); reset(); }}
-            className="flex-1 text-sm py-2.5 rounded-full tap-glass"
-            style={{
-              background: role === "customer" ? colors.hairline : "transparent",
-              color: role === "customer" ? "#FFFFFF" : colors.creamDim,
-              border: `2px solid ${colors.hairline}`,
-              fontWeight: 700,
-            }}
-          >
-            Book
-          </button>
-          <button
-            onClick={() => { setRole("owner"); setView("owner"); }}
-            className="flex-1 text-sm py-2.5 rounded-full tap-glass"
-            style={{
-              background: role === "owner" ? colors.hairline : "transparent",
-              color: role === "owner" ? "#FFFFFF" : colors.creamDim,
-              border: `2px solid ${colors.hairline}`,
-              fontWeight: 700,
-            }}
-          >
-            Owner
-          </button>
-          {(role === "customer" ? customerAuth : ownerAuth) && (
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen((o) => !o)}
-                className="p-2.5 rounded-full tap-glass"
-                style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+        <div className="flex px-4 pt-4 justify-between items-center">
+          <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
+            TheHub
+          </span>
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="p-2.5 rounded-full tap-glass"
+              style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+            >
+              <Menu size={20} />
+            </button>
+            {menuOpen && (
+              <div
+                className="absolute right-0 mt-2 w-60 rounded-2xl shadow-lg z-50 overflow-hidden"
+                style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
               >
-                <Menu size={20} />
-              </button>
-              {menuOpen && (
-                <div
-                  className="absolute right-0 mt-2 w-48 rounded-2xl shadow-lg z-50 overflow-hidden"
-                  style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+                <button
+                  onClick={() => { setMenuOpen(false); setRole("customer"); reset(); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                  style={{
+                    color: colors.cream,
+                    background: role === "customer" ? colors.panel : "transparent",
+                    fontWeight: role === "customer" ? 700 : 500,
+                  }}
                 >
-                  {role === "customer" && (
-                    <button
-                      onClick={() => { setMenuOpen(false); setView("myBookings"); }}
-                      className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                      style={{ color: colors.cream }}
-                    >
-                      <CalendarCheck size={16} /> My bookings
-                    </button>
-                  )}
+                  <CalendarCheck size={16} /> Book an appointment
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); setRole("owner"); setView("owner"); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                  style={{
+                    color: colors.cream,
+                    background: role === "owner" ? colors.panel : "transparent",
+                    fontWeight: role === "owner" ? 700 : 500,
+                  }}
+                >
+                  <Store size={16} /> I run a salon
+                </button>
+                <div style={{ borderTop: `2px solid ${colors.hairline}` }} />
+                {role === "customer" && customerAuth && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setView("myBookings"); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: colors.cream }}
+                  >
+                    <CalendarCheck size={16} /> My bookings
+                  </button>
+                )}
+                {(role === "customer" ? customerAuth : ownerAuth) && (
                   <button
                     onClick={() => { setMenuOpen(false); setView("settings"); }}
                     className="w-full flex items-center gap-2 px-4 py-3 text-sm"
@@ -2776,7 +2787,8 @@ export default function App() {
                   >
                     <Settings size={16} /> Settings
                   </button>
-                {role === "owner" && (
+                )}
+                {role === "owner" && ownerAuth && (
                   <button
                     onClick={() => { setMenuOpen(false); setOwnerPage("completed"); }}
                     className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
@@ -2784,22 +2796,23 @@ export default function App() {
                     <CheckCircle2 size={16} /> Completed Appointments
                   </button>
                 )}
-            {role === "owner" && (
-              <button
-                onClick={() => { setMenuOpen(false); setOwnerPage("ratings"); }}
-                className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
-              >
-                <Star size={16} /> Ratings &amp; Reviews
-              </button>
-            )}
-            {role === "owner" && (
-              <button
-                onClick={() => { setMenuOpen(false); setOwnerPage("profile"); }}
-                className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
-              >
-                <UserCircle size={16} /> My Profile
-              </button>
-            )}
+                {role === "owner" && ownerAuth && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setOwnerPage("ratings"); }}
+                    className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
+                  >
+                    <Star size={16} /> Ratings &amp; Reviews
+                  </button>
+                )}
+                {role === "owner" && ownerAuth && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setOwnerPage("profile"); }}
+                    className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
+                  >
+                    <UserCircle size={16} /> My Profile
+                  </button>
+                )}
+                {(role === "customer" ? customerAuth : ownerAuth) && (
                   <button
                     onClick={() => {
                       setMenuOpen(false);
@@ -2817,10 +2830,10 @@ export default function App() {
                   >
                     <LogOut size={16} /> Log out
                   </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </div>
         {status === "offline" && (
           <div className="mx-4 mt-4 px-4 py-3 rounded-2xl flex items-start gap-2" style={{ border: `3px solid ${colors.hairline}` }}>
