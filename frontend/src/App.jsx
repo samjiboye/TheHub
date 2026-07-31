@@ -2948,8 +2948,13 @@ function ResetPasswordView({ token, onDone }) {
 
 const ONBOARDING_SLIDES = [
   {
-    title: "Welcome to TheHub",
-    body: "Great hair, skin, and beauty care — booked in seconds. In the salon or at home, wherever suits you.",
+    title: "Welcome to TheHub!",
+    body: "Nigeria's home for beauty and grooming — booked in seconds, no phone calls needed.",
+    photo: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
+  },
+  {
+    title: "Book any service, anywhere",
+    body: "Great hair, skin, and beauty care — in the salon or at home, wherever suits you.",
     photo: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
   },
   {
