@@ -150,6 +150,13 @@ const SALONS = [
 ];
 
 const TIME_SLOTS = ["9:00 AM", "10:30 AM", "12:00 PM", "1:30 PM", "3:00 PM", "4:30 PM", "6:00 PM"];
+
+function formatBookingDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later — the UI already discloses it if so
 const COMMISSION_RATE = 0.15;
 
@@ -420,9 +427,16 @@ function ProfileView({ salon, onBack, onBook }) {
               <div className="text-left">
                 <p style={{ color: colors.cream, fontFamily: FONT_DISPLAY, fontWeight: 700 }} className="text-xl">{svc.name}</p>
                 <p className="text-base mt-1" style={{ color: colors.creamDim }}>{svc.duration_min ?? svc.duration} min</p>
+                {svc.home_service_price != null && (
+                  <p className="text-sm mt-1" style={{ color: colors.gold, fontWeight: 600 }}>
+                    🏠 {svc.salon_service_available === false ? "Home visits only" : "Home visits available"}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3">
-                <span style={{ color: colors.cream, fontWeight: 700 }} className="text-2xl">${svc.price}</span>
+                <span style={{ color: colors.cream, fontWeight: 700 }} className="text-2xl">
+                  {svc.salon_service_available === false ? `$${svc.home_service_price}` : `$${svc.price}`}
+                </span>
               </div>
             </button>
           ))}
@@ -433,20 +447,36 @@ function ProfileView({ salon, onBack, onBook }) {
 }
 
 function BookingView({ salon, service, onBack, token }) {
+  const homeOnly = service.salon_service_available === false;
+  const hasHomeOption = service.home_service_price != null;
   const [time, setTime] = useState(null);
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [location, setLocation] = useState(homeOnly ? "home" : "salon");
+  const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const total = (service.price + BOOKING_FEE).toFixed(2);
+
+  const price = location === "home" ? service.home_service_price : service.price;
+  const total = (price + BOOKING_FEE).toFixed(2);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const canSubmit = time && date && (location !== "home" || address.trim().length > 0);
 
   const handleBook = async () => {
-    if (!time || submitting) return;
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
       const { url } = await apiFetch("/payments/checkout", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ salon_id: salon.id, service_id: service.id, time_slot: time }),
+        body: JSON.stringify({
+          salon_id: salon.id,
+          service_id: service.id,
+          time_slot: time,
+          booking_date: date,
+          location_type: location,
+          customer_address: location === "home" ? address.trim() : undefined,
+        }),
       });
       window.location.href = url; // hand off to Stripe's hosted checkout page
     } catch (e) {
@@ -465,7 +495,69 @@ function BookingView({ salon, service, onBack, token }) {
     >
       <Header title={service.name} onBack={onBack} />
       <div className="px-4 relative">
-        <h3 className="mt-4 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
+        {hasHomeOption && !homeOnly && (
+          <>
+            <h3 className="mt-4 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
+              Where should this happen?
+            </h3>
+            <div className="grid grid-cols-2 gap-3 mb-2">
+              <button
+                onClick={() => setLocation("salon")}
+                className="py-4 px-3 rounded-2xl text-base tap-glass"
+                style={{
+                  background: location === "salon" ? colors.hairline : colors.panelLight,
+                  color: location === "salon" ? "#FFFFFF" : colors.cream,
+                  border: `3px solid ${colors.hairline}`,
+                  fontWeight: 700,
+                }}
+              >
+                At the salon<br /><span className="text-sm font-normal">${service.price.toFixed(2)}</span>
+              </button>
+              <button
+                onClick={() => setLocation("home")}
+                className="py-4 px-3 rounded-2xl text-base tap-glass"
+                style={{
+                  background: location === "home" ? colors.hairline : colors.panelLight,
+                  color: location === "home" ? "#FFFFFF" : colors.cream,
+                  border: `3px solid ${colors.hairline}`,
+                  fontWeight: 700,
+                }}
+              >
+                At your location<br /><span className="text-sm font-normal">${service.home_service_price.toFixed(2)}</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        {homeOnly && (
+          <p className="mt-4 mb-2 text-sm" style={{ color: textColor }}>
+            🏠 This is a home-visit service — ${service.home_service_price.toFixed(2)}
+          </p>
+        )}
+
+        {location === "home" && (
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Your address (where should they come?)"
+            className="w-full mb-4 px-4 py-3 rounded-xl text-base outline-none"
+            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          />
+        )}
+
+        <h3 className="mt-2 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
+          Pick a date
+        </h3>
+        <input
+          type="date"
+          min={todayStr}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full mb-6 px-4 py-3 rounded-xl text-base outline-none"
+          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+        />
+
+        <h3 className="mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
           Pick a time
         </h3>
         <div className="grid grid-cols-2 gap-3">
@@ -491,8 +583,8 @@ function BookingView({ salon, service, onBack, token }) {
 
         <div className="mt-6 rounded-2xl px-5 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
           <div className="flex justify-between text-sm" style={{ color: colors.creamDim }}>
-            <span>Service price</span>
-            <span>${service.price.toFixed(2)}</span>
+            <span>{location === "home" ? "Home visit price" : "Service price"}</span>
+            <span>${price.toFixed(2)}</span>
           </div>
           {BOOKING_FEE > 0 && (
             <div className="flex justify-between text-sm mt-1" style={{ color: colors.creamDim }}>
@@ -511,12 +603,12 @@ function BookingView({ salon, service, onBack, token }) {
         )}
 
         <button
-          disabled={!time || submitting}
+          disabled={!canSubmit || submitting}
           onClick={handleBook}
           className="w-full mt-6 py-5 rounded-2xl text-xl flex items-center justify-center gap-2 tap-glass"
           style={{
-            background: time ? colors.hairline : colors.panelLight,
-            color: time ? "#FFFFFF" : colors.creamDim,
+            background: canSubmit ? colors.hairline : colors.panelLight,
+            color: canSubmit ? "#FFFFFF" : colors.creamDim,
             fontWeight: 700,
             border: `3px solid ${colors.hairline}`,
           }}
@@ -824,6 +916,8 @@ function CreateSalonView({ token, onDone }) {
   const [svcName, setSvcName] = useState("");
   const [svcDuration, setSvcDuration] = useState("");
   const [svcPrice, setSvcPrice] = useState("");
+  const [svcHomePrice, setSvcHomePrice] = useState("");
+  const [svcHomeOnly, setSvcHomeOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -849,16 +943,32 @@ function CreateSalonView({ token, onDone }) {
   const addService = async (e) => {
     e.preventDefault();
     if (!svcName || !svcDuration || !svcPrice) return;
+    if (svcHomeOnly && !svcHomePrice) {
+      setError("Add a home-visit price — this service is marked as home-visit only.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       await apiFetch(`/salons/${salonId}/services`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: svcName, duration_min: Number(svcDuration), price: Number(svcPrice) }),
+        body: JSON.stringify({
+          name: svcName,
+          duration_min: Number(svcDuration),
+          price: Number(svcPrice),
+          home_service_price: svcHomePrice ? Number(svcHomePrice) : null,
+          salon_service_available: !svcHomeOnly,
+        }),
       });
-      setServices((prev) => [...prev, { name: svcName, duration_min: svcDuration, price: svcPrice }]);
-      setSvcName(""); setSvcDuration(""); setSvcPrice("");
+      setServices((prev) => [...prev, {
+        name: svcName,
+        duration_min: svcDuration,
+        price: svcPrice,
+        home_service_price: svcHomePrice || null,
+        salon_service_available: !svcHomeOnly,
+      }]);
+      setSvcName(""); setSvcDuration(""); setSvcPrice(""); setSvcHomePrice(""); setSvcHomeOnly(false);
     } catch (err) {
       setError(err.message || "Couldn't add that service.");
     } finally {
@@ -929,9 +1039,19 @@ function CreateSalonView({ token, onDone }) {
       {services.length > 0 && (
         <div className="flex flex-col gap-2 mb-5">
           {services.map((s, i) => (
-            <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ border: `2px solid ${colors.hairline}` }}>
-              <span style={{ color: colors.cream, fontWeight: 600 }}>{s.name}</span>
-              <span style={{ color: colors.creamDim }}>{s.duration_min} min · ${s.price}</span>
+            <div key={i} className="flex flex-col px-4 py-3 rounded-xl" style={{ border: `2px solid ${colors.hairline}` }}>
+              <div className="flex items-center justify-between">
+                <span style={{ color: colors.cream, fontWeight: 600 }}>{s.name}</span>
+                <span style={{ color: colors.creamDim }}>
+                  {s.duration_min} min{s.salon_service_available !== false ? ` · $${s.price}` : ""}
+                </span>
+              </div>
+              {s.home_service_price && (
+                <span className="text-sm mt-1" style={{ color: colors.gold }}>
+                  🏠 Home visit — ${s.home_service_price}
+                  {s.salon_service_available === false ? " (home visits only)" : ""}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -943,9 +1063,29 @@ function CreateSalonView({ token, onDone }) {
         <div className="flex gap-3">
           <input value={svcDuration} onChange={(e) => setSvcDuration(e.target.value)} type="number" placeholder="Minutes"
             className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
-          <input value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} type="number" placeholder="Price $"
+          <input value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} type="number" placeholder="Price $ (at salon)"
             className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
         </div>
+
+        <label className="flex items-center gap-2 text-sm mt-1" style={{ color: colors.creamDim }}>
+          <input type="checkbox" checked={svcHomeOnly} onChange={(e) => setSvcHomeOnly(e.target.checked)} />
+          I don't have a shop — this is a home-visit-only service
+        </label>
+
+        <input
+          value={svcHomePrice}
+          onChange={(e) => setSvcHomePrice(e.target.value)}
+          type="number"
+          placeholder={svcHomeOnly ? "Home visit price $ (required)" : "Home visit price $ (optional)"}
+          className="pb-2 text-base outline-none"
+          style={inputStyle}
+        />
+        {svcHomePrice && !svcHomeOnly && (
+          <p className="text-xs" style={{ color: colors.creamDim }}>
+            Clients will be able to choose "at the salon" or "at their home" for this service.
+          </p>
+        )}
+
         {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
         <button type="submit" disabled={loading}
           className="py-3.5 rounded-2xl text-base flex items-center justify-center gap-2 tap-glass"
@@ -1271,9 +1411,15 @@ function CompletedAppointmentsView({ token, onBack }) {
                 <div>
                   <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
                   <p className="text-xs" style={{ color: colors.creamDim }}>{b.customer_name}</p>
+                  {b.location_type === "home" && (
+                    <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 {b.customer_address}</p>
+                  )}
                 </div>
               </div>
-              <span className="text-xs" style={{ color: colors.creamDim }}>{b.time_slot}</span>
+              <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)}<br /></>}
+                {b.time_slot}
+              </span>
             </div>
           ))}
         </div>
@@ -1547,9 +1693,15 @@ function OwnerDashboard({ token }) {
                 <div>
                   <p className="text-sm" style={{ color: colors.cream }}>{a.service_name}</p>
                   <p className="text-xs" style={{ color: colors.creamDim }}>{a.customer_name}</p>
+                  {a.location_type === "home" && (
+                    <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 {a.customer_address}</p>
+                  )}
                 </div>
               </div>
-              <span className="text-xs" style={{ color: colors.creamDim }}>{a.time_slot}</span>
+              <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                {formatBookingDate(a.booking_date) && <>{formatBookingDate(a.booking_date)}<br /></>}
+                {a.time_slot}
+              </span>
                 {cancellingId !== a.id && (
                   <button
                     onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
@@ -2082,8 +2234,14 @@ function MyBookingsView({ token, onBack }) {
                 <div>
                   <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
                   <p className="text-xs" style={{ color: colors.creamDim }}>{b.salon_name}</p>
+                  {b.location_type === "home" && (
+                    <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 At your address</p>
+                  )}
                 </div>
-                <span className="text-xs" style={{ color: colors.creamDim }}>{b.time_slot}</span>
+                <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                  {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)}<br /></>}
+                  {b.time_slot}
+                </span>
               </div>
 
               {b.status === "cancelled" && (
