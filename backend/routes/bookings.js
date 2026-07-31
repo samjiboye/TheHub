@@ -2,7 +2,7 @@ const express = require("express");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
-const BOOKING_FEE = 2.5;
+const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
 const COMMISSION_RATE = 0.15;
 
 // POST /bookings — creates a booking with NO payment attached (status stays 'pending',
