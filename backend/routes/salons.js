@@ -170,6 +170,128 @@ router.post("/:id/services", requireAuth, requireRole("owner"), async (req, res)
   }
 });
 
+// PATCH /salons/:id (owner edits salon details: name, category, address, location, service type)
+router.patch("/:id", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { name, category, address, service_type, state, city, bio, hours } = req.body;
+    if (!name || !category) return res.status(400).json({ error: "name and category are required" });
+
+    let finalLat = salon.lat;
+    let finalLng = salon.lng;
+    const addressChanged = address !== salon.address || state !== salon.state || city !== salon.city;
+    const fullAddress = [address, city, state].filter(Boolean).join(", ");
+    if (addressChanged && fullAddress) {
+      const geocoded = await geocodeAddress(fullAddress);
+      finalLat = geocoded.lat;
+      finalLng = geocoded.lng;
+    }
+
+    const { rows } = await db.query(
+      `UPDATE salons SET name = $1, category = $2, address = $3, service_type = $4, state = $5, city = $6,
+        bio = $7, hours = $8, lat = $9, lng = $10
+       WHERE id = $11 RETURNING *`,
+      [name, category, address || null, service_type || salon.service_type, state || null, city || null,
+        bio ?? salon.bio, hours ?? salon.hours, finalLat, finalLng, salon.id]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't update that salon." });
+  }
+});
+
+// PATCH /salons/:id/services/:serviceId (owner edits a service's name/duration/price/home-visit settings)
+router.patch("/:id/services/:serviceId", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows: svcRows } = await db.query(
+      "SELECT * FROM services WHERE id = $1 AND salon_id = $2",
+      [req.params.serviceId, salon.id]
+    );
+    const existing = svcRows[0];
+    if (!existing) return res.status(404).json({ error: "Service not found" });
+
+    const { name, duration_min, price, home_service_price, salon_service_available } = req.body;
+    const salonAvailable = salon_service_available !== undefined ? salon_service_available !== false : existing.salon_service_available;
+    const homePrice = home_service_price !== undefined ? home_service_price : existing.home_service_price;
+    if (!salonAvailable && homePrice == null) {
+      return res.status(400).json({ error: "A home-visit price is required when a service isn't offered at the salon." });
+    }
+
+    const { rows } = await db.query(
+      `UPDATE services SET name = $1, duration_min = $2, price = $3, home_service_price = $4, salon_service_available = $5
+       WHERE id = $6 RETURNING *`,
+      [
+        name || existing.name,
+        duration_min || existing.duration_min,
+        price != null ? price : existing.price,
+        homePrice,
+        salonAvailable,
+        existing.id,
+      ]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't update that service." });
+  }
+});
+
+// DELETE /salons/:id/services/:serviceId (owner removes a service)
+router.delete("/:id/services/:serviceId", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows } = await db.query(
+      "DELETE FROM services WHERE id = $1 AND salon_id = $2 RETURNING id",
+      [req.params.serviceId, salon.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Service not found" });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't remove that service." });
+  }
+});
+
+// DELETE /salons/:id (owner permanently deletes their salon listing — blocked if any bookings exist)
+router.delete("/:id", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows: bookingCountRows } = await db.query(
+      "SELECT COUNT(*) AS count FROM bookings WHERE salon_id = $1",
+      [salon.id]
+    );
+    if (Number(bookingCountRows[0].count) > 0) {
+      return res.status(400).json({
+        error: "This salon has booking history and can't be deleted. Contact support if you need help with this.",
+      });
+    }
+
+    await db.query("DELETE FROM salons WHERE id = $1", [salon.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't delete that salon." });
+  }
+});
+
 // GET /salons/:id/dashboard (owner earnings summary)
 router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res) => {
   try {
