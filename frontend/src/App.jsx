@@ -58,11 +58,11 @@ const FONT_BODY = "'Baloo 2', sans-serif";
 const FONT_MONO = "'Baloo 2', sans-serif";
 
 const CATEGORIES = [
-  { name: "Barbing", icon: Scissors },
-  { name: "Hairdressing", icon: Wand2 },
-  { name: "Nails", icon: Palette },
-  { name: "Makeup", icon: Sparkles },
-  { name: "Spa", icon: Flower2 },
+  { name: "Barbing", icon: Scissors, photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
+  { name: "Hairdressing", icon: Wand2, photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
+  { name: "Nails", icon: Palette, photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
+  { name: "Makeup", icon: Sparkles, photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
+  { name: "Spa", icon: Flower2, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
 ];
 
 // Category-specific hero background treatments — used behind the search screen
@@ -358,13 +358,22 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
                 setCategory(category === c.name ? null : c.name);
                 e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
               }}
-              className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap tap-glass shrink-0 relative"
+              className="pl-1.5 pr-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap tap-glass shrink-0 relative flex items-center gap-2"
               style={{
                 background: category === c.name ? colors.gold : colors.panelLight,
                 color: category === c.name ? "#FFFFFF" : colors.cream,
                 border: `2px solid ${category === c.name ? colors.gold : colors.hairline}`,
               }}
             >
+              <div
+                className="w-7 h-7 rounded-full shrink-0"
+                style={{
+                  backgroundImage: `url(${c.photo})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  border: "2px solid rgba(255,255,255,0.8)",
+                }}
+              />
               {c.name}
             </button>
           ))}
