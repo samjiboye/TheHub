@@ -70,11 +70,11 @@ const CATEGORIES = [
 // images are loaded here (kept to CSS gradients + a large watermark icon) so
 // there's nothing to break if network access to an image host is unavailable.
 const CATEGORY_THEMES = {
-  Barbing: { gradient: "linear-gradient(160deg, #1B140F 0%, #4A2E1A 50%, #C97A34 100%)" },
+  Barbing: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
   Hairdressing: { gradient: "linear-gradient(160deg, #241019 0%, #5C2740 50%, #D98CA6 100%)" },
   Nails: { gradient: "linear-gradient(160deg, #241214 0%, #6B333B 50%, #E7A9A0 100%)" },
   Makeup: { gradient: "linear-gradient(160deg, #180E20 0%, #451D54 50%, #C9A0DC 100%)" },
-  Spa: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
+  Spa: { gradient: "linear-gradient(160deg, #0D1B2A 0%, #1B4965 50%, #A9D6E5 100%)" },
 };
 const NEUTRAL_HERO_GRADIENT = "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)";
 // A distinct, muted "business dashboard" gradient for the owner side of the app —
@@ -566,8 +566,16 @@ function BookingView({ salon, service, onBack, token }) {
           min={todayStr}
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="w-full mb-6 px-4 py-3 rounded-xl text-base outline-none"
-          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          className="w-full mb-6 px-4 py-3 rounded-xl text-base outline-none block"
+          style={{
+            background: colors.panelLight,
+            border: `2px solid ${colors.hairline}`,
+            color: colors.cream,
+            boxSizing: "border-box",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+          }}
         />
 
         <h3 className="mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
@@ -615,19 +623,7 @@ function BookingView({ salon, service, onBack, token }) {
           <p className="text-base text-center mt-4" style={{ color: heroTheme ? "rgba(255,255,255,0.85)" : colors.creamDim }}>{error}</p>
         )}
 
-        <button
-          disabled={!canSubmit || submitting}
-          onClick={handleBook}
-          className="w-full mt-6 py-5 rounded-2xl text-xl flex items-center justify-center gap-2 tap-glass"
-          style={{
-            background: canSubmit ? colors.hairline : colors.panelLight,
-            color: canSubmit ? "#FFFFFF" : colors.creamDim,
-            fontWeight: 700,
-            border: `3px solid ${colors.hairline}`,
-          }}
-        >
-          {submitting ? <Loader2 size={22} className="animate-spin" /> : <>Pay & book <ArrowRight size={22} /></>}
-        </button>
+<SwipeToPay onConfirm={handleBook} disabled={!canSubmit} submitting={submitting} />
       </div>
     </div>
   );
@@ -1362,6 +1358,76 @@ function SwipeToComplete({ onComplete }) {
         style={{ left: dragX, width: handleSize, height: handleSize, background: colors.green, transition: dragging ? "none" : "left 0.2s ease" }}
       >
         <CheckCircle2 size={18} color="#FFFFFF" />
+      </div>
+    </div>
+  );
+}
+
+function SwipeToPay({ onConfirm, disabled, submitting }) {
+  const trackRef = useRef(null);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startXRef = useRef(0);
+  const trackWidthRef = useRef(0);
+  const handleSize = 56;
+
+  function handlePointerDown(e) {
+    if (disabled || submitting) return;
+    e.target.setPointerCapture?.(e.pointerId);
+    setDragging(true);
+    trackWidthRef.current = trackRef.current.offsetWidth;
+    startXRef.current = e.clientX - dragX;
+  }
+  function handlePointerMove(e) {
+    if (!dragging) return;
+    const maxX = trackWidthRef.current - handleSize;
+    let next = e.clientX - startXRef.current;
+    next = Math.max(0, Math.min(next, maxX));
+    setDragX(next);
+  }
+  function handlePointerUp() {
+    if (!dragging) return;
+    setDragging(false);
+    const maxX = trackWidthRef.current - handleSize;
+    if (maxX > 0 && dragX >= maxX * 0.8) {
+      setDragX(maxX);
+      onConfirm();
+    } else {
+      setDragX(0);
+    }
+  }
+
+  return (
+    <div
+      ref={trackRef}
+      className="relative rounded-2xl overflow-hidden select-none w-full mt-6"
+      style={{
+        height: 64,
+        background: colors.panelLight,
+        border: `3px solid ${colors.hairline}`,
+        touchAction: "none",
+        opacity: disabled && !submitting ? 0.6 : 1,
+      }}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
+      <div
+        className="absolute inset-y-0 left-0 rounded-2xl"
+        style={{ width: dragX + handleSize, background: colors.hairline, transition: dragging ? "none" : "width 0.2s ease" }}
+      />
+      <div
+        className="absolute inset-0 flex items-center justify-center text-lg font-bold pointer-events-none"
+        style={{ color: colors.cream }}
+      >
+        {submitting ? "Processing..." : "Slide to pay & book"}
+      </div>
+      <div
+        onPointerDown={handlePointerDown}
+        className="absolute top-0 flex items-center justify-center rounded-2xl"
+        style={{ left: dragX, width: handleSize, height: handleSize, background: colors.hairline, cursor: disabled ? "not-allowed" : "pointer" }}
+      >
+        {submitting ? <Loader2 size={22} className="animate-spin" color="#FFFFFF" /> : <ArrowRight size={22} color="#FFFFFF" />}
       </div>
     </div>
   );
@@ -3228,7 +3294,7 @@ export default function App() {
             inset 0 0 12px rgba(120,200,255,0.3);
         }
       `}</style>
-      <div className="w-full relative" style={{ minHeight: "100vh", overflowX: "hidden", maxWidth: "1600px", margin: "0 auto" }}>
+      <div className="w-full relative" style={{ minHeight: "100vh", maxWidth: "1600px", margin: "0 auto" }}>
         <div className="flex px-4 pt-4 justify-between items-center">
           <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
             TheHub
