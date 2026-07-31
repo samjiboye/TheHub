@@ -2964,17 +2964,17 @@ const ONBOARDING_SLIDES = [
   {
     title: "Book any service, anywhere",
     body: "Great hair, skin, and beauty care — in the salon or at home, wherever suits you.",
-    photo: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
+    photo: "https://images.pexels.com/photos/4350096/pexels-photo-4350096.jpeg",
   },
   {
     title: "Built for clients and businesses alike",
     body: "Search by category and see real reviews before you book. Salon or freelance owners get paid instantly via Paystack — no waiting around.",
-    photo: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80",
+    photo: "https://images.pexels.com/photos/7389077/pexels-photo-7389077.jpeg",
   },
   {
     type: "categories",
     title: "Explore what we offer",
-    photo: "https://images.pexels.com/photos/7389077/pexels-photo-7389077.jpeg",
+    photo: null,
     categories: [
       { name: "Braids", photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
       { name: "Barbing", photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
@@ -3005,7 +3005,7 @@ function OnboardingView({ onDone }) {
       style={{
         backgroundImage:
           current.type === "categories"
-            ? `linear-gradient(160deg, rgba(201,122,61,0.35), rgba(166,83,42,0.4)), url(${current.photo})`
+            ? "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)"
             : `linear-gradient(160deg, rgba(201,122,61,0.75), rgba(166,83,42,0.85)), url(${current.photo})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -3034,8 +3034,8 @@ function OnboardingView({ onDone }) {
         <>
           <div className="mt-8">
             <h1
-              className="text-3xl font-extrabold text-white leading-tight mb-4"
-              style={{ fontFamily: FONT_DISPLAY }}
+              className="text-3xl font-extrabold leading-tight mb-4"
+              style={{ fontFamily: FONT_DISPLAY, color: colors.hairline }}
             >
               {current.title}
             </h1>
@@ -3051,10 +3051,10 @@ function OnboardingView({ onDone }) {
                       backgroundImage: `url(${cat.photo})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
-                      border: "3px solid rgba(255,255,255,0.8)",
+                      border: `3px solid ${colors.hairline}`,
                     }}
                   />
-                  <span className="text-white text-xs font-semibold text-center">{cat.name}</span>
+                  <span className="text-xs font-semibold text-center" style={{ color: colors.hairline }}>{cat.name}</span>
                 </div>
               ))}
             </div>
@@ -3094,7 +3094,11 @@ function OnboardingView({ onDone }) {
 
       <div className="flex items-center justify-between">
         {slide > 0 ? (
-          <button onClick={prev} className="text-white text-base font-semibold">
+          <button
+            onClick={prev}
+            className="text-base font-semibold"
+            style={{ color: current.type === "categories" ? colors.hairline : "#FFFFFF" }}
+          >
             Prev
           </button>
         ) : (
@@ -3106,7 +3110,12 @@ function OnboardingView({ onDone }) {
             <div
               key={i}
               className={i === slide ? "w-6 h-2 rounded-full" : "w-2 h-2 rounded-full"}
-              style={{ background: i === slide ? "#FFFFFF" : "rgba(255,255,255,0.5)" }}
+              style={{
+                background:
+                  current.type === "categories"
+                    ? i === slide ? colors.hairline : "rgba(166,83,42,0.35)"
+                    : i === slide ? "#FFFFFF" : "rgba(255,255,255,0.5)",
+              }}
             />
           ))}
         </div>
