@@ -2719,7 +2719,7 @@ function MyBookingsView({ token, onBack }) {
   );
 }
 
-function SettingsView({ onBack }) {
+function SettingsView({ onBack, onWatchIntro }) {
   const savedCustomer = JSON.parse(localStorage.getItem("customerAuth") || "null");
   const savedOwner = JSON.parse(localStorage.getItem("ownerAuth") || "null");
   const user = savedCustomer?.user || savedOwner?.user || {};
@@ -2749,6 +2749,15 @@ function SettingsView({ onBack }) {
           <p className="text-xs mb-1" style={{ color: colors.creamDim }}>Phone</p>
           <p className="text-sm" style={{ color: colors.cream }}>{user.phone || "—"}</p>
         </div>
+        {onWatchIntro && (
+          <button
+            onClick={onWatchIntro}
+            className="px-4 py-3 rounded-xl text-sm font-semibold text-left tap-glass"
+            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          >
+            Watch intro again
+          </button>
+        )}
       </div>
     </div>
   );
@@ -2939,18 +2948,18 @@ function ResetPasswordView({ token, onDone }) {
 
 const ONBOARDING_SLIDES = [
   {
-    title: "Find what you're looking for",
-    body: "Aim to efficiently attract specific individuals or groups likely to be interested in a product or service through focused marketing strategies.",
+    title: "Book any service, anywhere",
+    body: "Get a haircut, lashes, a manicure, or a full glam look — in the salon or at your own home. Anywhere in Nigeria.",
     photo: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
   },
   {
-    title: "Targeted User Acquisition Campaigns",
-    body: "Aim to efficiently attract specific individuals or groups likely to be interested in a product or service through focused marketing strategies.",
+    title: "Browse with confidence",
+    body: "Search by category, see real ratings from real clients, and know exactly what you're booking before you pay.",
     photo: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80",
   },
   {
-    title: "Building Trust and Credibility",
-    body: "Emphasizing security measures, highlighting positive user experiences or reviews, and providing transparent information about the sellers and their products/services.",
+    title: "Own a business? Get paid instantly",
+    body: "List your services, set your prices, and get paid straight to your account through Paystack — no waiting around.",
     photo: "https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=800&q=80",
   },
 ];
@@ -3494,6 +3503,7 @@ export default function App() {
             {view === "settings" && (
               <SettingsView
                 onBack={() => setView("home")}
+                onWatchIntro={() => setShowOnboarding(true)}
               />
             )}
           </>
