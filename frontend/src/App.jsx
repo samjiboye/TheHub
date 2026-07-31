@@ -423,7 +423,7 @@ function ProfileView({ salon, onBack, onBook }) {
           Pick a service
         </h3>
         <div className="flex flex-col gap-3">
-          {salon.services.map((svc) => (
+          {(salon.services || []).map((svc) => (
             <button
               key={svc.id ?? svc.name}
               onClick={() => onBook(svc)}
@@ -2127,7 +2127,7 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
             <div className="mt-4 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
               <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg mb-3">Services & pricing</h3>
               <div className="flex flex-col gap-2">
-                {salon.services.map((svc) => (
+                {(salon.services || []).map((svc) => (
                   <div key={svc.id} className="rounded-xl px-3 py-3" style={{ border: `2px solid ${colors.hairline}` }}>
                     {editingServiceId === svc.id ? (
                       <div className="flex flex-col gap-2">

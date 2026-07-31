@@ -78,7 +78,13 @@ router.get("/", async (req, res) => {
 router.get("/mine", requireAuth, requireRole("owner"), async (req, res) => {
   try {
     const { rows } = await db.query("SELECT * FROM salons WHERE owner_id = $1", [req.user.id]);
-    res.json(rows);
+    const withServices = await Promise.all(
+      rows.map(async (s) => {
+        const { rows: services } = await db.query("SELECT * FROM services WHERE salon_id = $1", [s.id]);
+        return { ...s, services };
+      })
+    );
+    res.json(withServices);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load your salons." });
