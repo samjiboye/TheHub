@@ -3221,7 +3221,7 @@ export default function App() {
             inset 0 0 12px rgba(120,200,255,0.3);
         }
       `}</style>
-      <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl relative" style={{ minHeight: "100vh", overflowX: "hidden" }}>
+      <div className="w-full relative" style={{ minHeight: "100vh", overflowX: "hidden", maxWidth: "1600px", margin: "0 auto" }}>
         <div className="flex px-4 pt-4 justify-between items-center">
           <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
             TheHub
