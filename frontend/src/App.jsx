@@ -560,22 +560,26 @@ function BookingView({ salon, service, onBack, token }) {
         <h3 className="mt-2 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
           Pick a date
         </h3>
-        <input
-          type="date"
-          min={todayStr}
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full mb-6 px-4 py-3 rounded-xl text-base outline-none block"
-          style={{
-            background: colors.panelLight,
-            border: `2px solid ${colors.hairline}`,
-            color: colors.cream,
-            boxSizing: "border-box",
-            width: "100%",
-            maxWidth: "100%",
-            minWidth: 0,
-          }}
-        />
+        <div className="w-full mb-6 rounded-xl overflow-hidden" style={{ border: `2px solid ${colors.hairline}` }}>
+          <input
+            type="date"
+            min={todayStr}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="outline-none block"
+            style={{
+              background: colors.panelLight,
+              color: colors.cream,
+              boxSizing: "border-box",
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              padding: "10px 8px",
+              fontSize: "0.9rem",
+              border: "none",
+            }}
+          />
+        </div>
 
         <h3 className="mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
           Pick a time
