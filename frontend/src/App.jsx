@@ -287,85 +287,92 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
   }, [category]);
 
   return (
-    <div
-      className="px-4 pt-2 pb-10 relative overflow-hidden rounded-b-[2.5rem] transition-[background] duration-500"
-      style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
-    >
-      {HeroIcon && (
-        <HeroIcon
-          size={220}
-          strokeWidth={1}
-          color="#FFFFFF"
-          style={{ position: "absolute", right: -36, top: 4, opacity: 0.14, pointerEvents: "none" }}
-        />
-      )}
-      <h2
-        style={{ fontFamily: FONT_DISPLAY, color: heroTheme ? "#FFFFFF" : colors.cream, fontSize: "1.9rem", fontWeight: 700 }}
-        className="mt-2 mb-4 text-center relative transition-colors duration-500"
+    <div className="relative">
+      <div
+        className="px-4 pt-2 pb-6 relative overflow-hidden rounded-b-[2.5rem] transition-[background] duration-500"
+        style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT }}
       >
-        What do you want today?
-      </h2>
-
-      <input
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search by name or location"
-        className="w-full mb-3 px-4 py-3 rounded-xl text-base outline-none"
-        style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-      />
-
-      <div className="grid grid-cols-2 gap-2 mb-5">
-        <select
-          value={searchState}
-          onChange={(e) => { setSearchState(e.target.value); setSearchCity(""); }}
-          className="px-3 py-3 rounded-xl text-sm outline-none"
-          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+        {HeroIcon && (
+          <HeroIcon
+            size={220}
+            strokeWidth={1}
+            color="#FFFFFF"
+            style={{ position: "absolute", right: -36, top: 4, opacity: 0.14, pointerEvents: "none" }}
+          />
+        )}
+        <h2
+          style={{ fontFamily: FONT_DISPLAY, color: heroTheme ? "#FFFFFF" : colors.cream, fontSize: "1.9rem", fontWeight: 700 }}
+          className="mt-2 text-center relative transition-colors duration-500"
         >
-          <option value="">All states</option>
-          {NIGERIA_LOCATIONS.map((s) => <option key={s.state} value={s.state}>{s.state}</option>)}
-        </select>
-        <select
-          value={searchCity}
-          onChange={(e) => setSearchCity(e.target.value)}
-          disabled={!searchState}
-          className="px-3 py-3 rounded-xl text-sm outline-none"
-          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-        >
-          <option value="">All cities</option>
-          {citiesForState.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+          What do you want today?
+        </h2>
       </div>
 
-      <div ref={chipRowRef} className="flex gap-2 overflow-x-auto pb-2 mb-4 relative">
-        <div
-          className="water-slide"
-          style={{
-            left: chipIndicator.left,
-            width: chipIndicator.width,
-            opacity: chipIndicator.opacity,
-          }}
+      <div
+        className="sticky top-0 z-20 px-4 pt-4 pb-3 transition-[background] duration-500"
+        style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT, borderBottom: `2px solid ${colors.hairline}` }}
+      >
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name or location"
+          className="w-full mb-3 px-4 py-3 rounded-xl text-base outline-none"
+          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
         />
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.name}
-            ref={(el) => { chipRefs.current[c.name] = el; }}
-            onClick={(e) => {
-              setCategory(category === c.name ? null : c.name);
-              e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-            }}
-            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap tap-glass shrink-0 relative"
-            style={{
-              background: category === c.name ? colors.gold : colors.panelLight,
-              color: category === c.name ? "#FFFFFF" : colors.cream,
-              border: `2px solid ${category === c.name ? colors.gold : colors.hairline}`,
-            }}
+
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <select
+            value={searchState}
+            onChange={(e) => { setSearchState(e.target.value); setSearchCity(""); }}
+            className="px-3 py-3 rounded-xl text-sm outline-none"
+            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
           >
-            {c.name}
-          </button>
-        ))}
+            <option value="">All states</option>
+            {NIGERIA_LOCATIONS.map((s) => <option key={s.state} value={s.state}>{s.state}</option>)}
+          </select>
+          <select
+            value={searchCity}
+            onChange={(e) => setSearchCity(e.target.value)}
+            disabled={!searchState}
+            className="px-3 py-3 rounded-xl text-sm outline-none"
+            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          >
+            <option value="">All cities</option>
+            {citiesForState.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <div ref={chipRowRef} className="flex gap-2 overflow-x-auto pb-1 relative">
+          <div
+            className="water-slide"
+            style={{
+              left: chipIndicator.left,
+              width: chipIndicator.width,
+              opacity: chipIndicator.opacity,
+            }}
+          />
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.name}
+              ref={(el) => { chipRefs.current[c.name] = el; }}
+              onClick={(e) => {
+                setCategory(category === c.name ? null : c.name);
+                e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+              }}
+              className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap tap-glass shrink-0 relative"
+              style={{
+                background: category === c.name ? colors.gold : colors.panelLight,
+                color: category === c.name ? "#FFFFFF" : colors.cream,
+                border: `2px solid ${category === c.name ? colors.gold : colors.hairline}`,
+              }}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="px-4 pt-5 pb-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.length === 0 && (
           <p className="text-lg text-center py-10 sm:col-span-2 lg:col-span-3" style={{ color: colors.creamDim }}>
             No one here yet.
@@ -441,7 +448,7 @@ function ProfileView({ salon, onBack, onBook }) {
               </div>
               <div className="flex items-center gap-3">
                 <span style={{ color: colors.cream, fontWeight: 700 }} className="text-2xl">
-                  {svc.salon_service_available === false ? `$${svc.home_service_price}` : `$${svc.price}`}
+                  {svc.salon_service_available === false ? `₦${svc.home_service_price}` : `₦${svc.price}`}
                 </span>
               </div>
             </button>
@@ -517,7 +524,7 @@ function BookingView({ salon, service, onBack, token }) {
                   fontWeight: 700,
                 }}
               >
-                At the salon<br /><span className="text-sm font-normal">${service.price.toFixed(2)}</span>
+                At the salon<br /><span className="text-sm font-normal">₦{service.price.toFixed(2)}</span>
               </button>
               <button
                 onClick={() => setLocation("home")}
@@ -529,7 +536,7 @@ function BookingView({ salon, service, onBack, token }) {
                   fontWeight: 700,
                 }}
               >
-                At your location<br /><span className="text-sm font-normal">${service.home_service_price.toFixed(2)}</span>
+                At your location<br /><span className="text-sm font-normal">₦{service.home_service_price.toFixed(2)}</span>
               </button>
             </div>
           </>
@@ -537,7 +544,7 @@ function BookingView({ salon, service, onBack, token }) {
 
         {homeOnly && (
           <p className="mt-4 mb-2 text-sm" style={{ color: textColor }}>
-            🏠 This is a home-visit service — ${service.home_service_price.toFixed(2)}
+            🏠 This is a home-visit service — ₦{service.home_service_price.toFixed(2)}
           </p>
         )}
 
@@ -590,17 +597,17 @@ function BookingView({ salon, service, onBack, token }) {
         <div className="mt-6 rounded-2xl px-5 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
           <div className="flex justify-between text-sm" style={{ color: colors.creamDim }}>
             <span>{location === "home" ? "Home visit price" : "Service price"}</span>
-            <span>${price.toFixed(2)}</span>
+            <span>₦{price.toFixed(2)}</span>
           </div>
           {BOOKING_FEE > 0 && (
             <div className="flex justify-between text-sm mt-1" style={{ color: colors.creamDim }}>
               <span>Booking fee</span>
-              <span>${BOOKING_FEE.toFixed(2)}</span>
+              <span>₦{BOOKING_FEE.toFixed(2)}</span>
             </div>
           )}
           <div className="mt-2 pt-2 flex justify-between text-lg" style={{ color: colors.cream, borderTop: `2px solid ${colors.hairline}` }}>
             <span>Total</span>
-            <span style={{ fontWeight: 700 }}>${total}</span>
+            <span style={{ fontWeight: 700 }}>₦{total}</span>
           </div>
         </div>
 
@@ -1049,12 +1056,12 @@ function CreateSalonView({ token, onDone }) {
               <div className="flex items-center justify-between">
                 <span style={{ color: colors.cream, fontWeight: 600 }}>{s.name}</span>
                 <span style={{ color: colors.creamDim }}>
-                  {s.duration_min} min{s.salon_service_available !== false ? ` · $${s.price}` : ""}
+                  {s.duration_min} min{s.salon_service_available !== false ? ` · ₦${s.price}` : ""}
                 </span>
               </div>
               {s.home_service_price && (
                 <span className="text-sm mt-1" style={{ color: colors.gold }}>
-                  🏠 Home visit — ${s.home_service_price}
+                  🏠 Home visit — ₦{s.home_service_price}
                   {s.salon_service_available === false ? " (home visits only)" : ""}
                 </span>
               )}
@@ -1069,7 +1076,7 @@ function CreateSalonView({ token, onDone }) {
         <div className="flex gap-3">
           <input value={svcDuration} onChange={(e) => setSvcDuration(e.target.value)} type="number" placeholder="Minutes"
             className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
-          <input value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} type="number" placeholder="Price $ (at salon)"
+          <input value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} type="number" placeholder="Price ₦ (at salon)"
             className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
         </div>
 
@@ -1082,7 +1089,7 @@ function CreateSalonView({ token, onDone }) {
           value={svcHomePrice}
           onChange={(e) => setSvcHomePrice(e.target.value)}
           type="number"
-          placeholder={svcHomeOnly ? "Home visit price $ (required)" : "Home visit price $ (optional)"}
+          placeholder={svcHomeOnly ? "Home visit price ₦ (required)" : "Home visit price ₦ (optional)"}
           className="pb-2 text-base outline-none"
           style={inputStyle}
         />
@@ -1663,17 +1670,17 @@ function OwnerDashboard({ token }) {
               <TrendingUp size={13} /> Gross bookings
             </div>
             <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.6rem" }} className="mt-1">
-              ${data.gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ₦{data.gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl px-4 py-3" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
               <p className="text-xs" style={{ color: colors.creamDim }}>Platform commission (15%)</p>
-              <p style={{ color: colors.cream }} className="text-lg mt-1">-${data.commission.toFixed(2)}</p>
+              <p style={{ color: colors.cream }} className="text-lg mt-1">-₦{data.commission.toFixed(2)}</p>
             </div>
             <div className="rounded-2xl px-4 py-3" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
               <p className="text-xs" style={{ color: colors.creamDim }}>Your payout</p>
-              <p style={{ color: colors.cream }} className="text-lg mt-1">${data.payout.toFixed(2)}</p>
+              <p style={{ color: colors.cream }} className="text-lg mt-1">₦{data.payout.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -2137,7 +2144,7 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                           <input value={serviceForm.duration_min} onChange={(e) => setServiceForm({ ...serviceForm, duration_min: e.target.value })}
                             type="number" placeholder="Minutes" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
                           <input value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
-                            type="number" placeholder="Price $" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                            type="number" placeholder="Price ₦" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
                         </div>
                         <label className="flex items-center gap-2 text-sm" style={{ color: colors.creamDim }}>
                           <input type="checkbox" checked={!serviceForm.salon_service_available}
@@ -2145,7 +2152,7 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                           Home-visit only (no shop)
                         </label>
                         <input value={serviceForm.home_service_price} onChange={(e) => setServiceForm({ ...serviceForm, home_service_price: e.target.value })}
-                          type="number" placeholder="Home visit price $ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
+                          type="number" placeholder="Home visit price ₦ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
                         {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
                         <div className="flex gap-2">
                           <button onClick={saveService} disabled={savingService}
@@ -2165,11 +2172,11 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                         <div>
                           <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
                           <p className="text-sm" style={{ color: colors.creamDim }}>
-                            {svc.duration_min} min{svc.salon_service_available !== false ? ` · $${svc.price}` : ""}
+                            {svc.duration_min} min{svc.salon_service_available !== false ? ` · ₦${svc.price}` : ""}
                           </p>
                           {svc.home_service_price != null && (
                             <p className="text-sm" style={{ color: colors.gold }}>
-                              🏠 ${svc.home_service_price}{svc.salon_service_available === false ? " (home only)" : ""}
+                              🏠 ₦{svc.home_service_price}{svc.salon_service_available === false ? " (home only)" : ""}
                             </p>
                           )}
                         </div>
@@ -2195,14 +2202,14 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                     <input value={newSvc.duration_min} onChange={(e) => setNewSvc({ ...newSvc, duration_min: e.target.value })}
                       type="number" placeholder="Minutes" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
                     <input value={newSvc.price} onChange={(e) => setNewSvc({ ...newSvc, price: e.target.value })}
-                      type="number" placeholder="Price $" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                      type="number" placeholder="Price ₦" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
                   </div>
                   <label className="flex items-center gap-2 text-sm" style={{ color: colors.creamDim }}>
                     <input type="checkbox" checked={newSvc.home_only} onChange={(e) => setNewSvc({ ...newSvc, home_only: e.target.checked })} />
                     I don't have a shop — home-visit only
                   </label>
                   <input value={newSvc.home_service_price} onChange={(e) => setNewSvc({ ...newSvc, home_service_price: e.target.value })}
-                    type="number" placeholder="Home visit price $ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
+                    type="number" placeholder="Home visit price ₦ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
                   {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
                   <div className="flex gap-2">
                     <button onClick={addService} disabled={savingNewSvc}
