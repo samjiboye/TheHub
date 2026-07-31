@@ -10,9 +10,13 @@ const COMMISSION_RATE = 0.15;
 // real customer flow is POST /payments/checkout, which creates the booking AND a
 // Paystack transaction together, then a webhook confirms it once paid.
 router.post("/", requireAuth, async (req, res) => {
-  const { salon_id, service_id, time_slot } = req.body;
+  const { salon_id, service_id, time_slot, booking_date, location_type, customer_address } = req.body;
   if (!salon_id || !service_id || !time_slot) {
     return res.status(400).json({ error: "salon_id, service_id, and time_slot are required" });
+  }
+  const loc = location_type === "home" ? "home" : "salon";
+  if (loc === "home" && !customer_address) {
+    return res.status(400).json({ error: "An address is required for home service bookings." });
   }
   try {
     const { rows: serviceRows } = await db.query(
@@ -21,15 +25,22 @@ router.post("/", requireAuth, async (req, res) => {
     );
     const service = serviceRows[0];
     if (!service) return res.status(404).json({ error: "Service not found for this salon" });
+    if (loc === "salon" && !service.salon_service_available) {
+      return res.status(400).json({ error: "This service is only available as a home visit." });
+    }
+    if (loc === "home" && service.home_service_price == null) {
+      return res.status(400).json({ error: "This service doesn't offer home visits." });
+    }
 
-    const commission_amount = Math.round(service.price * COMMISSION_RATE * 100) / 100;
-    const payout_amount = Math.round((service.price - commission_amount) * 100) / 100;
+    const price = loc === "home" ? service.home_service_price : service.price;
+    const commission_amount = Math.round(price * COMMISSION_RATE * 100) / 100;
+    const payout_amount = Math.round((price - commission_amount) * 100) / 100;
 
     const { rows } = await db.query(
       `INSERT INTO bookings
-        (customer_id, salon_id, service_id, time_slot, service_price, booking_fee, commission_rate, commission_amount, payout_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [req.user.id, salon_id, service_id, time_slot, service.price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount]
+        (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, service_price, booking_fee, commission_rate, commission_amount, payout_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

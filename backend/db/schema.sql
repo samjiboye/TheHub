@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS services (
   duration_min INTEGER NOT NULL,
   price REAL NOT NULL
 );
+ALTER TABLE services ADD COLUMN IF NOT EXISTS home_service_price REAL;
+ALTER TABLE services ADD COLUMN IF NOT EXISTS salon_service_available BOOLEAN NOT NULL DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS bookings (
   id SERIAL PRIMARY KEY,
@@ -76,6 +78,9 @@ ALTER TABLE salons ADD COLUMN IF NOT EXISTS profile_image_public_id TEXT;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by TEXT;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancel_note TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_date DATE;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location_type TEXT NOT NULL DEFAULT 'salon';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_address TEXT;
 
 CREATE TABLE IF NOT EXISTS salon_media (
   id SERIAL PRIMARY KEY,

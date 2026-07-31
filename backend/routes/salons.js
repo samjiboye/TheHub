@@ -150,13 +150,18 @@ router.post("/:id/services", requireAuth, requireRole("owner"), async (req, res)
     if (!salon) return res.status(404).json({ error: "Salon not found" });
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
-    const { name, duration_min, price } = req.body;
+    const { name, duration_min, price, home_service_price, salon_service_available } = req.body;
     if (!name || !duration_min || price == null) {
       return res.status(400).json({ error: "name, duration_min, and price are required" });
     }
+    const salonAvailable = salon_service_available !== false;
+    if (!salonAvailable && home_service_price == null) {
+      return res.status(400).json({ error: "A home-visit price is required when a service isn't offered at the salon." });
+    }
     const { rows } = await db.query(
-      "INSERT INTO services (salon_id, name, duration_min, price) VALUES ($1, $2, $3, $4) RETURNING id",
-      [salon.id, name, duration_min, price]
+      `INSERT INTO services (salon_id, name, duration_min, price, home_service_price, salon_service_available)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [salon.id, name, duration_min, price, home_service_price ?? null, salonAvailable]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
