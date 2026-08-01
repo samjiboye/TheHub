@@ -2983,6 +2983,11 @@ const ONBOARDING_SLIDES = [
       { name: "Spa", photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
     ],
   },
+  {
+    type: "location",
+    title: "See what's near you",
+    body: "Turn on location to find salons, barbers, and pros close to you — sorted nearest first.",
+  },
 ];
 
 function OnboardingView({ onDone }) {
@@ -2999,14 +3004,15 @@ function OnboardingView({ onDone }) {
     if (slide > 0) setSlide((s) => s - 1);
   };
 
+  const isPlain = current.type === "categories" || current.type === "location";
+
   return (
     <div
       className="min-h-screen w-full flex flex-col justify-between px-6 pt-10 pb-10 relative overflow-hidden"
       style={{
-        backgroundImage:
-          current.type === "categories"
-            ? "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)"
-            : `linear-gradient(160deg, rgba(201,122,61,0.75), rgba(166,83,42,0.85)), url(${current.photo})`,
+        backgroundImage: isPlain
+          ? "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)"
+          : `linear-gradient(160deg, rgba(201,122,61,0.75), rgba(166,83,42,0.85)), url(${current.photo})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -3024,7 +3030,11 @@ function OnboardingView({ onDone }) {
           </span>
         </div>
         {!isLast && (
-          <button onClick={onDone} className="text-white text-base font-semibold">
+          <button
+            onClick={onDone}
+            className="text-base font-semibold"
+            style={{ color: isPlain ? colors.hairline : "#FFFFFF" }}
+          >
             Skip
           </button>
         )}
@@ -3058,6 +3068,29 @@ function OnboardingView({ onDone }) {
                 </div>
               ))}
             </div>
+          </div>
+        </>
+      ) : current.type === "location" ? (
+        <>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="relative w-56 h-56">
+              <MapPin size={44} color="#F2C79E" fill="#F2C79E" className="absolute" style={{ top: 0, left: 70 }} />
+              <MapPin size={40} color="#F2C79E" fill="#F2C79E" className="absolute" style={{ top: 50, left: 0 }} />
+              <MapPin size={40} color="#F2C79E" fill="#F2C79E" className="absolute" style={{ top: 60, left: 150 }} />
+              <MapPin size={48} color="#4FA89C" fill="#4FA89C" className="absolute" style={{ top: 140, left: 90 }} />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1
+              className="text-3xl font-extrabold leading-tight mb-4 text-center"
+              style={{ fontFamily: FONT_DISPLAY, color: colors.hairline }}
+            >
+              {current.title}
+            </h1>
+            <p className="text-base leading-relaxed text-center" style={{ color: colors.hairline, opacity: 0.75 }}>
+              {current.body}
+            </p>
           </div>
         </>
       ) : (
@@ -3097,7 +3130,7 @@ function OnboardingView({ onDone }) {
           <button
             onClick={prev}
             className="text-base font-semibold"
-            style={{ color: current.type === "categories" ? colors.hairline : "#FFFFFF" }}
+            style={{ color: isPlain ? colors.hairline : "#FFFFFF" }}
           >
             Prev
           </button>
@@ -3111,10 +3144,9 @@ function OnboardingView({ onDone }) {
               key={i}
               className={i === slide ? "w-6 h-2 rounded-full" : "w-2 h-2 rounded-full"}
               style={{
-                background:
-                  current.type === "categories"
-                    ? i === slide ? colors.hairline : "rgba(166,83,42,0.35)"
-                    : i === slide ? "#FFFFFF" : "rgba(255,255,255,0.5)",
+                background: isPlain
+                  ? i === slide ? colors.hairline : "rgba(166,83,42,0.35)"
+                  : i === slide ? "#FFFFFF" : "rgba(255,255,255,0.5)",
               }}
             />
           ))}
