@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { notifyUser } = require("../lib/notify");
+const paystack = require("../lib/paystack");
 const router = express.Router();
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
 const COMMISSION_RATE = 0.15;
@@ -144,6 +145,24 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
       await db.query("UPDATE salons SET cancellation_count = cancellation_count + 1 WHERE id = $1", [booking.salon_id]);
     }
 
+    let refundStatus = "none"; // none | refunded | pending
+    if (booking.payment_status === "paid" && booking.paystack_reference) {
+      try {
+        await paystack.post("/refund", { transaction: booking.paystack_reference });
+        await db.query("UPDATE bookings SET payment_status = 'refunded' WHERE id = $1", [booking.id]);
+        refundStatus = "refunded";
+      } catch (err) {
+        console.error(`Refund failed for booking #${booking.id}:`, err.paystackResponse || err.message);
+        refundStatus = "pending";
+      }
+    }
+    const refundNote =
+      refundStatus === "refunded"
+        ? " Your payment has been refunded — it should reflect in your account within 5–10 business days."
+        : refundStatus === "pending"
+        ? " We're processing your refund manually and will confirm once it's issued."
+        : "";
+
     const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
     const serviceName = serviceRows[0]?.name || "your service";
 
@@ -151,19 +170,29 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
       await notifyUser(booking.customer_id, {
         type: "booking_cancelled",
         title: "Booking cancelled",
-        body: `Your booking for ${serviceName}${salon ? ` at ${salon.name}` : ""} at ${booking.time_slot} was cancelled by the owner. Reason: ${reason}.`,
+        body: `Your booking for ${serviceName}${salon ? ` at ${salon.name}` : ""} at ${booking.time_slot} was cancelled by the owner. Reason: ${reason}.${refundNote}`,
         bookingId: booking.id,
       });
-    } else if (salon) {
-      await notifyUser(salon.owner_id, {
-        type: "booking_cancelled",
-        title: "Booking cancelled",
-        body: `A client cancelled their booking for ${serviceName} at ${booking.time_slot}. Reason: ${reason}.`,
-        bookingId: booking.id,
-      });
+    } else {
+      if (refundNote) {
+        await notifyUser(booking.customer_id, {
+          type: "booking_cancelled",
+          title: "Booking cancelled",
+          body: `Your booking for ${serviceName} at ${booking.time_slot} was cancelled.${refundNote}`,
+          bookingId: booking.id,
+        });
+      }
+      if (salon) {
+        await notifyUser(salon.owner_id, {
+          type: "booking_cancelled",
+          title: "Booking cancelled",
+          body: `A client cancelled their booking for ${serviceName} at ${booking.time_slot}. Reason: ${reason}.`,
+          bookingId: booking.id,
+        });
+      }
     }
 
-    res.json({ ok: true });
+    res.json({ ok: true, refundStatus });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't cancel that booking." });
