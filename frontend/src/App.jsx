@@ -2972,6 +2972,12 @@ const ONBOARDING_SLIDES = [
     photo: "https://images.pexels.com/photos/7389077/pexels-photo-7389077.jpeg",
   },
   {
+    type: "location",
+    title: "See what's near you",
+    body: "Turn on location to find salons, barbers, and pros close to you — sorted nearest first.",
+    photo: "https://images.pexels.com/photos/8828593/pexels-photo-8828593.jpeg",
+  },
+  {
     type: "categories",
     title: "Explore what we offer",
     photo: null,
@@ -2982,11 +2988,6 @@ const ONBOARDING_SLIDES = [
       { name: "Makeup", photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
       { name: "Spa", photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
     ],
-  },
-  {
-    type: "location",
-    title: "See what's near you",
-    body: "Turn on location to find salons, barbers, and pros close to you — sorted nearest first.",
   },
 ];
 
@@ -3004,7 +3005,7 @@ function OnboardingView({ onDone }) {
     if (slide > 0) setSlide((s) => s - 1);
   };
 
-  const isPlain = current.type === "categories" || current.type === "location";
+  const isPlain = current.type === "categories";
 
   return (
     <div
@@ -3083,12 +3084,12 @@ function OnboardingView({ onDone }) {
 
           <div className="mb-6">
             <h1
-              className="text-3xl font-extrabold leading-tight mb-4 text-center"
-              style={{ fontFamily: FONT_DISPLAY, color: colors.hairline }}
+              className="text-3xl font-extrabold text-white leading-tight mb-4 text-center"
+              style={{ fontFamily: FONT_DISPLAY }}
             >
               {current.title}
             </h1>
-            <p className="text-base leading-relaxed text-center" style={{ color: colors.hairline, opacity: 0.75 }}>
+            <p className="text-white text-base leading-relaxed text-center" style={{ opacity: 0.9 }}>
               {current.body}
             </p>
           </div>
