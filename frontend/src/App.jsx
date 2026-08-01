@@ -263,7 +263,7 @@ function Header({ title, onBack, right }) {
   );
 }
 
-function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, onSelectSalon }) {
+function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon }) {
   const filtered = salons
     .filter((s) => (category ? s.category === category : true))
     .sort((a, b) => (a.distance ?? 999) - (b.distance ?? 999));
@@ -318,6 +318,37 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
           className="w-full mb-3 px-4 py-3 rounded-xl text-base outline-none"
           style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
         />
+
+        <button
+          onClick={onRequestLocation}
+          disabled={locationStatus === "loading"}
+          className="w-full mb-1 px-4 py-3 rounded-xl text-sm flex items-center justify-center gap-2 tap-glass"
+          style={{
+            background: locationStatus === "granted" ? colors.hairline : colors.panelLight,
+            border: `2px solid ${colors.hairline}`,
+            color: locationStatus === "granted" ? "#FFFFFF" : colors.cream,
+            fontWeight: 600,
+          }}
+        >
+          {locationStatus === "loading" ? (
+            <><Loader2 size={16} className="animate-spin" /> Finding your location…</>
+          ) : locationStatus === "granted" ? (
+            <><MapPin size={16} /> Showing results near you — tap to refresh</>
+          ) : (
+            <><MapPin size={16} /> Find services near me</>
+          )}
+        </button>
+        {locationStatus === "denied" && (
+          <p className="text-xs text-center mb-2" style={{ color: colors.creamDim }}>
+            Location is blocked. Enable it in your browser's site settings, then tap the button above again.
+          </p>
+        )}
+        {locationStatus === "unsupported" && (
+          <p className="text-xs text-center mb-2" style={{ color: colors.creamDim }}>
+            Your browser doesn't support location search — try the state/city filters below instead.
+          </p>
+        )}
+        <div className="mb-3" />
 
         <div className="grid grid-cols-2 gap-2 mb-3">
           <select
@@ -3212,6 +3243,7 @@ export default function App() {
   }); // { token, user }
   const [salons, setSalons] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
+    const [locationStatus, setLocationStatus] = useState("idle"); // idle | loading | granted | denied | unsupported
     const [searchQuery, setSearchQuery] = useState("");
     const [searchState, setSearchState] = useState("");
     const [searchCity, setSearchCity] = useState("");
@@ -3224,13 +3256,23 @@ export default function App() {
     setSelectedSalon(null);
     setSelectedService(null);
   };
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus("unsupported");
+      return;
+    }
+    setLocationStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationStatus("granted");
+      },
+      () => setLocationStatus("denied"),
+      { timeout: 8000 }
+    );
+  };
   useEffect(() => {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
-        { timeout: 8000 }
-      );
+      requestLocation();
     }, []);
     useEffect(() => {
       const params = new URLSearchParams();
@@ -3564,6 +3606,7 @@ export default function App() {
                 searchQuery={searchQuery} setSearchQuery={setSearchQuery}
                 searchState={searchState} setSearchState={setSearchState}
                 searchCity={searchCity} setSearchCity={setSearchCity}
+                locationStatus={locationStatus} onRequestLocation={requestLocation}
                 onSelectSalon={(s) => { setSelectedSalon(s); setView("profile"); }}
               />
             )}
