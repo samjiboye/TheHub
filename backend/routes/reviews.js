@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { notifyUser } = require("../lib/notify");
 const router = express.Router();
 
 // POST /reviews
@@ -13,6 +14,17 @@ router.post("/", requireAuth, async (req, res) => {
       "INSERT INTO reviews (salon_id, customer_id, booking_id, rating, comment) VALUES ($1, $2, $3, $4, $5) RETURNING id",
       [salon_id, req.user.id, booking_id || null, rating, comment || null]
     );
+
+    const { rows: salonRows } = await db.query("SELECT owner_id, name FROM salons WHERE id = $1", [salon_id]);
+    const salon = salonRows[0];
+    if (salon) {
+      await notifyUser(salon.owner_id, {
+        type: "new_review",
+        title: "New review received",
+        body: `You got a new ${rating}-star review${salon.name ? ` for ${salon.name}` : ""}.`,
+      });
+    }
+
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
     console.error(err);

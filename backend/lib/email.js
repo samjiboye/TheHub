@@ -16,4 +16,16 @@ async function sendPasswordResetEmail(to, resetLink) {
   });
 }
 
-module.exports = { sendPasswordResetEmail };
+async function sendNotificationEmail(to, subject, message) {
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject,
+    html: `
+      <p>${message}</p>
+      <p style="color:#888;font-size:12px;margin-top:24px;">This is an automated notification from TheHub.</p>
+    `,
+  });
+}
+
+module.exports = { sendPasswordResetEmail, sendNotificationEmail };

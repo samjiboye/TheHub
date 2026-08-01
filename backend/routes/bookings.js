@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { notifyUser } = require("../lib/notify");
 const router = express.Router();
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
 const COMMISSION_RATE = 0.15;
@@ -143,6 +144,25 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
       await db.query("UPDATE salons SET cancellation_count = cancellation_count + 1 WHERE id = $1", [booking.salon_id]);
     }
 
+    const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
+    const serviceName = serviceRows[0]?.name || "your service";
+
+    if (cancelledBy === "owner") {
+      await notifyUser(booking.customer_id, {
+        type: "booking_cancelled",
+        title: "Booking cancelled",
+        body: `Your booking for ${serviceName}${salon ? ` at ${salon.name}` : ""} at ${booking.time_slot} was cancelled by the owner. Reason: ${reason}.`,
+        bookingId: booking.id,
+      });
+    } else if (salon) {
+      await notifyUser(salon.owner_id, {
+        type: "booking_cancelled",
+        title: "Booking cancelled",
+        body: `A client cancelled their booking for ${serviceName} at ${booking.time_slot}. Reason: ${reason}.`,
+        bookingId: booking.id,
+      });
+    }
+
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -176,6 +196,15 @@ router.patch("/:id/complete", requireAuth, async (req, res) => {
       "UPDATE bookings SET status = 'completed' WHERE id = $1",
       [booking.id]
     );
+
+    const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
+    const serviceName = serviceRows[0]?.name || "your service";
+    await notifyUser(booking.customer_id, {
+      type: "booking_completed",
+      title: "Service completed",
+      body: `Your ${serviceName} appointment${salon ? ` at ${salon.name}` : ""} is marked complete. Tap to leave a review!`,
+      bookingId: booking.id,
+    });
 
     res.json({ ok: true });
   } catch (err) {

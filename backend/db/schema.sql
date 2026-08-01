@@ -92,3 +92,18 @@ CREATE TABLE IF NOT EXISTS salon_media (
 );
 
 CREATE INDEX IF NOT EXISTS idx_salon_media_salon ON salon_media(salon_id);
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+  read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);

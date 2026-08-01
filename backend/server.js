@@ -11,6 +11,8 @@ const conciergeRoutes = require("./routes/concierge");
 const paymentRoutes = require("./routes/payments");
 const paystackWebhookRoutes = require("./routes/paystackWebhook");
 const adminSeedRoutes = require("./routes/adminSeed");
+const notificationRoutes = require("./routes/notifications");
+const { startReminderJob } = require("./lib/reminders");
 
 const app = express();
 
@@ -31,6 +33,7 @@ app.use("/reviews", reviewRoutes);
 app.use("/concierge", conciergeRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/admin", adminSeedRoutes);
+app.use("/notifications", notificationRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
@@ -39,3 +42,4 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`The Hub API running on http://localhost:${PORT}`));
+startReminderJob();

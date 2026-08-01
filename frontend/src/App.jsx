@@ -4,7 +4,7 @@ import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
-  UserCircle,
+  UserCircle, Bell,
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
@@ -3241,6 +3241,9 @@ export default function App() {
       return null;
     }
   }); // { token, user }
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [salons, setSalons] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
     const [locationStatus, setLocationStatus] = useState("idle"); // idle | loading | granted | denied | unsupported
@@ -3288,6 +3291,38 @@ export default function App() {
         .then((list) => { setSalons(list); setStatus("ready"); })
         .catch(() => setStatus("offline"));
     }, [userLocation, searchQuery, searchState, searchCity]);
+  useEffect(() => {
+    const activeAuth = role === "customer" ? customerAuth : ownerAuth;
+    if (!activeAuth?.token) { setNotifications([]); setUnreadCount(0); return; }
+    const fetchNotifications = () => {
+      apiFetch("/notifications/me", { headers: { Authorization: `Bearer ${activeAuth.token}` } })
+        .then((data) => { setNotifications(data.notifications || []); setUnreadCount(data.unreadCount || 0); })
+        .catch(() => {});
+    };
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [role, customerAuth?.token, ownerAuth?.token]);
+  const markNotificationRead = (id) => {
+    const activeAuth = role === "customer" ? customerAuth : ownerAuth;
+    if (!activeAuth?.token) return;
+    apiFetch(`/notifications/${id}/read`, { method: "PATCH", headers: { Authorization: `Bearer ${activeAuth.token}` } })
+      .then(() => {
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+        setUnreadCount((c) => Math.max(0, c - 1));
+      })
+      .catch(() => {});
+  };
+  const markAllNotificationsRead = () => {
+    const activeAuth = role === "customer" ? customerAuth : ownerAuth;
+    if (!activeAuth?.token) return;
+    apiFetch("/notifications/read-all", { method: "PATCH", headers: { Authorization: `Bearer ${activeAuth.token}` } })
+      .then(() => {
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        setUnreadCount(0);
+      })
+      .catch(() => {});
+  };
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const googleToken = params.get("token");
@@ -3455,7 +3490,64 @@ export default function App() {
           <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
             TheHub
           </span>
-          <div className="relative">
+          <div className="flex items-center gap-2">
+            {(role === "customer" ? customerAuth : ownerAuth) && (
+              <div className="relative">
+                <button
+                  onClick={() => setNotifOpen((o) => !o)}
+                  className="p-2.5 rounded-full tap-glass relative"
+                  style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span
+                      className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-xs"
+                      style={{ background: "#E07A5F", color: "#FFFFFF", minWidth: 18, height: 18, fontWeight: 700, padding: "0 4px" }}
+                    >
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+                {notifOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-72 rounded-2xl shadow-lg z-50 overflow-hidden"
+                    style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+                  >
+                    <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `2px solid ${colors.hairline}` }}>
+                      <span className="text-sm font-bold" style={{ color: colors.cream }}>Notifications</span>
+                      {unreadCount > 0 && (
+                        <button onClick={markAllNotificationsRead} className="text-xs font-semibold" style={{ color: colors.creamDim }}>
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                      {notifications.length === 0 ? (
+                        <p className="px-4 py-6 text-sm text-center" style={{ color: colors.creamDim }}>
+                          No notifications yet.
+                        </p>
+                      ) : (
+                        notifications.map((n) => (
+                          <button
+                            key={n.id}
+                            onClick={() => !n.read && markNotificationRead(n.id)}
+                            className="w-full text-left px-4 py-3"
+                            style={{
+                              borderBottom: `1px solid ${colors.hairline}`,
+                              background: n.read ? "transparent" : "rgba(224,122,95,0.08)",
+                            }}
+                          >
+                            <p className="text-sm font-semibold" style={{ color: colors.cream }}>{n.title}</p>
+                            {n.body && <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>{n.body}</p>}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}
               className="p-2.5 rounded-full tap-glass"
@@ -3554,6 +3646,7 @@ export default function App() {
                 )}
               </div>
             )}
+          </div>
           </div>
         </div>
         {status === "offline" && (
