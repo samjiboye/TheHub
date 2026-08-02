@@ -6,8 +6,8 @@ const { notifyUser } = require("../lib/notify");
 const { sendNotificationEmail } = require("../lib/email");
 const paystack = require("../lib/paystack");
 const cloudinary = require("../lib/cloudinary");
-const { creditWallet } = require("../lib/wallet");
 const { completeBooking } = require("../lib/completeBooking");
+const { refundBooking } = require("../lib/refund");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
@@ -162,31 +162,12 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
     }
 
     let refundStatus = "none"; // none | refunded | pending
-    if (booking.payment_status === "paid" && booking.payment_method === "wallet") {
-      await creditWallet(booking.customer_id, booking.service_price + booking.booking_fee, {
-        type: "refund",
-        bookingId: booking.id,
-      });
-      await db.query("UPDATE bookings SET payment_status = 'refunded' WHERE id = $1", [booking.id]);
-      refundStatus = "refunded";
-    } else if (booking.payment_status === "paid" && booking.paystack_reference) {
-      try {
-        await paystack.post("/refund", { transaction: booking.paystack_reference });
-        await db.query("UPDATE bookings SET payment_status = 'refunded' WHERE id = $1", [booking.id]);
-        refundStatus = "refunded";
-      } catch (err) {
-        console.error(`Refund failed for booking #${booking.id}:`, err.paystackResponse || err.message);
-        refundStatus = "pending";
-      }
+    let refundNote = "";
+    if (booking.payment_status === "paid") {
+      const result = await refundBooking(booking);
+      refundStatus = result.refundStatus;
+      refundNote = result.refundNote;
     }
-    const refundNote =
-      refundStatus === "refunded" && booking.payment_method === "wallet"
-        ? " The full amount has been added back to your wallet."
-        : refundStatus === "refunded"
-        ? " Your payment has been refunded — it should reflect in your account within 5–10 business days."
-        : refundStatus === "pending"
-        ? " We're processing your refund manually and will confirm once it's issued."
-        : "";
 
     const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
     const serviceName = serviceRows[0]?.name || "your service";
@@ -225,6 +206,81 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
 });
 
 
+// POST /bookings/:id/accept — owner accepts a newly-paid booking.
+router.post("/:id/accept", requireAuth, async (req, res) => {
+  try {
+    const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+    const isOwner = salon && salon.owner_id === req.user.id;
+    if (!isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    if (booking.status !== "confirmed" || booking.owner_response !== "pending") {
+      return res.status(400).json({ error: "This booking isn't awaiting a response." });
+    }
+
+    await db.query("UPDATE bookings SET owner_response = 'accepted' WHERE id = $1", [booking.id]);
+
+    const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
+    const serviceName = serviceRows[0]?.name || "your service";
+    await notifyUser(booking.customer_id, {
+      type: "booking_accepted",
+      title: "Booking accepted",
+      body: `${salon?.name || "The salon"} accepted your booking for ${serviceName} at ${booking.time_slot}. See you then!`,
+      bookingId: booking.id,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't accept that booking." });
+  }
+});
+
+// POST /bookings/:id/decline — owner declines a newly-paid booking; customer is refunded.
+router.post("/:id/decline", requireAuth, async (req, res) => {
+  const { reason } = req.body;
+  try {
+    const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+    const isOwner = salon && salon.owner_id === req.user.id;
+    if (!isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    if (booking.status !== "confirmed" || booking.owner_response !== "pending") {
+      return res.status(400).json({ error: "This booking isn't awaiting a response." });
+    }
+
+    await db.query(
+      "UPDATE bookings SET status = 'cancelled', owner_response = 'declined', cancelled_by = 'owner', cancel_reason = $1 WHERE id = $2",
+      [reason || "Declined by owner", booking.id]
+    );
+
+    const { refundNote } = await refundBooking(booking);
+
+    const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
+    const serviceName = serviceRows[0]?.name || "your service";
+    await notifyUser(booking.customer_id, {
+      type: "booking_declined",
+      title: "Booking declined",
+      body: `${salon?.name || "The salon"} wasn't able to accept your booking for ${serviceName} at ${booking.time_slot}.${refundNote}`,
+      bookingId: booking.id,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't decline that booking." });
+  }
+});
+
+
 // POST /bookings/:id/request-completion — owner says the service is done.
 // Optionally attaches a photo, generates a 4-digit code, and sends it to the
 // customer. The booking only becomes 'completed' once the owner enters that
@@ -242,6 +298,9 @@ router.post("/:id/request-completion", requireAuth, upload.single("photo"), asyn
 
     if (booking.status !== "confirmed") {
       return res.status(400).json({ error: "Only confirmed bookings can be marked as done." });
+    }
+    if (booking.owner_response === "pending") {
+      return res.status(400).json({ error: "Accept this booking before marking it done." });
     }
     if (booking.disputed_at) {
       return res.status(400).json({ error: "This booking is under dispute review." });

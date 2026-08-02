@@ -145,8 +145,8 @@ router.post("/checkout-wallet", requireAuth, async (req, res) => {
 
     const { rows: bookingRows } = await db.query(
       `INSERT INTO bookings
-        (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status, payment_method, payout_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', $8, $9, $10, $11, $12, 'paid', 'wallet', 'pending') RETURNING id`,
+        (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status, payment_method, payout_status, owner_response)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', $8, $9, $10, $11, $12, 'paid', 'wallet', 'pending', 'pending') RETURNING id`,
       [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount]
     );
     const bookingId = bookingRows[0].id;
@@ -159,14 +159,14 @@ router.post("/checkout-wallet", requireAuth, async (req, res) => {
 
     await notifyUser(req.user.id, {
       type: "booking_confirmed",
-      title: "Booking confirmed",
-      body: `Your booking at ${salon.name} for ${service.name} at ${time_slot} is confirmed. Paid from your wallet.`,
+      title: "Payment received",
+      body: `Your payment for ${service.name} at ${salon.name} at ${time_slot} went through — waiting for the salon to accept.`,
       bookingId,
     });
     await notifyUser(salon.owner_id, {
       type: "new_booking",
       title: "New booking received",
-      body: `You have a new booking for ${service.name} at ${time_slot}.`,
+      body: `You have a new booking for ${service.name} at ${time_slot}. Accept or decline it from your dashboard.`,
       bookingId,
     });
 

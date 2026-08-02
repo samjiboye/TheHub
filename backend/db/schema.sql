@@ -134,3 +134,7 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS completion_otp_expires_at TIMESTAM
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS completion_requested_at TIMESTAMP;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS disputed_at TIMESTAMP;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS dispute_reason TEXT;
+
+-- Default 'accepted' so existing bookings aren't retroactively gated behind
+-- acceptance; new bookings are explicitly set to 'pending' at payment time.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS owner_response TEXT NOT NULL DEFAULT 'accepted' CHECK (owner_response IN ('pending', 'accepted', 'declined'));

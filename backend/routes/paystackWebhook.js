@@ -40,7 +40,7 @@ router.post("/", async (req, res) => {
     } else if (bookingId) {
       try {
         const { rows } = await db.query(
-          `UPDATE bookings SET payment_status = 'paid', status = 'confirmed'
+          `UPDATE bookings SET payment_status = 'paid', status = 'confirmed', owner_response = 'pending'
            WHERE id = $1 AND paystack_reference = $2 RETURNING *`,
           [bookingId, event.data.reference]
         );
@@ -54,15 +54,15 @@ router.post("/", async (req, res) => {
           const info = infoRows[0];
           await notifyUser(booking.customer_id, {
             type: "booking_confirmed",
-            title: "Booking confirmed",
-            body: `Your booking${info ? ` at ${info.salon_name} for ${info.service_name}` : ""} at ${booking.time_slot} is confirmed.`,
+            title: "Payment received",
+            body: `Your payment${info ? ` for ${info.service_name} at ${info.salon_name}` : ""} at ${booking.time_slot} went through — waiting for the salon to accept.`,
             bookingId: booking.id,
           });
           if (info) {
             await notifyUser(info.owner_id, {
               type: "new_booking",
               title: "New booking received",
-              body: `You have a new booking for ${info.service_name} at ${booking.time_slot}.`,
+              body: `You have a new booking for ${info.service_name} at ${booking.time_slot}. Accept or decline it from your dashboard.`,
               bookingId: booking.id,
             });
           }
