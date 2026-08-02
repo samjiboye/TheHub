@@ -127,3 +127,10 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_wallet_tx_user ON wallet_transactions(user_id, created_at DESC);
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS completion_photo_url TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS completion_otp TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS completion_otp_expires_at TIMESTAMP;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS completion_requested_at TIMESTAMP;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS disputed_at TIMESTAMP;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS dispute_reason TEXT;

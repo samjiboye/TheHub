@@ -14,6 +14,7 @@ const adminSeedRoutes = require("./routes/adminSeed");
 const notificationRoutes = require("./routes/notifications");
 const { startReminderJob } = require("./lib/reminders");
 const walletRoutes = require("./routes/wallet");
+const { startAutoReleaseJob } = require("./lib/autoRelease");
 
 const app = express();
 
@@ -45,3 +46,4 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`The Hub API running on http://localhost:${PORT}`));
 startReminderJob();
+startAutoReleaseJob();

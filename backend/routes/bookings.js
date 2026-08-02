@@ -1,12 +1,27 @@
 const express = require("express");
+const multer = require("multer");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { notifyUser } = require("../lib/notify");
+const { sendNotificationEmail } = require("../lib/email");
 const paystack = require("../lib/paystack");
+const cloudinary = require("../lib/cloudinary");
 const { creditWallet } = require("../lib/wallet");
+const { completeBooking } = require("../lib/completeBooking");
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
 const COMMISSION_RATE = 0.15;
+
+function uploadToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { resource_type: "image", folder: "thehub/completions" },
+      (err, result) => (err ? reject(err) : resolve(result))
+    );
+    stream.end(buffer);
+  });
+}
 
 // POST /bookings — creates a booking with NO payment attached (status stays 'pending',
 // payment_status stays 'unpaid'). Useful for testing or manual/free bookings, but the
@@ -210,7 +225,11 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
 });
 
 
-router.patch("/:id/complete", requireAuth, async (req, res) => {
+// POST /bookings/:id/request-completion — owner says the service is done.
+// Optionally attaches a photo, generates a 4-digit code, and sends it to the
+// customer. The booking only becomes 'completed' once the owner enters that
+// code back via /confirm-completion, or 24 hours pass with no dispute filed.
+router.post("/:id/request-completion", requireAuth, upload.single("photo"), async (req, res) => {
   try {
     const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
     const booking = bookingRows[0];
@@ -218,12 +237,14 @@ router.patch("/:id/complete", requireAuth, async (req, res) => {
 
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
     const salon = salonRows[0];
-
     const isOwner = salon && salon.owner_id === req.user.id;
     if (!isOwner) return res.status(403).json({ error: "Not your booking" });
 
     if (booking.status !== "confirmed") {
-      return res.status(400).json({ error: "Only confirmed bookings can be marked as completed." });
+      return res.status(400).json({ error: "Only confirmed bookings can be marked as done." });
+    }
+    if (booking.disputed_at) {
+      return res.status(400).json({ error: "This booking is under dispute review." });
     }
 
     const appointmentTime = parseAppointmentDateTime(booking);
@@ -231,60 +252,120 @@ router.patch("/:id/complete", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "This appointment hasn't happened yet." });
     }
 
-    await db.query(
-      "UPDATE bookings SET status = 'completed' WHERE id = $1",
-      [booking.id]
-    );
-
-    if (booking.payment_method === "wallet" && booking.payout_status !== "paid" && salon) {
-      try {
-        let recipientCode = salon.paystack_recipient_code;
-        if (!recipientCode) {
-          if (!salon.bank_code || !salon.account_number) {
-            throw new Error("This salon connected payouts before wallet support was added — reconnect payouts in My Profile to enable wallet payouts.");
-          }
-          const recipient = await paystack.post("/transferrecipient", {
-            type: "nuban",
-            name: salon.name,
-            account_number: salon.account_number,
-            bank_code: salon.bank_code,
-            currency: "NGN",
-          });
-          recipientCode = recipient.recipient_code;
-          await db.query("UPDATE salons SET paystack_recipient_code = $1 WHERE id = $2", [recipientCode, salon.id]);
-        }
-        await paystack.post("/transfer", {
-          source: "balance",
-          amount: Math.round(booking.payout_amount * 100),
-          recipient: recipientCode,
-          reason: `Payout for booking #${booking.id}`,
-        });
-        await db.query("UPDATE bookings SET payout_status = 'paid' WHERE id = $1", [booking.id]);
-      } catch (err) {
-        console.error(`Wallet payout failed for booking #${booking.id}:`, err.paystackResponse || err.message);
-        await db.query("UPDATE bookings SET payout_status = 'failed' WHERE id = $1", [booking.id]);
-        await notifyUser(salon.owner_id, {
-          type: "payout_failed",
-          title: "Payout couldn't be sent",
-          body: `We couldn't send your payout for booking #${booking.id}. If your payout details are outdated, reconnect payouts in My Profile.`,
-          bookingId: booking.id,
-        });
-      }
+    let photoUrl = booking.completion_photo_url;
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      photoUrl = result.secure_url;
     }
 
-    const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
-    const serviceName = serviceRows[0]?.name || "your service";
+    const otp = String(Math.floor(1000 + Math.random() * 9000));
+    await db.query(
+      `UPDATE bookings SET
+         completion_otp = $1,
+         completion_otp_expires_at = NOW() + INTERVAL '2 hours',
+         completion_requested_at = COALESCE(completion_requested_at, NOW()),
+         completion_photo_url = $2
+       WHERE id = $3`,
+      [otp, photoUrl, booking.id]
+    );
+
     await notifyUser(booking.customer_id, {
-      type: "booking_completed",
-      title: "Service completed",
-      body: `Your ${serviceName} appointment${salon ? ` at ${salon.name}` : ""} is marked complete. Tap to leave a review!`,
+      type: "completion_requested",
+      title: "Confirm your appointment",
+      body: `${salon?.name || "The salon"} says your service is done. Give them this code to confirm: ${otp}. If something's wrong, you can dispute it instead from My Bookings.`,
       bookingId: booking.id,
     });
 
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Couldn't mark booking as completed." });
+    res.status(500).json({ error: "Couldn't request completion." });
+  }
+});
+
+// POST /bookings/:id/confirm-completion — owner enters the code the customer gave them.
+router.post("/:id/confirm-completion", requireAuth, async (req, res) => {
+  const { otp } = req.body;
+  try {
+    const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+    const isOwner = salon && salon.owner_id === req.user.id;
+    if (!isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    if (booking.status !== "confirmed" || !booking.completion_requested_at) {
+      return res.status(400).json({ error: "Request completion first before confirming." });
+    }
+    if (booking.disputed_at) {
+      return res.status(400).json({ error: "This booking is under dispute review." });
+    }
+    if (!otp || String(otp).trim() !== booking.completion_otp) {
+      return res.status(400).json({ error: "That code doesn't match. Double check with your client." });
+    }
+    if (new Date(booking.completion_otp_expires_at).getTime() < Date.now()) {
+      return res.status(400).json({ error: "That code has expired — tap 'request completion' again to get a new one." });
+    }
+
+    await db.query("UPDATE bookings SET completion_otp = NULL WHERE id = $1", [booking.id]);
+    await completeBooking(booking, salon);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't confirm completion." });
+  }
+});
+
+// POST /bookings/:id/dispute — customer says the owner's completion claim is wrong.
+router.post("/:id/dispute", requireAuth, async (req, res) => {
+  const { reason } = req.body;
+  try {
+    const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+    if (booking.customer_id !== req.user.id) return res.status(403).json({ error: "Not your booking" });
+
+    if (!booking.completion_requested_at || booking.status !== "confirmed") {
+      return res.status(400).json({ error: "There's nothing to dispute on this booking yet." });
+    }
+    if (booking.disputed_at) {
+      return res.status(400).json({ error: "This booking is already under review." });
+    }
+
+    await db.query("UPDATE bookings SET disputed_at = NOW(), dispute_reason = $1 WHERE id = $2", [reason || null, booking.id]);
+
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+
+    if (salon) {
+      await notifyUser(salon.owner_id, {
+        type: "booking_disputed",
+        title: "Booking disputed",
+        body: `A client disputed booking #${booking.id}. The Hub team will review it — please don't request completion again until it's resolved.`,
+        bookingId: booking.id,
+      });
+    }
+
+    if (process.env.ADMIN_EMAIL) {
+      await sendNotificationEmail(
+        process.env.ADMIN_EMAIL,
+        `Dispute filed — booking #${booking.id}`,
+        `A customer disputed booking #${booking.id} at ${salon?.name || "a salon"}.<br>
+         Reason: ${reason || "No reason given"}<br>
+         Completion photo: ${booking.completion_photo_url ? `<a href="${booking.completion_photo_url}">view</a>` : "none provided"}<br>
+         Customer ID: ${booking.customer_id} &middot; Owner ID: ${salon?.owner_id || "unknown"}`
+      ).catch((e) => console.error("Failed to email admin about dispute:", e));
+    } else {
+      console.warn(`ADMIN_EMAIL not set — dispute email not sent for booking #${booking.id}`);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't file that dispute." });
   }
 });
 

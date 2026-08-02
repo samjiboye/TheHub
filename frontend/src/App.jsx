@@ -1617,7 +1617,13 @@ function OwnerDashboard({ token }) {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState(null);
-  const [completeError, setCompleteError] = useState(null);
+  const [completingId, setCompletingId] = useState(null); // booking whose "mark as done" panel is open
+  const [completionPhoto, setCompletionPhoto] = useState(null);
+  const [completionSubmitting, setCompletionSubmitting] = useState(false);
+  const [completionError, setCompletionError] = useState(null);
+  const [otpInputs, setOtpInputs] = useState({}); // bookingId -> code string
+  const [confirmSubmittingId, setConfirmSubmittingId] = useState(null);
+  const [confirmErrors, setConfirmErrors] = useState({});
 
   async function submitCancel(bookingId) {
     if (!cancelReason) {
@@ -1647,21 +1653,51 @@ function OwnerDashboard({ token }) {
     }
   }
 
-  async function submitComplete(bookingId) {
-    setCompleteError(null);
+  async function submitRequestCompletion(bookingId) {
+    setCompletionSubmitting(true);
+    setCompletionError(null);
     try {
-      const res = await fetch(`${API_BASE}/bookings/${bookingId}/complete`, {
-        method: "PATCH",
+      const form = new FormData();
+      if (completionPhoto) form.append("photo", completionPhoto);
+      const res = await fetch(`${API_BASE}/bookings/${bookingId}/request-completion`, {
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
+        body: form,
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setCompleteError(err.error || "Failed to mark as completed.");
+        setCompletionError(err.error || "Couldn't request completion.");
         return;
       }
+      setCompletingId(null);
+      setCompletionPhoto(null);
       setRefreshKey((k) => k + 1);
     } catch (e) {
-      setCompleteError("Network error. Please try again.");
+      setCompletionError("Network error. Please try again.");
+    } finally {
+      setCompletionSubmitting(false);
+    }
+  }
+
+  async function submitConfirmCompletion(bookingId) {
+    const otp = (otpInputs[bookingId] || "").trim();
+    if (!otp) {
+      setConfirmErrors((prev) => ({ ...prev, [bookingId]: "Enter the client's code." }));
+      return;
+    }
+    setConfirmSubmittingId(bookingId);
+    setConfirmErrors((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      await apiFetch(`/bookings/${bookingId}/confirm-completion`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ otp }),
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setConfirmErrors((prev) => ({ ...prev, [bookingId]: e.message || "Couldn't confirm — check the code." }));
+    } finally {
+      setConfirmSubmittingId(null);
     }
   }
   const [connecting, setConnecting] = useState(false);
@@ -1882,17 +1918,88 @@ function OwnerDashboard({ token }) {
                 {formatBookingDate(a.booking_date) && <>{formatBookingDate(a.booking_date)}<br /></>}
                 {a.time_slot}
               </span>
-                {cancellingId !== a.id && (
+                {a.disputed_at ? (
+                  <span className="ml-3 text-xs font-semibold px-3 py-1 rounded-full" style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}>
+                    ⚠️ Disputed
+                  </span>
+                ) : a.completion_requested_at ? null : (
+                  cancellingId !== a.id && (
+                    <button
+                      onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
+                      className="ml-3 text-xs font-semibold px-3 py-1 rounded-full tap-glass"
+                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                    >
+                      Cancel
+                    </button>
+                  )
+                )}
+                {!a.disputed_at && !a.completion_requested_at && completingId !== a.id && (
                   <button
-                    onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
-                    className="ml-3 text-xs font-semibold px-3 py-1 rounded-full tap-glass"
-                    style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                    onClick={() => { setCompletingId(a.id); setCompletionPhoto(null); setCompletionError(null); }}
+                    className="ml-2 text-xs font-semibold px-3 py-1 rounded-full tap-glass"
+                    style={{ background: colors.hairline, color: "#FFFFFF" }}
                   >
-                    Cancel
+                    Mark as done
                   </button>
                 )}
-                <SwipeToComplete onComplete={() => submitComplete(a.id)} />
-              
+              {completingId === a.id && (
+                <div className="mt-2 flex flex-col gap-2 w-full">
+                  <p className="text-xs" style={{ color: colors.creamDim }}>
+                    Add a photo of the finished result — optional, but helps protect you if there's ever a dispute.
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setCompletionPhoto(e.target.files[0] || null)}
+                    className="text-xs"
+                    style={{ color: colors.creamDim }}
+                  />
+                  {completionError && <p className="text-xs" style={{ color: "#E07A5F" }}>{completionError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => submitRequestCompletion(a.id)}
+                      disabled={completionSubmitting}
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                      style={{ background: colors.hairline, color: "#FFFFFF" }}
+                    >
+                      {completionSubmitting ? "Sending…" : "Request completion"}
+                    </button>
+                    <button
+                      onClick={() => setCompletingId(null)}
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              {a.completion_requested_at && !a.disputed_at && (
+                <div className="mt-2 flex flex-col gap-2 w-full">
+                  <p className="text-xs" style={{ color: colors.creamDim }}>
+                    Code sent to client — enter it below once they give it to you. Auto-confirms in 24 hours if they don't respond.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      value={otpInputs[a.id] || ""}
+                      onChange={(e) => setOtpInputs((prev) => ({ ...prev, [a.id]: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                      placeholder="4-digit code"
+                      inputMode="numeric"
+                      className="px-3 py-2 rounded-xl text-sm outline-none w-28"
+                      style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+                    />
+                    <button
+                      onClick={() => submitConfirmCompletion(a.id)}
+                      disabled={confirmSubmittingId === a.id}
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                      style={{ background: colors.hairline, color: "#FFFFFF" }}
+                    >
+                      {confirmSubmittingId === a.id ? "Confirming…" : "Confirm"}
+                    </button>
+                  </div>
+                  {confirmErrors[a.id] && <p className="text-xs" style={{ color: "#E07A5F" }}>{confirmErrors[a.id]}</p>}
+                </div>
+              )}
               {cancellingId === a.id && (
                 <div className="mt-2 flex flex-col gap-2">
                   <select
@@ -2783,6 +2890,10 @@ function MyBookingsView({ token, onBack }) {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState(null);
+  const [disputingId, setDisputingId] = useState(null);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+  const [disputeError, setDisputeError] = useState(null);
 
   useEffect(() => {
     if (!token) return;
@@ -2795,6 +2906,25 @@ function MyBookingsView({ token, onBack }) {
       .catch(() => setError("Couldn't load your bookings."))
       .finally(() => setLoading(false));
   }, [token, refreshKey]);
+
+  async function submitDispute(bookingId) {
+    setDisputeSubmitting(true);
+    setDisputeError(null);
+    try {
+      await apiFetch(`/bookings/${bookingId}/dispute`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: disputeReason.trim() || null }),
+      });
+      setDisputingId(null);
+      setDisputeReason("");
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setDisputeError(e.message || "Couldn't file that dispute — try again.");
+    } finally {
+      setDisputeSubmitting(false);
+    }
+  }
 
   async function submitCancel(bookingId) {
     if (!cancelReason) {
@@ -2868,6 +2998,60 @@ function MyBookingsView({ token, onBack }) {
                   {b.cancel_reason ? ` — ${b.cancel_reason}` : ""}
                 </p>
               )}
+                {b.status === "confirmed" && b.disputed_at && (
+                  <p className="text-xs mt-2" style={{ color: "#E07A5F" }}>
+                    ⚠️ You disputed this booking — TheHub is reviewing it.
+                  </p>
+                )}
+                {b.status === "confirmed" && b.completion_requested_at && !b.disputed_at && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <div className="px-3 py-2 rounded-xl text-center" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+                      <p className="text-xs" style={{ color: colors.creamDim }}>Your confirmation code</p>
+                      <p className="text-2xl" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 800, letterSpacing: "0.1em" }}>
+                        {b.completion_otp || "····"}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>Give this to {b.salon_name} once you're happy with the service.</p>
+                    </div>
+                    {disputingId !== b.id ? (
+                      <button
+                        onClick={() => { setDisputingId(b.id); setDisputeReason(""); setDisputeError(null); }}
+                        className="self-start text-xs font-semibold px-3 py-1 rounded-full tap-glass"
+                        style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}
+                      >
+                        Something wrong? Dispute this booking
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <textarea
+                          value={disputeReason}
+                          onChange={(e) => setDisputeReason(e.target.value)}
+                          placeholder="What went wrong? (optional)"
+                          rows={2}
+                          className="px-3 py-2 rounded-xl text-sm outline-none resize-none"
+                          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+                        />
+                        {disputeError && <p className="text-xs" style={{ color: "#E07A5F" }}>{disputeError}</p>}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => submitDispute(b.id)}
+                            disabled={disputeSubmitting}
+                            className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                            style={{ background: "#E07A5F", color: "#FFFFFF" }}
+                          >
+                            {disputeSubmitting ? "Filing…" : "File dispute"}
+                          </button>
+                          <button
+                            onClick={() => setDisputingId(null)}
+                            className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                            style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                          >
+                            Never mind
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {b.status === "completed" && b.already_rated && (
                   <p className="text-xs mt-2" style={{ color: colors.green }}>
                     Completed — you rated it {"★".repeat(b.given_rating)}{"☆".repeat(5 - b.given_rating)}
@@ -2881,7 +3065,7 @@ function MyBookingsView({ token, onBack }) {
                   />
                 )}
 
-              {(b.status === "pending" || b.status === "confirmed") && cancellingId !== b.id && (
+              {(b.status === "pending" || b.status === "confirmed") && !b.completion_requested_at && cancellingId !== b.id && (
                 <button
                   onClick={() => { setCancellingId(b.id); setCancelReason(""); setCancelError(null); }}
                   className="mt-2 self-start text-xs font-semibold px-3 py-1 rounded-full tap-glass"
