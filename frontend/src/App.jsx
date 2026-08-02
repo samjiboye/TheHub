@@ -3414,6 +3414,7 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [headerWalletBalance, setHeaderWalletBalance] = useState(null);
   const [salons, setSalons] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
     const [locationStatus, setLocationStatus] = useState("idle"); // idle | loading | granted | denied | unsupported
@@ -3473,6 +3474,17 @@ export default function App() {
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [role, customerAuth?.token, ownerAuth?.token]);
+  useEffect(() => {
+    if (role !== "customer" || !customerAuth?.token) { setHeaderWalletBalance(null); return; }
+    const fetchBalance = () => {
+      apiFetch("/wallet/me", { headers: { Authorization: `Bearer ${customerAuth.token}` } })
+        .then((data) => setHeaderWalletBalance(data.balance || 0))
+        .catch(() => {});
+    };
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 15000);
+    return () => clearInterval(interval);
+  }, [role, customerAuth?.token, view]);
   const markNotificationRead = (id) => {
     const activeAuth = role === "customer" ? customerAuth : ownerAuth;
     if (!activeAuth?.token) return;
@@ -3660,9 +3672,20 @@ export default function App() {
       `}</style>
       <div className="w-full relative" style={{ minHeight: "100vh", maxWidth: "1600px", margin: "0 auto" }}>
         <div className="flex px-4 pt-4 justify-between items-center">
-          <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
-            TheHub
-          </span>
+          <div>
+            <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
+              TheHub
+            </span>
+            {role === "customer" && customerAuth && headerWalletBalance !== null && (
+              <button
+                onClick={() => setView("wallet")}
+                className="flex items-center gap-1 mt-0.5 tap-glass"
+                style={{ color: colors.creamDim, fontSize: "0.8rem", fontWeight: 700 }}
+              >
+                <Wallet size={12} /> ₦{Number(headerWalletBalance).toLocaleString()}
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {(role === "customer" ? customerAuth : ownerAuth) && (
               <div className="relative">
