@@ -17,7 +17,27 @@ router.post("/", async (req, res) => {
   const event = JSON.parse(req.body.toString("utf8"));
   if (event.event === "charge.success") {
     const bookingId = event.data?.metadata?.booking_id;
-    if (bookingId) {
+    const walletFund = event.data?.metadata?.wallet_fund;
+    if (walletFund) {
+      try {
+        const { rows } = await db.query(
+          `UPDATE wallet_transactions SET status = 'success'
+           WHERE paystack_reference = $1 AND status = 'pending' RETURNING *`,
+          [event.data.reference]
+        );
+        const tx = rows[0];
+        if (tx) {
+          await db.query("UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2", [tx.amount, tx.user_id]);
+          await notifyUser(tx.user_id, {
+            type: "wallet_funded",
+            title: "Wallet funded",
+            body: `₦${Number(tx.amount).toLocaleString()} has been added to your TheHub wallet.`,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to credit wallet from webhook:", err);
+      }
+    } else if (bookingId) {
       try {
         const { rows } = await db.query(
           `UPDATE bookings SET payment_status = 'paid', status = 'confirmed'
@@ -53,7 +73,17 @@ router.post("/", async (req, res) => {
     }
   } else if (event.event === "charge.failed") {
     const bookingId = event.data?.metadata?.booking_id;
-    if (bookingId) {
+    const walletFund = event.data?.metadata?.wallet_fund;
+    if (walletFund) {
+      try {
+        await db.query(
+          `UPDATE wallet_transactions SET status = 'failed' WHERE paystack_reference = $1 AND status = 'pending'`,
+          [event.data.reference]
+        );
+      } catch (err) {
+        console.error("Failed to mark wallet funding as failed:", err);
+      }
+    } else if (bookingId) {
       try {
         const { rows } = await db.query(
           `UPDATE bookings SET payment_status = 'failed'

@@ -107,3 +107,23 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance REAL NOT NULL DEFAULT 0;
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS bank_code TEXT;
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS account_number TEXT;
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS paystack_recipient_code TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'paystack';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payout_status TEXT NOT NULL DEFAULT 'paid';
+
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('fund', 'debit', 'refund')),
+  amount REAL NOT NULL,
+  booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+  paystack_reference TEXT,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'success', 'failed')) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_wallet_tx_user ON wallet_transactions(user_id, created_at DESC);

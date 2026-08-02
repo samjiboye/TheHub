@@ -3,6 +3,7 @@ const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { notifyUser } = require("../lib/notify");
 const paystack = require("../lib/paystack");
+const { creditWallet } = require("../lib/wallet");
 const router = express.Router();
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
 const COMMISSION_RATE = 0.15;
@@ -146,7 +147,14 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
     }
 
     let refundStatus = "none"; // none | refunded | pending
-    if (booking.payment_status === "paid" && booking.paystack_reference) {
+    if (booking.payment_status === "paid" && booking.payment_method === "wallet") {
+      await creditWallet(booking.customer_id, booking.service_price + booking.booking_fee, {
+        type: "refund",
+        bookingId: booking.id,
+      });
+      await db.query("UPDATE bookings SET payment_status = 'refunded' WHERE id = $1", [booking.id]);
+      refundStatus = "refunded";
+    } else if (booking.payment_status === "paid" && booking.paystack_reference) {
       try {
         await paystack.post("/refund", { transaction: booking.paystack_reference });
         await db.query("UPDATE bookings SET payment_status = 'refunded' WHERE id = $1", [booking.id]);
@@ -157,7 +165,9 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
       }
     }
     const refundNote =
-      refundStatus === "refunded"
+      refundStatus === "refunded" && booking.payment_method === "wallet"
+        ? " The full amount has been added back to your wallet."
+        : refundStatus === "refunded"
         ? " Your payment has been refunded — it should reflect in your account within 5–10 business days."
         : refundStatus === "pending"
         ? " We're processing your refund manually and will confirm once it's issued."
@@ -225,6 +235,42 @@ router.patch("/:id/complete", requireAuth, async (req, res) => {
       "UPDATE bookings SET status = 'completed' WHERE id = $1",
       [booking.id]
     );
+
+    if (booking.payment_method === "wallet" && booking.payout_status !== "paid" && salon) {
+      try {
+        let recipientCode = salon.paystack_recipient_code;
+        if (!recipientCode) {
+          if (!salon.bank_code || !salon.account_number) {
+            throw new Error("This salon connected payouts before wallet support was added — reconnect payouts in My Profile to enable wallet payouts.");
+          }
+          const recipient = await paystack.post("/transferrecipient", {
+            type: "nuban",
+            name: salon.name,
+            account_number: salon.account_number,
+            bank_code: salon.bank_code,
+            currency: "NGN",
+          });
+          recipientCode = recipient.recipient_code;
+          await db.query("UPDATE salons SET paystack_recipient_code = $1 WHERE id = $2", [recipientCode, salon.id]);
+        }
+        await paystack.post("/transfer", {
+          source: "balance",
+          amount: Math.round(booking.payout_amount * 100),
+          recipient: recipientCode,
+          reason: `Payout for booking #${booking.id}`,
+        });
+        await db.query("UPDATE bookings SET payout_status = 'paid' WHERE id = $1", [booking.id]);
+      } catch (err) {
+        console.error(`Wallet payout failed for booking #${booking.id}:`, err.paystackResponse || err.message);
+        await db.query("UPDATE bookings SET payout_status = 'failed' WHERE id = $1", [booking.id]);
+        await notifyUser(salon.owner_id, {
+          type: "payout_failed",
+          title: "Payout couldn't be sent",
+          body: `We couldn't send your payout for booking #${booking.id}. If your payout details are outdated, reconnect payouts in My Profile.`,
+          bookingId: booking.id,
+        });
+      }
+    }
 
     const { rows: serviceRows } = await db.query("SELECT name FROM services WHERE id = $1", [booking.service_id]);
     const serviceName = serviceRows[0]?.name || "your service";

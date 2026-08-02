@@ -13,6 +13,7 @@ const paystackWebhookRoutes = require("./routes/paystackWebhook");
 const adminSeedRoutes = require("./routes/adminSeed");
 const notificationRoutes = require("./routes/notifications");
 const { startReminderJob } = require("./lib/reminders");
+const walletRoutes = require("./routes/wallet");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/concierge", conciergeRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/admin", adminSeedRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/wallet", walletRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

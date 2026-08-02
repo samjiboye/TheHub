@@ -4,7 +4,7 @@ import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
-  UserCircle, Bell,
+  UserCircle, Bell, Wallet,
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
@@ -498,7 +498,7 @@ function ProfileView({ salon, onBack, onBook }) {
   );
 }
 
-function BookingView({ salon, service, onBack, token }) {
+function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
   const homeOnly = service.salon_service_available === false;
   const hasHomeOption = service.home_service_price != null;
   const [time, setTime] = useState(null);
@@ -507,17 +507,43 @@ function BookingView({ salon, service, onBack, token }) {
   const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [payMethod, setPayMethod] = useState("card");
+
+  useEffect(() => {
+    if (!token) return;
+    apiFetch("/wallet/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => setWalletBalance(data.balance || 0))
+      .catch(() => {});
+  }, [token]);
 
   const price = location === "home" ? service.home_service_price : service.price;
   const total = (price + BOOKING_FEE).toFixed(2);
   const todayStr = new Date().toISOString().slice(0, 10);
   const canSubmit = time && date && (location !== "home" || address.trim().length > 0);
+  const walletCanCover = walletBalance >= parseFloat(total);
 
   const handleBook = async () => {
     if (!canSubmit || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
+      if (payMethod === "wallet") {
+        await apiFetch("/payments/checkout-wallet", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            salon_id: salon.id,
+            service_id: service.id,
+            time_slot: time,
+            booking_date: date,
+            location_type: location,
+            customer_address: location === "home" ? address.trim() : undefined,
+          }),
+        });
+        onPaidWithWallet();
+        return;
+      }
       const { url } = await apiFetch("/payments/checkout", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -665,6 +691,38 @@ function BookingView({ salon, service, onBack, token }) {
         {error && (
           <p className="text-base text-center mt-4" style={{ color: heroTheme ? "rgba(255,255,255,0.85)" : colors.creamDim }}>{error}</p>
         )}
+
+        <h3 className="mt-6 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
+          How do you want to pay?
+        </h3>
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          <button
+            onClick={() => setPayMethod("card")}
+            className="py-4 px-3 rounded-2xl text-base tap-glass"
+            style={{
+              background: payMethod === "card" ? colors.hairline : colors.panelLight,
+              color: payMethod === "card" ? "#FFFFFF" : colors.cream,
+              border: `3px solid ${colors.hairline}`,
+              fontWeight: 700,
+            }}
+          >
+            Pay by card
+          </button>
+          <button
+            onClick={() => walletCanCover && setPayMethod("wallet")}
+            disabled={!walletCanCover}
+            className="py-4 px-3 rounded-2xl text-base tap-glass"
+            style={{
+              background: payMethod === "wallet" ? colors.hairline : colors.panelLight,
+              color: payMethod === "wallet" ? "#FFFFFF" : colors.cream,
+              border: `3px solid ${colors.hairline}`,
+              fontWeight: 700,
+              opacity: walletCanCover ? 1 : 0.5,
+            }}
+          >
+            Pay from wallet<br /><span className="text-sm font-normal">₦{Number(walletBalance).toLocaleString()} available</span>
+          </button>
+        </div>
 
 <SwipeToPay onConfirm={handleBook} disabled={!canSubmit} submitting={submitting} />
       </div>
@@ -2605,6 +2663,118 @@ function StarSlideRating({ booking, token, onDone }) {
 }
 
 
+function WalletView({ token, onBack }) {
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [fundAmount, setFundAmount] = useState("");
+  const [funding, setFunding] = useState(false);
+  const [fundError, setFundError] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    apiFetch("/wallet/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => { setBalance(data.balance || 0); setTransactions(data.transactions || []); setError(null); })
+      .catch(() => setError("Couldn't load your wallet."))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const handleFund = async () => {
+    const amount = parseFloat(fundAmount);
+    if (!amount || amount <= 0) {
+      setFundError("Enter a valid amount.");
+      return;
+    }
+    setFunding(true);
+    setFundError(null);
+    try {
+      const { url } = await apiFetch("/wallet/fund", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount }),
+      });
+      window.location.href = url;
+    } catch (e) {
+      setFundError(e.message || "Couldn't start funding — try again.");
+      setFunding(false);
+    }
+  };
+
+  const TX_LABELS = { fund: "Wallet top-up", debit: "Booking payment", refund: "Refund" };
+
+  return (
+    <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
+      <Header title="Wallet" onBack={onBack} />
+      <div className="px-4 max-w-xl mx-auto w-full">
+        <div className="mt-2 rounded-2xl px-5 py-6 text-center" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
+          <p className="text-sm" style={{ color: colors.creamDim }}>Wallet balance</p>
+          <p className="text-4xl mt-1" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 800 }}>
+            ₦{Number(balance).toLocaleString()}
+          </p>
+        </div>
+
+        <h3 className="mt-6 mb-3 text-lg" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
+          Top up
+        </h3>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            inputMode="decimal"
+            value={fundAmount}
+            onChange={(e) => setFundAmount(e.target.value)}
+            placeholder="Amount in ₦"
+            className="flex-1 px-4 py-3 rounded-xl text-base outline-none"
+            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          />
+          <button
+            onClick={handleFund}
+            disabled={funding}
+            className="px-5 py-3 rounded-xl text-base tap-glass"
+            style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
+          >
+            {funding ? <Loader2 size={18} className="animate-spin" /> : "Fund"}
+          </button>
+        </div>
+        {fundError && <p className="text-sm mt-2" style={{ color: colors.creamDim }}>{fundError}</p>}
+
+        <h3 className="mt-8 mb-3 text-lg" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
+          History
+        </h3>
+        {loading && (
+          <div className="flex justify-center pt-4">
+            <Loader2 size={24} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && <p className="text-sm text-center mt-4" style={{ color: colors.creamDim }}>{error}</p>}
+        {!loading && !error && transactions.length === 0 && (
+          <p className="text-sm py-4" style={{ color: colors.creamDim }}>No wallet activity yet.</p>
+        )}
+        <div className="flex flex-col gap-2 mt-2">
+          {transactions.map((tx) => (
+            <div
+              key={tx.id}
+              className="flex items-center justify-between px-4 py-3 rounded-xl"
+              style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+            >
+              <div>
+                <p className="text-sm font-semibold" style={{ color: colors.cream }}>{TX_LABELS[tx.type] || tx.type}</p>
+                <p className="text-xs" style={{ color: colors.creamDim }}>
+                  {new Date(tx.created_at).toLocaleDateString()} · {tx.status}
+                </p>
+              </div>
+              <p className="text-base" style={{ color: tx.type === "debit" ? "#E07A5F" : colors.cream, fontWeight: 700 }}>
+                {tx.type === "debit" ? "-" : "+"}₦{Number(tx.amount).toLocaleString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MyBookingsView({ token, onBack }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3346,6 +3516,9 @@ export default function App() {
     } else if (params.get("booking_cancelled")) {
       setCheckoutResult("cancelled");
       setRole("customer");
+    } else if (params.get("wallet_success")) {
+      setRole("customer");
+      setView("wallet");
     } else if (params.get("stripe_return") || params.get("stripe_refresh")) {
       setRole("owner");
     } else if (params.get("token")) {
@@ -3592,6 +3765,15 @@ export default function App() {
                     <CalendarCheck size={16} /> My bookings
                   </button>
                 )}
+                {role === "customer" && customerAuth && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setView("wallet"); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: colors.cream }}
+                  >
+                    <Wallet size={16} /> Wallet
+                  </button>
+                )}
                 {(role === "customer" ? customerAuth : ownerAuth) && (
                   <button
                     onClick={() => { setMenuOpen(false); setView("settings"); }}
@@ -3730,10 +3912,17 @@ export default function App() {
                 service={selectedService}
                 token={customerAuth.token}
                 onBack={() => setView("profile")}
+                onPaidWithWallet={() => setCheckoutResult("success")}
               />
             )}
             {view === "myBookings" && customerAuth && (
               <MyBookingsView
+                token={customerAuth.token}
+                onBack={() => setView("home")}
+              />
+            )}
+            {view === "wallet" && customerAuth && (
+              <WalletView
                 token={customerAuth.token}
                 onBack={() => setView("home")}
               />
