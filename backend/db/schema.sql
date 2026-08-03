@@ -138,3 +138,8 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS dispute_reason TEXT;
 -- Default 'accepted' so existing bookings aren't retroactively gated behind
 -- acceptance; new bookings are explicitly set to 'pending' at payment time.
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS owner_response TEXT NOT NULL DEFAULT 'accepted' CHECK (owner_response IN ('pending', 'accepted', 'declined'));
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_bookings_since_reward INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_type_check;
+ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_type_check CHECK (type IN ('fund', 'debit', 'refund', 'reward'));

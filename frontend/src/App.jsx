@@ -2895,12 +2895,22 @@ function WalletView({ token, onBack }) {
   const [fundAmount, setFundAmount] = useState("");
   const [funding, setFunding] = useState(false);
   const [fundError, setFundError] = useState(null);
+  const [loyaltyCount, setLoyaltyCount] = useState(0);
+  const [loyaltyGoal, setLoyaltyGoal] = useState(5);
+  const [loyaltyReward, setLoyaltyReward] = useState(1000);
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     apiFetch("/wallet/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then((data) => { setBalance(data.balance || 0); setTransactions(data.transactions || []); setError(null); })
+      .then((data) => {
+        setBalance(data.balance || 0);
+        setTransactions(data.transactions || []);
+        setLoyaltyCount(data.loyaltyCount || 0);
+        setLoyaltyGoal(data.loyaltyGoal || 5);
+        setLoyaltyReward(data.loyaltyReward || 1000);
+        setError(null);
+      })
       .catch(() => setError("Couldn't load your wallet."))
       .finally(() => setLoading(false));
   }, [token]);
@@ -2926,7 +2936,7 @@ function WalletView({ token, onBack }) {
     }
   };
 
-  const TX_LABELS = { fund: "Wallet top-up", debit: "Booking payment", refund: "Refund" };
+  const TX_LABELS = { fund: "Wallet top-up", debit: "Booking payment", refund: "Refund", reward: "Loyalty reward" };
 
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
@@ -2936,6 +2946,24 @@ function WalletView({ token, onBack }) {
           <p className="text-sm" style={{ color: colors.creamDim }}>Wallet balance</p>
           <p className="text-4xl mt-1" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 800 }}>
             ₦{Number(balance).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold" style={{ color: colors.cream }}>🎁 Loyalty reward</p>
+            <p className="text-xs" style={{ color: colors.creamDim }}>{loyaltyCount}/{loyaltyGoal} bookings</p>
+          </div>
+          <div className="w-full rounded-full overflow-hidden" style={{ background: colors.panelLight, height: 10 }}>
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${Math.min(100, (loyaltyCount / loyaltyGoal) * 100)}%`, background: colors.hairline }}
+            />
+          </div>
+          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>
+            {loyaltyGoal - loyaltyCount > 0
+              ? `${loyaltyGoal - loyaltyCount} more booking${loyaltyGoal - loyaltyCount === 1 ? "" : "s"} through TheHub unlocks ₦${Number(loyaltyReward).toLocaleString()} in your wallet.`
+              : `Reward unlocked on your next completed booking!`}
           </p>
         </div>
 

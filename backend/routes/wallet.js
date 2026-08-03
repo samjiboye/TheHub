@@ -7,6 +7,8 @@ const router = express.Router();
 
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const LOYALTY_GOAL = 5;
+const LOYALTY_REWARD = 1000;
 
 router.get("/me", requireAuth, async (req, res) => {
   try {
@@ -15,7 +17,17 @@ router.get("/me", requireAuth, async (req, res) => {
       "SELECT * FROM wallet_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50",
       [req.user.id]
     );
-    res.json({ balance, transactions });
+    const { rows: loyaltyRows } = await db.query(
+      "SELECT loyalty_bookings_since_reward FROM users WHERE id = $1",
+      [req.user.id]
+    );
+    res.json({
+      balance,
+      transactions,
+      loyaltyCount: loyaltyRows[0]?.loyalty_bookings_since_reward || 0,
+      loyaltyGoal: LOYALTY_GOAL,
+      loyaltyReward: LOYALTY_REWARD,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load wallet." });

@@ -1,6 +1,10 @@
 const db = require("../db");
 const paystack = require("./paystack");
 const { notifyUser } = require("./notify");
+const { creditWallet } = require("./wallet");
+
+const LOYALTY_GOAL = 5; // completed in-app bookings needed per reward
+const LOYALTY_REWARD = 1000; // ₦ credited to the customer's wallet
 
 // Marks a booking completed, releases the wallet payout to the owner if applicable
 // (card-paid bookings were already split at checkout, so there's nothing to send),
@@ -55,6 +59,27 @@ async function completeBooking(booking, salon, { auto = false } = {}) {
       : `Your ${serviceName} appointment${salon ? ` at ${salon.name}` : ""} is marked complete. Tap to leave a review!`,
     bookingId: booking.id,
   });
+
+  // Loyalty: every LOYALTY_GOAL completed in-app bookings earns a wallet credit.
+  try {
+    const { rows: userRows } = await db.query(
+      "UPDATE users SET loyalty_bookings_since_reward = loyalty_bookings_since_reward + 1 WHERE id = $1 RETURNING loyalty_bookings_since_reward",
+      [booking.customer_id]
+    );
+    const count = userRows[0]?.loyalty_bookings_since_reward || 0;
+    if (count >= LOYALTY_GOAL) {
+      await db.query("UPDATE users SET loyalty_bookings_since_reward = 0 WHERE id = $1", [booking.customer_id]);
+      await creditWallet(booking.customer_id, LOYALTY_REWARD, { type: "reward", bookingId: booking.id });
+      await notifyUser(booking.customer_id, {
+        type: "loyalty_reward",
+        title: "Reward unlocked! 🎉",
+        body: `You've booked ${LOYALTY_GOAL} times through TheHub — ₦${LOYALTY_REWARD.toLocaleString()} has been added to your wallet.`,
+        bookingId: booking.id,
+      });
+    }
+  } catch (err) {
+    console.error(`Loyalty reward tracking failed for booking #${booking.id}:`, err);
+  }
 }
 
 module.exports = { completeBooking };
