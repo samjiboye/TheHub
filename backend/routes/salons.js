@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("../db");
 const { geocodeAddress } = require("../lib/geocode");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { getCommissionRate, getCompletedCount, TIERS } = require("../lib/commission");
 const router = express.Router();
 
 // Haversine distance in miles
@@ -330,7 +331,19 @@ router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res)
        ORDER BY b.created_at DESC LIMIT 20`,
       [salon.id]
     );
-    res.json({ ...totals, upcoming });
+
+    const completedCount = await getCompletedCount(salon.id);
+    const commissionRate = await getCommissionRate(salon.id);
+    const nextTier = [...TIERS].sort((a, b) => a.minCompleted - b.minCompleted).find((t) => t.minCompleted > completedCount);
+
+    res.json({
+      ...totals,
+      upcoming,
+      commissionRate,
+      completedCount,
+      nextTierAt: nextTier ? nextTier.minCompleted : null,
+      nextTierRate: nextTier ? nextTier.rate : null,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load dashboard." });

@@ -4,9 +4,10 @@ const paystack = require("../lib/paystack");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { debitWallet, getBalance } = require("../lib/wallet");
 const { notifyUser } = require("../lib/notify");
+const { getCommissionRate } = require("../lib/commission");
 const router = express.Router();
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
-const COMMISSION_RATE = 0.15;
+const BASE_COMMISSION_RATE = 0.15; // used only as Paystack's default subaccount split; actual bookings always override this per-transaction based on tier
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -66,7 +67,8 @@ router.post("/checkout", requireAuth, async (req, res) => {
     }
 
     const price = loc === "home" ? service.home_service_price : service.price;
-    const commission_amount = Math.round(price * COMMISSION_RATE * 100) / 100;
+    const commissionRate = await getCommissionRate(salon_id);
+    const commission_amount = Math.round(price * commissionRate * 100) / 100;
     const payout_amount = Math.round((price - commission_amount) * 100) / 100;
     const total = price + BOOKING_FEE;
 
@@ -74,7 +76,7 @@ router.post("/checkout", requireAuth, async (req, res) => {
       `INSERT INTO bookings
         (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12, 'unpaid') RETURNING id`,
-      [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount]
+      [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, commissionRate, commission_amount, payout_amount]
     );
     const bookingId = bookingRows[0].id;
 
@@ -134,7 +136,8 @@ router.post("/checkout-wallet", requireAuth, async (req, res) => {
     }
 
     const price = loc === "home" ? service.home_service_price : service.price;
-    const commission_amount = Math.round(price * COMMISSION_RATE * 100) / 100;
+    const commissionRate = await getCommissionRate(salon_id);
+    const commission_amount = Math.round(price * commissionRate * 100) / 100;
     const payout_amount = Math.round((price - commission_amount) * 100) / 100;
     const total = price + BOOKING_FEE;
 
@@ -147,7 +150,7 @@ router.post("/checkout-wallet", requireAuth, async (req, res) => {
       `INSERT INTO bookings
         (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status, payment_method, payout_status, owner_response)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', $8, $9, $10, $11, $12, 'paid', 'wallet', 'pending', 'pending') RETURNING id`,
-      [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, COMMISSION_RATE, commission_amount, payout_amount]
+      [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, commissionRate, commission_amount, payout_amount]
     );
     const bookingId = bookingRows[0].id;
 
@@ -192,7 +195,7 @@ router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
       business_name,
       bank_code,
       account_number,
-      percentage_charge: COMMISSION_RATE * 100,
+      percentage_charge: BASE_COMMISSION_RATE * 100,
     });
 
     await db.query(
