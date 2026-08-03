@@ -1928,6 +1928,34 @@ function OwnerDashboard({ token }) {
           <ShieldCheck size={13} />
           Commission is only taken on completed bookings — no charge for empty chairs.
         </div>
+
+        <div className="mt-6 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
+          <h3 className="text-sm font-bold mb-1" style={{ color: colors.cream }}>Your booking QR code</h3>
+          <p className="text-xs mb-3" style={{ color: colors.creamDim }}>
+            Print this or stick it up in your shop — clients scan it to book you directly, even walk-ins.
+          </p>
+          <div className="flex flex-col items-center gap-3">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.origin}/?salon=${salon.id}`)}`}
+              alt="Your TheHub booking QR code"
+              className="rounded-xl"
+              style={{ width: 200, height: 200, border: `2px solid ${colors.hairline}` }}
+            />
+            <a
+              href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`${window.location.origin}/?salon=${salon.id}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+              style={{ background: colors.hairline, color: "#FFFFFF" }}
+            >
+              Open large version (tap to save)
+            </a>
+            <p className="text-xs break-all text-center" style={{ color: colors.creamDim }}>
+              {window.location.origin}/?salon={salon.id}
+            </p>
+          </div>
+        </div>
+
         <MediaManager salonId={salon.id} token={token} />
 
         <h3 className="mt-6 mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_MONO }}>
@@ -3811,6 +3839,15 @@ export default function App() {
       setView("wallet");
     } else if (params.get("stripe_return") || params.get("stripe_refresh")) {
       setRole("owner");
+    } else if (params.get("salon")) {
+      const salonId = params.get("salon");
+      setRole("customer");
+      apiFetch(`/salons/${salonId}`)
+        .then((data) => {
+          setSelectedSalon(data);
+          setView("profile");
+        })
+        .catch(() => {});
     } else if (params.get("token")) {
       setResetToken(params.get("token"));
       setView("resetPassword");
