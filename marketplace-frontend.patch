@@ -1,0 +1,4109 @@
+diff --git a/frontend/.gitignore b/frontend/.gitignore
+new file mode 100644
+index 0000000..deed335
+--- /dev/null
++++ b/frontend/.gitignore
+@@ -0,0 +1,3 @@
++node_modules/
++dist/
++.env
+diff --git a/frontend/package-lock.json b/frontend/package-lock.json
+new file mode 100644
+index 0000000..bf27961
+--- /dev/null
++++ b/frontend/package-lock.json
+@@ -0,0 +1,2656 @@
++{
++  "name": "salonconnect-frontend",
++  "version": "1.0.0",
++  "lockfileVersion": 3,
++  "requires": true,
++  "packages": {
++    "": {
++      "name": "salonconnect-frontend",
++      "version": "1.0.0",
++      "dependencies": {
++        "lucide-react": "^0.383.0",
++        "react": "^18.3.1",
++        "react-dom": "^18.3.1"
++      },
++      "devDependencies": {
++        "@vitejs/plugin-react": "^4.3.1",
++        "autoprefixer": "^10.4.19",
++        "postcss": "^8.4.38",
++        "tailwindcss": "^3.4.4",
++        "vite": "^5.3.1"
++      }
++    },
++    "node_modules/@alloc/quick-lru": {
++      "version": "5.2.0",
++      "resolved": "https://registry.npmjs.org/@alloc/quick-lru/-/quick-lru-5.2.0.tgz",
++      "integrity": "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/@babel/code-frame": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.29.7.tgz",
++      "integrity": "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/helper-validator-identifier": "^7.29.7",
++        "js-tokens": "^4.0.0",
++        "picocolors": "^1.1.1"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/compat-data": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/compat-data/-/compat-data-7.29.7.tgz",
++      "integrity": "sha512-locTkQyKvwIEgBzVrn8693ebc97F2U8ZHjbXwDXJ5Fn2TCpNwTlKcaKLkdHop5c/icOFE7qt7Q9JC5hnKNa6Gg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/core": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/core/-/core-7.29.7.tgz",
++      "integrity": "sha512-RgHBCvtjbOK2gXSNBNIkNoEc9qoVEtau3hj8gEqKQuL3HZAibKarWFEI3Lfm6EYKkLalOh8eSrj9b+ch9H/VBA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/code-frame": "^7.29.7",
++        "@babel/generator": "^7.29.7",
++        "@babel/helper-compilation-targets": "^7.29.7",
++        "@babel/helper-module-transforms": "^7.29.7",
++        "@babel/helpers": "^7.29.7",
++        "@babel/parser": "^7.29.7",
++        "@babel/template": "^7.29.7",
++        "@babel/traverse": "^7.29.7",
++        "@babel/types": "^7.29.7",
++        "@jridgewell/remapping": "^2.3.5",
++        "convert-source-map": "^2.0.0",
++        "debug": "^4.1.0",
++        "gensync": "^1.0.0-beta.2",
++        "json5": "^2.2.3",
++        "semver": "^6.3.1"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      },
++      "funding": {
++        "type": "opencollective",
++        "url": "https://opencollective.com/babel"
++      }
++    },
++    "node_modules/@babel/generator": {
++      "version": "7.29.8",
++      "resolved": "https://registry.npmjs.org/@babel/generator/-/generator-7.29.8.tgz",
++      "integrity": "sha512-gZbepsdh3WDtgZKWL+vTPh71LSBrm/Y4/QDZBVCcYfmeTEEuoOYwlSy+G1StfJg+/Zy550u/3TATbm7qDbbMtg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/parser": "^7.29.8",
++        "@babel/types": "^7.29.8",
++        "@jridgewell/gen-mapping": "^0.3.12",
++        "@jridgewell/trace-mapping": "^0.3.28",
++        "jsesc": "^3.0.2"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helper-compilation-targets": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-compilation-targets/-/helper-compilation-targets-7.29.7.tgz",
++      "integrity": "sha512-wem6WaBj4NaVYVdNhLPPVacES6ZJ+KBBfSkTMD3YZxbP3rm3Di85tJU5ljaUNhaOynt+Aj0xruhYuzQBt8n71g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/compat-data": "^7.29.7",
++        "@babel/helper-validator-option": "^7.29.7",
++        "browserslist": "^4.24.0",
++        "lru-cache": "^5.1.1",
++        "semver": "^6.3.1"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helper-globals": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-globals/-/helper-globals-7.29.7.tgz",
++      "integrity": "sha512-3nQVUAtvkKH9zahfWgw96Jc/uFOmjACE1kQz82E2lqWmHBgjzbNlsC22nuQTfahmWeQtTq5nQ/4Nnd2A1wj4zA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helper-module-imports": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-module-imports/-/helper-module-imports-7.29.7.tgz",
++      "integrity": "sha512-ejHwrQQYcm9xnTivShn2IDOlIzInN34AXskvq9QicvCtEzq1Vzclu/tKF8Jq1Cg8JG2GL6/EmjgsCT7lXepE3g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/traverse": "^7.29.7",
++        "@babel/types": "^7.29.7"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helper-module-transforms": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-module-transforms/-/helper-module-transforms-7.29.7.tgz",
++      "integrity": "sha512-UPUVSyXbOh627KiCIGQSgwWzGeBKLkaJ9PJEdrngIwMSzxLR4jS4+f1f1jb7VzBbg8nFLaYotvVPFCTqdrmTAg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/helper-module-imports": "^7.29.7",
++        "@babel/helper-validator-identifier": "^7.29.7",
++        "@babel/traverse": "^7.29.7"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      },
++      "peerDependencies": {
++        "@babel/core": "^7.0.0"
++      }
++    },
++    "node_modules/@babel/helper-plugin-utils": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-plugin-utils/-/helper-plugin-utils-7.29.7.tgz",
++      "integrity": "sha512-G7sHYigPY17oO5SYWnfD/0MTBwVR781S/JI643e/JhUYgVgWE/61SoW3NH9KWUKyKq5LVh3npif99Wkt6j86Jw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helper-string-parser": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.7.tgz",
++      "integrity": "sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helper-validator-identifier": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.29.7.tgz",
++      "integrity": "sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helper-validator-option": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-validator-option/-/helper-validator-option-7.29.7.tgz",
++      "integrity": "sha512-N9ZErrD+yW5geCDtBqnOoxmR8+tNKiGuxKlDpuJxfsqpa2dFcexaziGAE/qoHLiDDreVNMupxGmSoNlyvsA3gw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/helpers": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helpers/-/helpers-7.29.7.tgz",
++      "integrity": "sha512-1k2lAGRMfHTcwuNYcCNUmaUffmQv8KWMfh2iJUUeRlwlwH4FdNG7mfPI10NPfLHJFThE4Tyr4mv7kTNZOiPuBg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/template": "^7.29.7",
++        "@babel/types": "^7.29.7"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/parser": {
++      "version": "7.29.8",
++      "resolved": "https://registry.npmjs.org/@babel/parser/-/parser-7.29.8.tgz",
++      "integrity": "sha512-E8lTAYNB1KW+FH+VGJuZM1ioAx2E6oVlvQFRrf5P8ZZmsiJXYAD9vTFV7yyEURNzgh1dFqMZuO6tUwcARbqFCA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/types": "^7.29.8"
++      },
++      "bin": {
++        "parser": "bin/babel-parser.js"
++      },
++      "engines": {
++        "node": ">=6.0.0"
++      }
++    },
++    "node_modules/@babel/plugin-transform-react-jsx-self": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/plugin-transform-react-jsx-self/-/plugin-transform-react-jsx-self-7.29.7.tgz",
++      "integrity": "sha512-TL0hMc9xzy86VD31nUiwzd5otRAcyEPcsegCxolO0PvcXuH1v0kECe/UIznYFihpkvU5wg/jk4v0TTEFfm53fw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/helper-plugin-utils": "^7.29.7"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      },
++      "peerDependencies": {
++        "@babel/core": "^7.0.0-0"
++      }
++    },
++    "node_modules/@babel/plugin-transform-react-jsx-source": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/plugin-transform-react-jsx-source/-/plugin-transform-react-jsx-source-7.29.7.tgz",
++      "integrity": "sha512-06IyK09H3wi4cGbhDBwp5gUGo0IKtnYa8tyTiephirPCK6fbobVGiXMMI5zLQ4aKEYP3wZ3ArU44o+8KMrSG/Q==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/helper-plugin-utils": "^7.29.7"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      },
++      "peerDependencies": {
++        "@babel/core": "^7.0.0-0"
++      }
++    },
++    "node_modules/@babel/template": {
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/template/-/template-7.29.7.tgz",
++      "integrity": "sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/code-frame": "^7.29.7",
++        "@babel/parser": "^7.29.7",
++        "@babel/types": "^7.29.7"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/traverse": {
++      "version": "7.29.8",
++      "resolved": "https://registry.npmjs.org/@babel/traverse/-/traverse-7.29.8.tgz",
++      "integrity": "sha512-I5z7H3bf/41ktsNVLtpN0wAa336HkqIHQ5BuPLEhTkt1jVSyZpeNKIzTgEWmlxjdg81R0IgUCcaE+Ok3NvrfZg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/code-frame": "^7.29.7",
++        "@babel/generator": "^7.29.8",
++        "@babel/helper-globals": "^7.29.7",
++        "@babel/parser": "^7.29.8",
++        "@babel/template": "^7.29.7",
++        "@babel/types": "^7.29.8",
++        "debug": "^4.3.1"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@babel/types": {
++      "version": "7.29.8",
++      "resolved": "https://registry.npmjs.org/@babel/types/-/types-7.29.8.tgz",
++      "integrity": "sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/helper-string-parser": "^7.29.7",
++        "@babel/helper-validator-identifier": "^7.29.7"
++      },
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/@esbuild/aix-ppc64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.21.5.tgz",
++      "integrity": "sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==",
++      "cpu": [
++        "ppc64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "aix"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/android-arm": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.21.5.tgz",
++      "integrity": "sha512-vCPvzSjpPHEi1siZdlvAlsPxXl7WbOVUBBAowWug4rJHb68Ox8KualB+1ocNvT5fjv6wpkX6o/iEpbDrf68zcg==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/android-arm64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.21.5.tgz",
++      "integrity": "sha512-c0uX9VAUBQ7dTDCjq+wdyGLowMdtR/GoC2U5IYk/7D1H1JYC0qseD7+11iMP2mRLN9RcCMRcjC4YMclCzGwS/A==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/android-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.21.5.tgz",
++      "integrity": "sha512-D7aPRUUNHRBwHxzxRvp856rjUHRFW1SdQATKXH2hqA0kAZb1hKmi02OpYRacl0TxIGz/ZmXWlbZgjwWYaCakTA==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/darwin-arm64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.21.5.tgz",
++      "integrity": "sha512-DwqXqZyuk5AiWWf3UfLiRDJ5EDd49zg6O9wclZ7kUMv2WRFr4HKjXp/5t8JZ11QbQfUS6/cRCKGwYhtNAY88kQ==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/darwin-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.21.5.tgz",
++      "integrity": "sha512-se/JjF8NlmKVG4kNIuyWMV/22ZaerB+qaSi5MdrXtd6R08kvs2qCN4C09miupktDitvh8jRFflwGFBQcxZRjbw==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/freebsd-arm64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.21.5.tgz",
++      "integrity": "sha512-5JcRxxRDUJLX8JXp/wcBCy3pENnCgBR9bN6JsY4OmhfUtIHe3ZW0mawA7+RDAcMLrMIZaf03NlQiX9DGyB8h4g==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "freebsd"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/freebsd-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.21.5.tgz",
++      "integrity": "sha512-J95kNBj1zkbMXtHVH29bBriQygMXqoVQOQYA+ISs0/2l3T9/kj42ow2mpqerRBxDJnmkUDCaQT/dfNXWX/ZZCQ==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "freebsd"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-arm": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.21.5.tgz",
++      "integrity": "sha512-bPb5AHZtbeNGjCKVZ9UGqGwo8EUu4cLq68E95A53KlxAPRmUyYv2D6F0uUI65XisGOL1hBP5mTronbgo+0bFcA==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-arm64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.21.5.tgz",
++      "integrity": "sha512-ibKvmyYzKsBeX8d8I7MH/TMfWDXBF3db4qM6sy+7re0YXya+K1cem3on9XgdT2EQGMu4hQyZhan7TeQ8XkGp4Q==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-ia32": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.21.5.tgz",
++      "integrity": "sha512-YvjXDqLRqPDl2dvRODYmmhz4rPeVKYvppfGYKSNGdyZkA01046pLWyRKKI3ax8fbJoK5QbxblURkwK/MWY18Tg==",
++      "cpu": [
++        "ia32"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-loong64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.21.5.tgz",
++      "integrity": "sha512-uHf1BmMG8qEvzdrzAqg2SIG/02+4/DHB6a9Kbya0XDvwDEKCoC8ZRWI5JJvNdUjtciBGFQ5PuBlpEOXQj+JQSg==",
++      "cpu": [
++        "loong64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-mips64el": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.21.5.tgz",
++      "integrity": "sha512-IajOmO+KJK23bj52dFSNCMsz1QP1DqM6cwLUv3W1QwyxkyIWecfafnI555fvSGqEKwjMXVLokcV5ygHW5b3Jbg==",
++      "cpu": [
++        "mips64el"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-ppc64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.21.5.tgz",
++      "integrity": "sha512-1hHV/Z4OEfMwpLO8rp7CvlhBDnjsC3CttJXIhBi+5Aj5r+MBvy4egg7wCbe//hSsT+RvDAG7s81tAvpL2XAE4w==",
++      "cpu": [
++        "ppc64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-riscv64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.21.5.tgz",
++      "integrity": "sha512-2HdXDMd9GMgTGrPWnJzP2ALSokE/0O5HhTUvWIbD3YdjME8JwvSCnNGBnTThKGEB91OZhzrJ4qIIxk/SBmyDDA==",
++      "cpu": [
++        "riscv64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-s390x": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.21.5.tgz",
++      "integrity": "sha512-zus5sxzqBJD3eXxwvjN1yQkRepANgxE9lgOW2qLnmr8ikMTphkjgXu1HR01K4FJg8h1kEEDAqDcZQtbrRnB41A==",
++      "cpu": [
++        "s390x"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/linux-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.21.5.tgz",
++      "integrity": "sha512-1rYdTpyv03iycF1+BhzrzQJCdOuAOtaqHTWJZCWvijKD2N5Xu0TtVC8/+1faWqcP9iBCWOmjmhoH94dH82BxPQ==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/netbsd-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.21.5.tgz",
++      "integrity": "sha512-Woi2MXzXjMULccIwMnLciyZH4nCIMpWQAs049KEeMvOcNADVxo0UBIQPfSmxB3CWKedngg7sWZdLvLczpe0tLg==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "netbsd"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/openbsd-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.21.5.tgz",
++      "integrity": "sha512-HLNNw99xsvx12lFBUwoT8EVCsSvRNDVxNpjZ7bPn947b8gJPzeHWyNVhFsaerc0n3TsbOINvRP2byTZ5LKezow==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "openbsd"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/sunos-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.21.5.tgz",
++      "integrity": "sha512-6+gjmFpfy0BHU5Tpptkuh8+uw3mnrvgs+dSPQXQOv3ekbordwnzTVEb4qnIvQcYXq6gzkyTnoZ9dZG+D4garKg==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "sunos"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/win32-arm64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.21.5.tgz",
++      "integrity": "sha512-Z0gOTd75VvXqyq7nsl93zwahcTROgqvuAcYDUr+vOv8uHhNSKROyU961kgtCD1e95IqPKSQKH7tBTslnS3tA8A==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/win32-ia32": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.21.5.tgz",
++      "integrity": "sha512-SWXFF1CL2RVNMaVs+BBClwtfZSvDgtL//G/smwAc5oVK/UPu2Gu9tIaRgFmYFFKrmg3SyAjSrElf0TiJ1v8fYA==",
++      "cpu": [
++        "ia32"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@esbuild/win32-x64": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.21.5.tgz",
++      "integrity": "sha512-tQd/1efJuzPC6rCFwEvLtci/xNFcTZknmXs98FYDfGE4wP9ClFV98nyKrzJKVPMhdDnjzLhdUyMX4PsQAPjwIw==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ],
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/@jridgewell/gen-mapping": {
++      "version": "0.3.13",
++      "resolved": "https://registry.npmjs.org/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz",
++      "integrity": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@jridgewell/sourcemap-codec": "^1.5.0",
++        "@jridgewell/trace-mapping": "^0.3.24"
++      }
++    },
++    "node_modules/@jridgewell/remapping": {
++      "version": "2.3.5",
++      "resolved": "https://registry.npmjs.org/@jridgewell/remapping/-/remapping-2.3.5.tgz",
++      "integrity": "sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@jridgewell/gen-mapping": "^0.3.5",
++        "@jridgewell/trace-mapping": "^0.3.24"
++      }
++    },
++    "node_modules/@jridgewell/resolve-uri": {
++      "version": "3.1.2",
++      "resolved": "https://registry.npmjs.org/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz",
++      "integrity": "sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.0.0"
++      }
++    },
++    "node_modules/@jridgewell/sourcemap-codec": {
++      "version": "1.5.5",
++      "resolved": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz",
++      "integrity": "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@jridgewell/trace-mapping": {
++      "version": "0.3.31",
++      "resolved": "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz",
++      "integrity": "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@jridgewell/resolve-uri": "^3.1.0",
++        "@jridgewell/sourcemap-codec": "^1.4.14"
++      }
++    },
++    "node_modules/@napi-rs/lzma-linux-x64-gnu": {
++      "version": "1.5.1",
++      "resolved": "https://registry.npmjs.org/@napi-rs/lzma-linux-x64-gnu/-/lzma-linux-x64-gnu-1.5.1.tgz",
++      "integrity": "sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ],
++      "engines": {
++        "node": "^22.20 || ^24.12 || >=25"
++      }
++    },
++    "node_modules/@nodelib/fs.scandir": {
++      "version": "2.1.5",
++      "resolved": "https://registry.npmjs.org/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz",
++      "integrity": "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@nodelib/fs.stat": "2.0.5",
++        "run-parallel": "^1.1.9"
++      },
++      "engines": {
++        "node": ">= 8"
++      }
++    },
++    "node_modules/@nodelib/fs.stat": {
++      "version": "2.0.5",
++      "resolved": "https://registry.npmjs.org/@nodelib/fs.stat/-/fs.stat-2.0.5.tgz",
++      "integrity": "sha512-RkhPPp2zrqDAQA/2jNhnztcPAlv64XdhIp7a7454A5ovI7Bukxgt7MX7udwAu3zg1DcpPU0rz3VV1SeaqvY4+A==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 8"
++      }
++    },
++    "node_modules/@nodelib/fs.walk": {
++      "version": "1.2.8",
++      "resolved": "https://registry.npmjs.org/@nodelib/fs.walk/-/fs.walk-1.2.8.tgz",
++      "integrity": "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@nodelib/fs.scandir": "2.1.5",
++        "fastq": "^1.6.0"
++      },
++      "engines": {
++        "node": ">= 8"
++      }
++    },
++    "node_modules/@rolldown/pluginutils": {
++      "version": "1.0.0-beta.27",
++      "resolved": "https://registry.npmjs.org/@rolldown/pluginutils/-/pluginutils-1.0.0-beta.27.tgz",
++      "integrity": "sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@rollup/rollup-android-arm-eabi": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.62.4.tgz",
++      "integrity": "sha512-RrPokAb7dmbxFoeO3TloqHyOjgye8RkBhSqmp4aJMIex4c9r46ZstPnleDQOq1t46VOVjwIuwNogIqbodV1Vvg==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ]
++    },
++    "node_modules/@rollup/rollup-android-arm64": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.62.4.tgz",
++      "integrity": "sha512-JKuJc+pnpks2pjy7L/N3v/cAkZxYlnmuZoD840ldbMI5KDbC4iO9NKwPKYdjYFCMAIIlBzYSFHxIJVYzRo2/8A==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ]
++    },
++    "node_modules/@rollup/rollup-darwin-arm64": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.62.4.tgz",
++      "integrity": "sha512-krw5uS2STmvJ02x0uTXHbqQNuz+9eZ1iw+qXk9dmW2gvV4jV7O2hEoOnuhFrpOPiel1mBFtqbxYZZtC46hXLOw==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ]
++    },
++    "node_modules/@rollup/rollup-darwin-x64": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.62.4.tgz",
++      "integrity": "sha512-wsTxtgApb4PrOsNJIm0FZ1h3WvCC+k9uxLJ4ad75hgoS4NiRes2SoJFlDAyMwiUY8IssDqGcHbXuN0sx1tfF1A==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ]
++    },
++    "node_modules/@rollup/rollup-freebsd-arm64": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.62.4.tgz",
++      "integrity": "sha512-GUOnQlyZe3yAXhWOtOMsn5Qkrv5E5mZXa0thbARWi5Ei2szlVXJFQhddZ4HbAzh8q92w5twp+CQvs/eFanz9YQ==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "freebsd"
++      ]
++    },
++    "node_modules/@rollup/rollup-freebsd-x64": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-x64/-/rollup-freebsd-x64-4.62.4.tgz",
++      "integrity": "sha512-/Y7f3QuxjzPKsjA/rfEDa3+0vXqyjmJ50Ln8dPpCmWkKTrUoWHG1cWhTqaAMLob2m2nESWuC7yGrREz019Ztqg==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "freebsd"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm-gnueabihf": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.62.4.tgz",
++      "integrity": "sha512-81wiiX3v7aqy+T+bT61TJ78yJjRquqFFTTbAPt08imfQQzkPIW8t6aJbkTagtCCrXMNc9D66+geqlK7ydLPNqA==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm-musleabihf": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.62.4.tgz",
++      "integrity": "sha512-9kmDIvNZqdoHOBZgNtpTBeLWYO/LVipM3H/j62P8848/l/VPEQL6N3uxU9pvP1oZAsXyC2MEnFP3ovRjo7WYNQ==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm64-gnu": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.62.4.tgz",
++      "integrity": "sha512-CcnXHWnXg69g+DX5VWL3FHts3qMRN2uVEHX+BZvGLdd07/gXkn3ePjYtO1LDJvxkGKVHMclKBRa1QUTH+6toYQ==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm64-musl": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.62.4.tgz",
++      "integrity": "sha512-iFOibiHnTRuhrWLlRsOQFdZJJIa7S8OwkneJr4ocALP16u5yk6lWLINFwhHaEqBFMsKDUZofLkGos7+CPzGB3g==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-loong64-gnu": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.62.4.tgz",
++      "integrity": "sha512-XnWYMI7euHlb5a871xPja+Gm7DRCFU+FGRrtS2sMq9N8FvqtpagUy6gD4YOemC5MRk9xbh8+jYMEJbigFQwsgA==",
++      "cpu": [
++        "loong64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-loong64-musl": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-musl/-/rollup-linux-loong64-musl-4.62.4.tgz",
++      "integrity": "sha512-qGDAlO0U8xedCcsdRm9oaoQY8DAx/QT7uIxJWhCdx0ceIWX783UC9QSYkdpzAe29wNiVfp24+bZdQmn49o45SQ==",
++      "cpu": [
++        "loong64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-ppc64-gnu": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.62.4.tgz",
++      "integrity": "sha512-ru4H6ezD7ysA5EiEK6qkkaEb4modH8CTej6kUy/gQi20u3kB3G7Zn8snXXkeJSCOFKG/rbPPtM/+9Wgas1961w==",
++      "cpu": [
++        "ppc64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-ppc64-musl": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-musl/-/rollup-linux-ppc64-musl-4.62.4.tgz",
++      "integrity": "sha512-2W4MO5WQVJnbJaZdvDb9rhBDuFU1nKIepPFpJUBsTh2k1YY2g+ODViaWuyOAjQ5cOP7NvrvLzt3wvHOoiAvc7w==",
++      "cpu": [
++        "ppc64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-riscv64-gnu": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.62.4.tgz",
++      "integrity": "sha512-+fxjfuoAmVMCYV5QyjoIpu0cp5DOiOTeqYFk1AVaxGr+/ravWLX89XfQmptsoWcaVy/TGf2hexzbUOrCQIL1CQ==",
++      "cpu": [
++        "riscv64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-riscv64-musl": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.62.4.tgz",
++      "integrity": "sha512-jTn8JfHGL4djjFxPuM06LmNUJDsst2jeVlsd9OmIH6zc5sC9K6rIuO4YajXatLUpBmBKl6b35ro1QZocLi+tcA==",
++      "cpu": [
++        "riscv64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-s390x-gnu": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.62.4.tgz",
++      "integrity": "sha512-oCJCJL4pXsoDcP2QZ+JVlPTIRc6266zsIaeJJsWImmF7HO0W8nb6HuSgZlMWxJwaPf8ehbSw8yo0EUw925hKsA==",
++      "cpu": [
++        "s390x"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-x64-gnu": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.62.4.tgz",
++      "integrity": "sha512-W69hukhZ3KKNRCaMIEzKvcFye42hh0FE1+YoYaf5+Ikacuftoco6yO/xouz0hc5d5W/s3yBro5jRiuEE/Q5vUw==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-x64-musl": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.62.4.tgz",
++      "integrity": "sha512-qiXbGG2jkjXhzXpsFZSR2Xpb8DN/UaxYsbb/STbuR/6fpaDgRmmaq1B/LmtF2wQFOFOSsK2jdE0RZ3a0zHn4QA==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-openbsd-x64": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-openbsd-x64/-/rollup-openbsd-x64-4.62.4.tgz",
++      "integrity": "sha512-nWeM//hxv8mIo6jD7Hu4o48DVmV9pbV6gsKaWU+4NFyqHoPKwrkRiZGLKUhOBk8qNmDmpwFtPKg80Bo/Tn4xiQ==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "openbsd"
++      ]
++    },
++    "node_modules/@rollup/rollup-openharmony-arm64": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.62.4.tgz",
++      "integrity": "sha512-s62SQ/vgsRSvMwDkOEfTqfgASF0f26ZNaQuTA6Aok5lrikf89yI2W0gFHvZb2Jpgc6N8JnOKZgCK2iciO3CsxQ==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "openharmony"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-arm64-msvc": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-arm64-msvc/-/rollup-win32-arm64-msvc-4.62.4.tgz",
++      "integrity": "sha512-J6wGf8TVGbXJq+HH+ttTvrcfNKPbuZecV6KT1B8I18BC5IURUh5kl4Yl5OEP5eFIUoI5BWxCsyYMhFsDx8kekw==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-ia32-msvc": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.62.4.tgz",
++      "integrity": "sha512-zmfrQd/0wu6oJs8Vq8KwY/YtsKSsLtKe/HwAP4Wqy8LhWjeT55fHRAkOhYQ12wI3ayS4Tt12d5CDRD7N96SAYQ==",
++      "cpu": [
++        "ia32"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-x64-gnu": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.62.4.tgz",
++      "integrity": "sha512-qPzHqdj9rfUD+w79dtE07zi/kFwKyCJqplp5K5ygeLTp7jLpAoc16OAH39HSmRC9UpozaecsleI8uAdEj6v2yw==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-x64-msvc": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.62.4.tgz",
++      "integrity": "sha512-zD6NdeWEByGE9QF9vCrlJ5YQB4oq9q91kPZS37Jwj5hOkvR1lTBSpsKhKDw4IJtbQ35LsTS1HD9DZYGKIshU1Q==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@types/babel__core": {
++      "version": "7.20.5",
++      "resolved": "https://registry.npmjs.org/@types/babel__core/-/babel__core-7.20.5.tgz",
++      "integrity": "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/parser": "^7.20.7",
++        "@babel/types": "^7.20.7",
++        "@types/babel__generator": "*",
++        "@types/babel__template": "*",
++        "@types/babel__traverse": "*"
++      }
++    },
++    "node_modules/@types/babel__generator": {
++      "version": "7.27.0",
++      "resolved": "https://registry.npmjs.org/@types/babel__generator/-/babel__generator-7.27.0.tgz",
++      "integrity": "sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/types": "^7.0.0"
++      }
++    },
++    "node_modules/@types/babel__template": {
++      "version": "7.4.4",
++      "resolved": "https://registry.npmjs.org/@types/babel__template/-/babel__template-7.4.4.tgz",
++      "integrity": "sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/parser": "^7.1.0",
++        "@babel/types": "^7.0.0"
++      }
++    },
++    "node_modules/@types/babel__traverse": {
++      "version": "7.28.0",
++      "resolved": "https://registry.npmjs.org/@types/babel__traverse/-/babel__traverse-7.28.0.tgz",
++      "integrity": "sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/types": "^7.28.2"
++      }
++    },
++    "node_modules/@types/estree": {
++      "version": "1.0.9",
++      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.9.tgz",
++      "integrity": "sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@vitejs/plugin-react": {
++      "version": "4.7.0",
++      "resolved": "https://registry.npmjs.org/@vitejs/plugin-react/-/plugin-react-4.7.0.tgz",
++      "integrity": "sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@babel/core": "^7.28.0",
++        "@babel/plugin-transform-react-jsx-self": "^7.27.1",
++        "@babel/plugin-transform-react-jsx-source": "^7.27.1",
++        "@rolldown/pluginutils": "1.0.0-beta.27",
++        "@types/babel__core": "^7.20.5",
++        "react-refresh": "^0.17.0"
++      },
++      "engines": {
++        "node": "^14.18.0 || >=16.0.0"
++      },
++      "peerDependencies": {
++        "vite": "^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0"
++      }
++    },
++    "node_modules/any-promise": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/any-promise/-/any-promise-1.3.0.tgz",
++      "integrity": "sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/anymatch": {
++      "version": "3.1.3",
++      "resolved": "https://registry.npmjs.org/anymatch/-/anymatch-3.1.3.tgz",
++      "integrity": "sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==",
++      "dev": true,
++      "license": "ISC",
++      "dependencies": {
++        "normalize-path": "^3.0.0",
++        "picomatch": "^2.0.4"
++      },
++      "engines": {
++        "node": ">= 8"
++      }
++    },
++    "node_modules/arg": {
++      "version": "5.0.2",
++      "resolved": "https://registry.npmjs.org/arg/-/arg-5.0.2.tgz",
++      "integrity": "sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/autoprefixer": {
++      "version": "10.5.4",
++      "resolved": "https://registry.npmjs.org/autoprefixer/-/autoprefixer-10.5.4.tgz",
++      "integrity": "sha512-MaU0U/za7N3r6brxD4YB/l4NSrFzLPlANv6wEuQVaIPlD3L4W9rFcQPbL/EilY9BHhHvhfcz3gInDLrEtWT4EA==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/postcss/"
++        },
++        {
++          "type": "tidelift",
++          "url": "https://tidelift.com/funding/github/npm/autoprefixer"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "browserslist": "^4.28.6",
++        "caniuse-lite": "^1.0.30001806",
++        "fraction.js": "^5.3.4",
++        "picocolors": "^1.1.1",
++        "postcss-value-parser": "^4.2.0"
++      },
++      "bin": {
++        "autoprefixer": "bin/autoprefixer"
++      },
++      "engines": {
++        "node": "^10 || ^12 || >=14"
++      },
++      "peerDependencies": {
++        "postcss": "^8.1.0"
++      }
++    },
++    "node_modules/baseline-browser-mapping": {
++      "version": "2.11.12",
++      "resolved": "https://registry.npmjs.org/baseline-browser-mapping/-/baseline-browser-mapping-2.11.12.tgz",
++      "integrity": "sha512-r7WnVImvVCeFpf2DOXfy41aPWzeNg3H/A2X4dKmy1QL0MSyyk/e7z8ihJ3N6Nn2PsdhkVlqnEfnUE4a05P2aTA==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "bin": {
++        "baseline-browser-mapping": "dist/cli.cjs"
++      },
++      "engines": {
++        "node": ">=6.0.0"
++      }
++    },
++    "node_modules/binary-extensions": {
++      "version": "2.3.0",
++      "resolved": "https://registry.npmjs.org/binary-extensions/-/binary-extensions-2.3.0.tgz",
++      "integrity": "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=8"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/braces": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/braces/-/braces-3.0.3.tgz",
++      "integrity": "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "fill-range": "^7.1.1"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/browserslist": {
++      "version": "4.28.7",
++      "resolved": "https://registry.npmjs.org/browserslist/-/browserslist-4.28.7.tgz",
++      "integrity": "sha512-JxV13hNrFxqjOc8alRbq9dK1MM79NEXYpma2B2J4wAtpWS5zIEIKqWPGCl7N4o7Uc7B7itylh7SuDujATRyyTw==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/browserslist"
++        },
++        {
++          "type": "tidelift",
++          "url": "https://tidelift.com/funding/github/npm/browserslist"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "baseline-browser-mapping": "^2.10.44",
++        "caniuse-lite": "^1.0.30001806",
++        "electron-to-chromium": "^1.5.393",
++        "node-releases": "^2.0.51",
++        "update-browserslist-db": "^1.2.3"
++      },
++      "bin": {
++        "browserslist": "cli.js"
++      },
++      "engines": {
++        "node": "^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7"
++      }
++    },
++    "node_modules/camelcase-css": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/camelcase-css/-/camelcase-css-2.0.1.tgz",
++      "integrity": "sha512-QOSvevhslijgYwRx6Rv7zKdMF8lbRmx+uQGx2+vDc+KI/eBnsy9kit5aj23AgGu3pa4t9AgwbnXWqS+iOY+2aA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 6"
++      }
++    },
++    "node_modules/caniuse-lite": {
++      "version": "1.0.30001806",
++      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001806.tgz",
++      "integrity": "sha512-72Cuvd95zbSYPKq6Fhg8eDJRlzgWDf7/mtoZv6Qe/DYNCEBdNxoA3+rZAU2ZhGCpZlns3EssFavaZomckT5Uuw==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/browserslist"
++        },
++        {
++          "type": "tidelift",
++          "url": "https://tidelift.com/funding/github/npm/caniuse-lite"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "CC-BY-4.0"
++    },
++    "node_modules/chokidar": {
++      "version": "3.6.0",
++      "resolved": "https://registry.npmjs.org/chokidar/-/chokidar-3.6.0.tgz",
++      "integrity": "sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "anymatch": "~3.1.2",
++        "braces": "~3.0.2",
++        "glob-parent": "~5.1.2",
++        "is-binary-path": "~2.1.0",
++        "is-glob": "~4.0.1",
++        "normalize-path": "~3.0.0",
++        "readdirp": "~3.6.0"
++      },
++      "engines": {
++        "node": ">= 8.10.0"
++      },
++      "funding": {
++        "url": "https://paulmillr.com/funding/"
++      },
++      "optionalDependencies": {
++        "fsevents": "~2.3.2"
++      }
++    },
++    "node_modules/chokidar/node_modules/glob-parent": {
++      "version": "5.1.2",
++      "resolved": "https://registry.npmjs.org/glob-parent/-/glob-parent-5.1.2.tgz",
++      "integrity": "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==",
++      "dev": true,
++      "license": "ISC",
++      "dependencies": {
++        "is-glob": "^4.0.1"
++      },
++      "engines": {
++        "node": ">= 6"
++      }
++    },
++    "node_modules/commander": {
++      "version": "4.1.1",
++      "resolved": "https://registry.npmjs.org/commander/-/commander-4.1.1.tgz",
++      "integrity": "sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 6"
++      }
++    },
++    "node_modules/convert-source-map": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/convert-source-map/-/convert-source-map-2.0.0.tgz",
++      "integrity": "sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/cssesc": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/cssesc/-/cssesc-3.0.0.tgz",
++      "integrity": "sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==",
++      "dev": true,
++      "license": "MIT",
++      "bin": {
++        "cssesc": "bin/cssesc"
++      },
++      "engines": {
++        "node": ">=4"
++      }
++    },
++    "node_modules/debug": {
++      "version": "4.4.3",
++      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
++      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "ms": "^2.1.3"
++      },
++      "engines": {
++        "node": ">=6.0"
++      },
++      "peerDependenciesMeta": {
++        "supports-color": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/didyoumean": {
++      "version": "1.2.2",
++      "resolved": "https://registry.npmjs.org/didyoumean/-/didyoumean-1.2.2.tgz",
++      "integrity": "sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==",
++      "dev": true,
++      "license": "Apache-2.0"
++    },
++    "node_modules/dlv": {
++      "version": "1.1.3",
++      "resolved": "https://registry.npmjs.org/dlv/-/dlv-1.1.3.tgz",
++      "integrity": "sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/electron-to-chromium": {
++      "version": "1.5.400",
++      "resolved": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.5.400.tgz",
++      "integrity": "sha512-96EWDNjM59SYflgeV5Ylsf4EMiq1a25YjCnJH7cxn/AF2H3pILRweaUnoLax0yKHWdpOzY6JKEu45e8irqZIHA==",
++      "dev": true,
++      "license": "ISC"
++    },
++    "node_modules/es-errors": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
++      "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/esbuild": {
++      "version": "0.21.5",
++      "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.21.5.tgz",
++      "integrity": "sha512-mg3OPMV4hXywwpoDxu3Qda5xCKQi+vCTZq8S9J/EpkhB2HzKXq4SNFZE3+NK93JYxc8VMSep+lOUSC/RVKaBqw==",
++      "dev": true,
++      "hasInstallScript": true,
++      "license": "MIT",
++      "bin": {
++        "esbuild": "bin/esbuild"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "optionalDependencies": {
++        "@esbuild/aix-ppc64": "0.21.5",
++        "@esbuild/android-arm": "0.21.5",
++        "@esbuild/android-arm64": "0.21.5",
++        "@esbuild/android-x64": "0.21.5",
++        "@esbuild/darwin-arm64": "0.21.5",
++        "@esbuild/darwin-x64": "0.21.5",
++        "@esbuild/freebsd-arm64": "0.21.5",
++        "@esbuild/freebsd-x64": "0.21.5",
++        "@esbuild/linux-arm": "0.21.5",
++        "@esbuild/linux-arm64": "0.21.5",
++        "@esbuild/linux-ia32": "0.21.5",
++        "@esbuild/linux-loong64": "0.21.5",
++        "@esbuild/linux-mips64el": "0.21.5",
++        "@esbuild/linux-ppc64": "0.21.5",
++        "@esbuild/linux-riscv64": "0.21.5",
++        "@esbuild/linux-s390x": "0.21.5",
++        "@esbuild/linux-x64": "0.21.5",
++        "@esbuild/netbsd-x64": "0.21.5",
++        "@esbuild/openbsd-x64": "0.21.5",
++        "@esbuild/sunos-x64": "0.21.5",
++        "@esbuild/win32-arm64": "0.21.5",
++        "@esbuild/win32-ia32": "0.21.5",
++        "@esbuild/win32-x64": "0.21.5"
++      }
++    },
++    "node_modules/escalade": {
++      "version": "3.2.0",
++      "resolved": "https://registry.npmjs.org/escalade/-/escalade-3.2.0.tgz",
++      "integrity": "sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6"
++      }
++    },
++    "node_modules/fast-glob": {
++      "version": "3.3.3",
++      "resolved": "https://registry.npmjs.org/fast-glob/-/fast-glob-3.3.3.tgz",
++      "integrity": "sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@nodelib/fs.stat": "^2.0.2",
++        "@nodelib/fs.walk": "^1.2.3",
++        "glob-parent": "^5.1.2",
++        "merge2": "^1.3.0",
++        "micromatch": "^4.0.8"
++      },
++      "engines": {
++        "node": ">=8.6.0"
++      }
++    },
++    "node_modules/fast-glob/node_modules/glob-parent": {
++      "version": "5.1.2",
++      "resolved": "https://registry.npmjs.org/glob-parent/-/glob-parent-5.1.2.tgz",
++      "integrity": "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==",
++      "dev": true,
++      "license": "ISC",
++      "dependencies": {
++        "is-glob": "^4.0.1"
++      },
++      "engines": {
++        "node": ">= 6"
++      }
++    },
++    "node_modules/fastq": {
++      "version": "1.20.1",
++      "resolved": "https://registry.npmjs.org/fastq/-/fastq-1.20.1.tgz",
++      "integrity": "sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==",
++      "dev": true,
++      "license": "ISC",
++      "dependencies": {
++        "reusify": "^1.0.4"
++      }
++    },
++    "node_modules/fill-range": {
++      "version": "7.1.1",
++      "resolved": "https://registry.npmjs.org/fill-range/-/fill-range-7.1.1.tgz",
++      "integrity": "sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "to-regex-range": "^5.0.1"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/fraction.js": {
++      "version": "5.3.4",
++      "resolved": "https://registry.npmjs.org/fraction.js/-/fraction.js-5.3.4.tgz",
++      "integrity": "sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": "*"
++      },
++      "funding": {
++        "type": "github",
++        "url": "https://github.com/sponsors/rawify"
++      }
++    },
++    "node_modules/fsevents": {
++      "version": "2.3.3",
++      "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
++      "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
++      "dev": true,
++      "hasInstallScript": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ],
++      "engines": {
++        "node": "^8.16.0 || ^10.6.0 || >=11.0.0"
++      }
++    },
++    "node_modules/function-bind": {
++      "version": "1.1.2",
++      "resolved": "https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz",
++      "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==",
++      "dev": true,
++      "license": "MIT",
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/gensync": {
++      "version": "1.0.0-beta.2",
++      "resolved": "https://registry.npmjs.org/gensync/-/gensync-1.0.0-beta.2.tgz",
++      "integrity": "sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
++    "node_modules/glob-parent": {
++      "version": "6.0.2",
++      "resolved": "https://registry.npmjs.org/glob-parent/-/glob-parent-6.0.2.tgz",
++      "integrity": "sha512-XxwI8EOhVQgWp6iDL+3b0r86f4d6AX6zSU55HfB4ydCEuXLXc5FcYeOu+nnGftS4TEju/11rt4KJPTMgbfmv4A==",
++      "dev": true,
++      "license": "ISC",
++      "dependencies": {
++        "is-glob": "^4.0.3"
++      },
++      "engines": {
++        "node": ">=10.13.0"
++      }
++    },
++    "node_modules/hasown": {
++      "version": "2.0.4",
++      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz",
++      "integrity": "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "function-bind": "^1.1.2"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/is-binary-path": {
++      "version": "2.1.0",
++      "resolved": "https://registry.npmjs.org/is-binary-path/-/is-binary-path-2.1.0.tgz",
++      "integrity": "sha512-ZMERYes6pDydyuGidse7OsHxtbI7WVeUEozgR/g7rd0xUimYNlvZRE/K2MgZTjWy725IfelLeVcEM97mmtRGXw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "binary-extensions": "^2.0.0"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/is-core-module": {
++      "version": "2.16.2",
++      "resolved": "https://registry.npmjs.org/is-core-module/-/is-core-module-2.16.2.tgz",
++      "integrity": "sha512-evOr8xfXKxE6qSR0hSXL2r3sd7ALj8+7jQEUvPYcm5sgZFdJ+AYzT6yNmJenvIYQBgIGwfwz08sL8zoL7yq2BA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "hasown": "^2.0.3"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/is-extglob": {
++      "version": "2.1.1",
++      "resolved": "https://registry.npmjs.org/is-extglob/-/is-extglob-2.1.1.tgz",
++      "integrity": "sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/is-glob": {
++      "version": "4.0.3",
++      "resolved": "https://registry.npmjs.org/is-glob/-/is-glob-4.0.3.tgz",
++      "integrity": "sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "is-extglob": "^2.1.1"
++      },
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/is-number": {
++      "version": "7.0.0",
++      "resolved": "https://registry.npmjs.org/is-number/-/is-number-7.0.0.tgz",
++      "integrity": "sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.12.0"
++      }
++    },
++    "node_modules/jiti": {
++      "version": "1.21.7",
++      "resolved": "https://registry.npmjs.org/jiti/-/jiti-1.21.7.tgz",
++      "integrity": "sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==",
++      "dev": true,
++      "license": "MIT",
++      "bin": {
++        "jiti": "bin/jiti.js"
++      }
++    },
++    "node_modules/js-tokens": {
++      "version": "4.0.0",
++      "resolved": "https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz",
++      "integrity": "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==",
++      "license": "MIT"
++    },
++    "node_modules/jsesc": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/jsesc/-/jsesc-3.1.0.tgz",
++      "integrity": "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==",
++      "dev": true,
++      "license": "MIT",
++      "bin": {
++        "jsesc": "bin/jsesc"
++      },
++      "engines": {
++        "node": ">=6"
++      }
++    },
++    "node_modules/json5": {
++      "version": "2.2.3",
++      "resolved": "https://registry.npmjs.org/json5/-/json5-2.2.3.tgz",
++      "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
++      "dev": true,
++      "license": "MIT",
++      "bin": {
++        "json5": "lib/cli.js"
++      },
++      "engines": {
++        "node": ">=6"
++      }
++    },
++    "node_modules/lilconfig": {
++      "version": "3.1.3",
++      "resolved": "https://registry.npmjs.org/lilconfig/-/lilconfig-3.1.3.tgz",
++      "integrity": "sha512-/vlFKAoH5Cgt3Ie+JLhRbwOsCQePABiU3tJ1egGvyQ+33R/vcwM2Zl2QR/LzjsBeItPt3oSVXapn+m4nQDvpzw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=14"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/antonk52"
++      }
++    },
++    "node_modules/lines-and-columns": {
++      "version": "1.2.4",
++      "resolved": "https://registry.npmjs.org/lines-and-columns/-/lines-and-columns-1.2.4.tgz",
++      "integrity": "sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/loose-envify": {
++      "version": "1.4.0",
++      "resolved": "https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz",
++      "integrity": "sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==",
++      "license": "MIT",
++      "dependencies": {
++        "js-tokens": "^3.0.0 || ^4.0.0"
++      },
++      "bin": {
++        "loose-envify": "cli.js"
++      }
++    },
++    "node_modules/lru-cache": {
++      "version": "5.1.1",
++      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz",
++      "integrity": "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==",
++      "dev": true,
++      "license": "ISC",
++      "dependencies": {
++        "yallist": "^3.0.2"
++      }
++    },
++    "node_modules/lucide-react": {
++      "version": "0.383.0",
++      "resolved": "https://registry.npmjs.org/lucide-react/-/lucide-react-0.383.0.tgz",
++      "integrity": "sha512-13xlG0CQCJtzjSQYwwJ3WRqMHtRj3EXmLlorrARt7y+IHnxUCp3XyFNL1DfaGySWxHObDvnu1u1dV+0VMKHUSg==",
++      "license": "ISC",
++      "peerDependencies": {
++        "react": "^16.5.1 || ^17.0.0 || ^18.0.0"
++      }
++    },
++    "node_modules/merge2": {
++      "version": "1.4.1",
++      "resolved": "https://registry.npmjs.org/merge2/-/merge2-1.4.1.tgz",
++      "integrity": "sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 8"
++      }
++    },
++    "node_modules/micromatch": {
++      "version": "4.0.8",
++      "resolved": "https://registry.npmjs.org/micromatch/-/micromatch-4.0.8.tgz",
++      "integrity": "sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "braces": "^3.0.3",
++        "picomatch": "^2.3.1"
++      },
++      "engines": {
++        "node": ">=8.6"
++      }
++    },
++    "node_modules/ms": {
++      "version": "2.1.3",
++      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
++      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/mz": {
++      "version": "2.7.0",
++      "resolved": "https://registry.npmjs.org/mz/-/mz-2.7.0.tgz",
++      "integrity": "sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "any-promise": "^1.0.0",
++        "object-assign": "^4.0.1",
++        "thenify-all": "^1.0.0"
++      }
++    },
++    "node_modules/nanoid": {
++      "version": "3.3.17",
++      "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.17.tgz",
++      "integrity": "sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "bin": {
++        "nanoid": "bin/nanoid.cjs"
++      },
++      "engines": {
++        "node": "^10 || ^12 || ^13.7 || ^14 || >=15.0.1"
++      }
++    },
++    "node_modules/node-releases": {
++      "version": "2.0.52",
++      "resolved": "https://registry.npmjs.org/node-releases/-/node-releases-2.0.52.tgz",
++      "integrity": "sha512-MRlTqhAfoMx/4mhEbPo3Hi02g9LJZaJkka69V6h67Cb1gjrAG0jsTE4CZX1eptNx+VCAwJmfpnDIF4P0Nh1A7A==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      }
++    },
++    "node_modules/normalize-path": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/normalize-path/-/normalize-path-3.0.0.tgz",
++      "integrity": "sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/object-assign": {
++      "version": "4.1.1",
++      "resolved": "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz",
++      "integrity": "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/object-hash": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/object-hash/-/object-hash-3.0.0.tgz",
++      "integrity": "sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 6"
++      }
++    },
++    "node_modules/path-parse": {
++      "version": "1.0.7",
++      "resolved": "https://registry.npmjs.org/path-parse/-/path-parse-1.0.7.tgz",
++      "integrity": "sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/picocolors": {
++      "version": "1.1.1",
++      "resolved": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
++      "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==",
++      "dev": true,
++      "license": "ISC"
++    },
++    "node_modules/picomatch": {
++      "version": "2.3.2",
++      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-2.3.2.tgz",
++      "integrity": "sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=8.6"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/jonschlinkert"
++      }
++    },
++    "node_modules/pify": {
++      "version": "2.3.0",
++      "resolved": "https://registry.npmjs.org/pify/-/pify-2.3.0.tgz",
++      "integrity": "sha512-udgsAY+fTnvv7kI7aaxbqwWNb0AHiB0qBO89PZKPkoTmGOgdbrHDKD+0B2X4uTfJ/FT1R09r9gTsjUjNJotuog==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/pirates": {
++      "version": "4.0.7",
++      "resolved": "https://registry.npmjs.org/pirates/-/pirates-4.0.7.tgz",
++      "integrity": "sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 6"
++      }
++    },
++    "node_modules/postcss": {
++      "version": "8.5.25",
++      "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.25.tgz",
++      "integrity": "sha512-DTPx3RWSSnWyzLxQnlH0rJP+EW5ekl16ZU4/psbIhA0e53kJfdgaN5vKM+xP7yJtXVu+nfdVFmlgFDEKAe4Pyw==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/postcss/"
++        },
++        {
++          "type": "tidelift",
++          "url": "https://tidelift.com/funding/github/npm/postcss"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "nanoid": "^3.3.16",
++        "picocolors": "^1.1.1",
++        "source-map-js": "^1.2.1"
++      },
++      "engines": {
++        "node": "^10 || ^12 || >=14"
++      }
++    },
++    "node_modules/postcss-import": {
++      "version": "15.1.0",
++      "resolved": "https://registry.npmjs.org/postcss-import/-/postcss-import-15.1.0.tgz",
++      "integrity": "sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "postcss-value-parser": "^4.0.0",
++        "read-cache": "^1.0.0",
++        "resolve": "^1.1.7"
++      },
++      "engines": {
++        "node": ">=14.0.0"
++      },
++      "peerDependencies": {
++        "postcss": "^8.0.0"
++      }
++    },
++    "node_modules/postcss-js": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/postcss-js/-/postcss-js-4.1.0.tgz",
++      "integrity": "sha512-oIAOTqgIo7q2EOwbhb8UalYePMvYoIeRY2YKntdpFQXNosSu3vLrniGgmH9OKs/qAkfoj5oB3le/7mINW1LCfw==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/postcss/"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "camelcase-css": "^2.0.1"
++      },
++      "engines": {
++        "node": "^12 || ^14 || >= 16"
++      },
++      "peerDependencies": {
++        "postcss": "^8.4.21"
++      }
++    },
++    "node_modules/postcss-load-config": {
++      "version": "6.0.1",
++      "resolved": "https://registry.npmjs.org/postcss-load-config/-/postcss-load-config-6.0.1.tgz",
++      "integrity": "sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/postcss/"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "lilconfig": "^3.1.1"
++      },
++      "engines": {
++        "node": ">= 18"
++      },
++      "peerDependencies": {
++        "jiti": ">=1.21.0",
++        "postcss": ">=8.0.9",
++        "tsx": "^4.8.1",
++        "yaml": "^2.4.2"
++      },
++      "peerDependenciesMeta": {
++        "jiti": {
++          "optional": true
++        },
++        "postcss": {
++          "optional": true
++        },
++        "tsx": {
++          "optional": true
++        },
++        "yaml": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/postcss-nested": {
++      "version": "6.2.0",
++      "resolved": "https://registry.npmjs.org/postcss-nested/-/postcss-nested-6.2.0.tgz",
++      "integrity": "sha512-HQbt28KulC5AJzG+cZtj9kvKB93CFCdLvog1WFLf1D+xmMvPGlBstkpTEZfK5+AN9hfJocyBFCNiqyS48bpgzQ==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/postcss/"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "postcss-selector-parser": "^6.1.1"
++      },
++      "engines": {
++        "node": ">=12.0"
++      },
++      "peerDependencies": {
++        "postcss": "^8.2.14"
++      }
++    },
++    "node_modules/postcss-selector-parser": {
++      "version": "6.1.4",
++      "resolved": "https://registry.npmjs.org/postcss-selector-parser/-/postcss-selector-parser-6.1.4.tgz",
++      "integrity": "sha512-bIoJLOmjCO1S9XdY/DcnR5hJxvrDir1PbGChrzXG3vw0/FOliy/fA3dmdhQ441kah4gKv+TwckGzex6wNS5cnQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "cssesc": "^3.0.0",
++        "util-deprecate": "^1.0.2"
++      },
++      "engines": {
++        "node": ">=4"
++      }
++    },
++    "node_modules/postcss-value-parser": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz",
++      "integrity": "sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/queue-microtask": {
++      "version": "1.2.3",
++      "resolved": "https://registry.npmjs.org/queue-microtask/-/queue-microtask-1.2.3.tgz",
++      "integrity": "sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT"
++    },
++    "node_modules/react": {
++      "version": "18.3.1",
++      "resolved": "https://registry.npmjs.org/react/-/react-18.3.1.tgz",
++      "integrity": "sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==",
++      "license": "MIT",
++      "dependencies": {
++        "loose-envify": "^1.1.0"
++      },
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/react-dom": {
++      "version": "18.3.1",
++      "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz",
++      "integrity": "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==",
++      "license": "MIT",
++      "dependencies": {
++        "loose-envify": "^1.1.0",
++        "scheduler": "^0.23.2"
++      },
++      "peerDependencies": {
++        "react": "^18.3.1"
++      }
++    },
++    "node_modules/react-refresh": {
++      "version": "0.17.0",
++      "resolved": "https://registry.npmjs.org/react-refresh/-/react-refresh-0.17.0.tgz",
++      "integrity": "sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/read-cache": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/read-cache/-/read-cache-1.0.0.tgz",
++      "integrity": "sha512-Owdv/Ft7IjOgm/i0xvNDZ1LrRANRfew4b2prF3OWMQLxLfu3bS8FVhCsrSCMK4lR56Y9ya+AThoTpDCTxCmpRA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "pify": "^2.3.0"
++      }
++    },
++    "node_modules/readdirp": {
++      "version": "3.6.0",
++      "resolved": "https://registry.npmjs.org/readdirp/-/readdirp-3.6.0.tgz",
++      "integrity": "sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "picomatch": "^2.2.1"
++      },
++      "engines": {
++        "node": ">=8.10.0"
++      }
++    },
++    "node_modules/resolve": {
++      "version": "1.22.12",
++      "resolved": "https://registry.npmjs.org/resolve/-/resolve-1.22.12.tgz",
++      "integrity": "sha512-TyeJ1zif53BPfHootBGwPRYT1RUt6oGWsaQr8UyZW/eAm9bKoijtvruSDEmZHm92CwS9nj7/fWttqPCgzep8CA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "es-errors": "^1.3.0",
++        "is-core-module": "^2.16.1",
++        "path-parse": "^1.0.7",
++        "supports-preserve-symlinks-flag": "^1.0.0"
++      },
++      "bin": {
++        "resolve": "bin/resolve"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/reusify": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/reusify/-/reusify-1.1.0.tgz",
++      "integrity": "sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "iojs": ">=1.0.0",
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/rollup": {
++      "version": "4.62.4",
++      "resolved": "https://registry.npmjs.org/rollup/-/rollup-4.62.4.tgz",
++      "integrity": "sha512-RXOqwaPsBGjMNMa4sQjDjHieHEZDFoj/Rdr46l2MU5DfEs16wHJPC2RPTPHWhNl+M3aI472LLqFkFKut4SblOg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/estree": "1.0.9"
++      },
++      "bin": {
++        "rollup": "dist/bin/rollup"
++      },
++      "engines": {
++        "node": ">=18.0.0",
++        "npm": ">=8.0.0"
++      },
++      "optionalDependencies": {
++        "@napi-rs/lzma-linux-x64-gnu": "1.5.1",
++        "@rollup/rollup-android-arm-eabi": "4.62.4",
++        "@rollup/rollup-android-arm64": "4.62.4",
++        "@rollup/rollup-darwin-arm64": "4.62.4",
++        "@rollup/rollup-darwin-x64": "4.62.4",
++        "@rollup/rollup-freebsd-arm64": "4.62.4",
++        "@rollup/rollup-freebsd-x64": "4.62.4",
++        "@rollup/rollup-linux-arm-gnueabihf": "4.62.4",
++        "@rollup/rollup-linux-arm-musleabihf": "4.62.4",
++        "@rollup/rollup-linux-arm64-gnu": "4.62.4",
++        "@rollup/rollup-linux-arm64-musl": "4.62.4",
++        "@rollup/rollup-linux-loong64-gnu": "4.62.4",
++        "@rollup/rollup-linux-loong64-musl": "4.62.4",
++        "@rollup/rollup-linux-ppc64-gnu": "4.62.4",
++        "@rollup/rollup-linux-ppc64-musl": "4.62.4",
++        "@rollup/rollup-linux-riscv64-gnu": "4.62.4",
++        "@rollup/rollup-linux-riscv64-musl": "4.62.4",
++        "@rollup/rollup-linux-s390x-gnu": "4.62.4",
++        "@rollup/rollup-linux-x64-gnu": "4.62.4",
++        "@rollup/rollup-linux-x64-musl": "4.62.4",
++        "@rollup/rollup-openbsd-x64": "4.62.4",
++        "@rollup/rollup-openharmony-arm64": "4.62.4",
++        "@rollup/rollup-win32-arm64-msvc": "4.62.4",
++        "@rollup/rollup-win32-ia32-msvc": "4.62.4",
++        "@rollup/rollup-win32-x64-gnu": "4.62.4",
++        "@rollup/rollup-win32-x64-msvc": "4.62.4",
++        "fsevents": "~2.3.2"
++      }
++    },
++    "node_modules/run-parallel": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/run-parallel/-/run-parallel-1.2.0.tgz",
++      "integrity": "sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "queue-microtask": "^1.2.2"
++      }
++    },
++    "node_modules/scheduler": {
++      "version": "0.23.2",
++      "resolved": "https://registry.npmjs.org/scheduler/-/scheduler-0.23.2.tgz",
++      "integrity": "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==",
++      "license": "MIT",
++      "dependencies": {
++        "loose-envify": "^1.1.0"
++      }
++    },
++    "node_modules/semver": {
++      "version": "6.3.1",
++      "resolved": "https://registry.npmjs.org/semver/-/semver-6.3.1.tgz",
++      "integrity": "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==",
++      "dev": true,
++      "license": "ISC",
++      "bin": {
++        "semver": "bin/semver.js"
++      }
++    },
++    "node_modules/source-map-js": {
++      "version": "1.2.1",
++      "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
++      "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==",
++      "dev": true,
++      "license": "BSD-3-Clause",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/sucrase": {
++      "version": "3.35.1",
++      "resolved": "https://registry.npmjs.org/sucrase/-/sucrase-3.35.1.tgz",
++      "integrity": "sha512-DhuTmvZWux4H1UOnWMB3sk0sbaCVOoQZjv8u1rDoTV0HTdGem9hkAZtl4JZy8P2z4Bg0nT+YMeOFyVr4zcG5Tw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@jridgewell/gen-mapping": "^0.3.2",
++        "commander": "^4.0.0",
++        "lines-and-columns": "^1.1.6",
++        "mz": "^2.7.0",
++        "pirates": "^4.0.1",
++        "tinyglobby": "^0.2.11",
++        "ts-interface-checker": "^0.1.9"
++      },
++      "bin": {
++        "sucrase": "bin/sucrase",
++        "sucrase-node": "bin/sucrase-node"
++      },
++      "engines": {
++        "node": ">=16 || 14 >=14.17"
++      }
++    },
++    "node_modules/supports-preserve-symlinks-flag": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/supports-preserve-symlinks-flag/-/supports-preserve-symlinks-flag-1.0.0.tgz",
++      "integrity": "sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/tailwindcss": {
++      "version": "3.4.19",
++      "resolved": "https://registry.npmjs.org/tailwindcss/-/tailwindcss-3.4.19.tgz",
++      "integrity": "sha512-3ofp+LL8E+pK/JuPLPggVAIaEuhvIz4qNcf3nA1Xn2o/7fb7s/TYpHhwGDv1ZU3PkBluUVaF8PyCHcm48cKLWQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@alloc/quick-lru": "^5.2.0",
++        "arg": "^5.0.2",
++        "chokidar": "^3.6.0",
++        "didyoumean": "^1.2.2",
++        "dlv": "^1.1.3",
++        "fast-glob": "^3.3.2",
++        "glob-parent": "^6.0.2",
++        "is-glob": "^4.0.3",
++        "jiti": "^1.21.7",
++        "lilconfig": "^3.1.3",
++        "micromatch": "^4.0.8",
++        "normalize-path": "^3.0.0",
++        "object-hash": "^3.0.0",
++        "picocolors": "^1.1.1",
++        "postcss": "^8.4.47",
++        "postcss-import": "^15.1.0",
++        "postcss-js": "^4.0.1",
++        "postcss-load-config": "^4.0.2 || ^5.0 || ^6.0",
++        "postcss-nested": "^6.2.0",
++        "postcss-selector-parser": "^6.1.2",
++        "resolve": "^1.22.8",
++        "sucrase": "^3.35.0"
++      },
++      "bin": {
++        "tailwind": "lib/cli.js",
++        "tailwindcss": "lib/cli.js"
++      },
++      "engines": {
++        "node": ">=14.0.0"
++      }
++    },
++    "node_modules/thenify": {
++      "version": "3.3.1",
++      "resolved": "https://registry.npmjs.org/thenify/-/thenify-3.3.1.tgz",
++      "integrity": "sha512-RVZSIV5IG10Hk3enotrhvz0T9em6cyHBLkH/YAZuKqd8hRkKhSfCGIcP2KUY0EPxndzANBmNllzWPwak+bheSw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "any-promise": "^1.0.0"
++      }
++    },
++    "node_modules/thenify-all": {
++      "version": "1.6.0",
++      "resolved": "https://registry.npmjs.org/thenify-all/-/thenify-all-1.6.0.tgz",
++      "integrity": "sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "thenify": ">= 3.1.0 < 4"
++      },
++      "engines": {
++        "node": ">=0.8"
++      }
++    },
++    "node_modules/tinyglobby": {
++      "version": "0.2.17",
++      "resolved": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
++      "integrity": "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "fdir": "^6.5.0",
++        "picomatch": "^4.0.4"
++      },
++      "engines": {
++        "node": ">=12.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/SuperchupuDev"
++      }
++    },
++    "node_modules/tinyglobby/node_modules/fdir": {
++      "version": "6.5.0",
++      "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
++      "integrity": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=12.0.0"
++      },
++      "peerDependencies": {
++        "picomatch": "^3 || ^4"
++      },
++      "peerDependenciesMeta": {
++        "picomatch": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/tinyglobby/node_modules/picomatch": {
++      "version": "4.0.5",
++      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.5.tgz",
++      "integrity": "sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/jonschlinkert"
++      }
++    },
++    "node_modules/to-regex-range": {
++      "version": "5.0.1",
++      "resolved": "https://registry.npmjs.org/to-regex-range/-/to-regex-range-5.0.1.tgz",
++      "integrity": "sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "is-number": "^7.0.0"
++      },
++      "engines": {
++        "node": ">=8.0"
++      }
++    },
++    "node_modules/ts-interface-checker": {
++      "version": "0.1.13",
++      "resolved": "https://registry.npmjs.org/ts-interface-checker/-/ts-interface-checker-0.1.13.tgz",
++      "integrity": "sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==",
++      "dev": true,
++      "license": "Apache-2.0"
++    },
++    "node_modules/update-browserslist-db": {
++      "version": "1.2.3",
++      "resolved": "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.2.3.tgz",
++      "integrity": "sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/browserslist"
++        },
++        {
++          "type": "tidelift",
++          "url": "https://tidelift.com/funding/github/npm/browserslist"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "escalade": "^3.2.0",
++        "picocolors": "^1.1.1"
++      },
++      "bin": {
++        "update-browserslist-db": "cli.js"
++      },
++      "peerDependencies": {
++        "browserslist": ">= 4.21.0"
++      }
++    },
++    "node_modules/util-deprecate": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz",
++      "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/vite": {
++      "version": "5.4.21",
++      "resolved": "https://registry.npmjs.org/vite/-/vite-5.4.21.tgz",
++      "integrity": "sha512-o5a9xKjbtuhY6Bi5S3+HvbRERmouabWbyUcpXXUA1u+GNUKoROi9byOJ8M0nHbHYHkYICiMlqxkg1KkYmm25Sw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "esbuild": "^0.21.3",
++        "postcss": "^8.4.43",
++        "rollup": "^4.20.0"
++      },
++      "bin": {
++        "vite": "bin/vite.js"
++      },
++      "engines": {
++        "node": "^18.0.0 || >=20.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/vitejs/vite?sponsor=1"
++      },
++      "optionalDependencies": {
++        "fsevents": "~2.3.3"
++      },
++      "peerDependencies": {
++        "@types/node": "^18.0.0 || >=20.0.0",
++        "less": "*",
++        "lightningcss": "^1.21.0",
++        "sass": "*",
++        "sass-embedded": "*",
++        "stylus": "*",
++        "sugarss": "*",
++        "terser": "^5.4.0"
++      },
++      "peerDependenciesMeta": {
++        "@types/node": {
++          "optional": true
++        },
++        "less": {
++          "optional": true
++        },
++        "lightningcss": {
++          "optional": true
++        },
++        "sass": {
++          "optional": true
++        },
++        "sass-embedded": {
++          "optional": true
++        },
++        "stylus": {
++          "optional": true
++        },
++        "sugarss": {
++          "optional": true
++        },
++        "terser": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/yallist": {
++      "version": "3.1.1",
++      "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.1.1.tgz",
++      "integrity": "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==",
++      "dev": true,
++      "license": "ISC"
++    }
++  }
++}
+diff --git a/frontend/src/AdminMarketplace.jsx b/frontend/src/AdminMarketplace.jsx
+new file mode 100644
+index 0000000..1bc0c02
+--- /dev/null
++++ b/frontend/src/AdminMarketplace.jsx
+@@ -0,0 +1,367 @@
++import React, { useState, useEffect, useRef } from "react";
++import { ChevronLeft, Plus, Loader2, Trash2, Upload, Package, Truck } from "lucide-react";
++
++const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
++const colors = {
++  bg: "#FFFFFF", panel: "#FFFFFF", panelLight: "#F2F2F2", hairline: "#D9702E",
++  cream: "#241B14", creamDim: "#7A6F63", gold: "#D9702E",
++};
++const FONT_DISPLAY = "'Baloo 2', sans-serif";
++
++async function apiFetch(path, options = {}) {
++  const res = await fetch(`${API_BASE}${path}`, {
++    ...options,
++    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
++  });
++  const data = await res.json().catch(() => ({}));
++  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
++  return data;
++}
++
++const naira = (n) => `₦${Number(n).toLocaleString()}`;
++const ORDER_STATUSES = ["pending", "processing", "dispatched", "delivered", "cancelled"];
++
++function AdminHeader({ title, onBack }) {
++  return (
++    <div className="flex items-center gap-2 px-4 py-5 sticky top-0 z-10" style={{ background: colors.bg, borderBottom: `3px solid ${colors.hairline}` }}>
++      {onBack && (
++        <button onClick={onBack} className="p-2 -ml-1 rounded-full flex items-center justify-center" style={{ border: `3px solid ${colors.hairline}`, width: 48, height: 48 }}>
++          <ChevronLeft size={26} color={colors.cream} />
++        </button>
++      )}
++      <h1 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 700 }}>{title}</h1>
++    </div>
++  );
++}
++
++function AddCategoryForm({ token, onAdded }) {
++  const [name, setName] = useState("");
++  const [saving, setSaving] = useState(false);
++  const [error, setError] = useState(null);
++
++  const submit = async () => {
++    if (!name.trim()) return;
++    setSaving(true);
++    setError(null);
++    try {
++      const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
++      await apiFetch("/product-categories", {
++        method: "POST",
++        headers: { Authorization: `Bearer ${token}` },
++        body: JSON.stringify({ name: name.trim(), slug }),
++      });
++      setName("");
++      onAdded();
++    } catch (err) {
++      setError(err.message || "Couldn't add category.");
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  return (
++    <div className="flex gap-2 items-center">
++      <input
++        value={name}
++        onChange={(e) => setName(e.target.value)}
++        placeholder="New category name"
++        className="flex-1 px-3 py-2.5 rounded-xl text-sm"
++        style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
++      />
++      <button onClick={submit} disabled={saving} className="p-2.5 rounded-xl" style={{ background: colors.hairline }}>
++        {saving ? <Loader2 size={16} className="animate-spin" color="#fff" /> : <Plus size={16} color="#fff" />}
++      </button>
++      {error && <p className="text-xs" style={{ color: "#E07A5F" }}>{error}</p>}
++    </div>
++  );
++}
++
++function ProductForm({ token, categories, product, onSaved, onCancel }) {
++  const [name, setName] = useState(product?.name || "");
++  const [description, setDescription] = useState(product?.description || "");
++  const [price, setPrice] = useState(product?.price ?? "");
++  const [stock, setStock] = useState(product?.stock_quantity ?? "");
++  const [categoryId, setCategoryId] = useState(product?.category_id || "");
++  const [saving, setSaving] = useState(false);
++  const [error, setError] = useState(null);
++  const fileInputRef = useRef(null);
++  const [fileName, setFileName] = useState(null);
++
++  const submit = async () => {
++    if (!name.trim() || !price) {
++      setError("Name and price are required.");
++      return;
++    }
++    setSaving(true);
++    setError(null);
++    try {
++      const formData = new FormData();
++      formData.append("name", name.trim());
++      formData.append("description", description);
++      formData.append("price", price);
++      formData.append("stock_quantity", stock || 0);
++      if (categoryId) formData.append("category_id", categoryId);
++      if (fileInputRef.current?.files[0]) formData.append("image", fileInputRef.current.files[0]);
++
++      const url = product ? `${API_BASE}/products/${product.id}` : `${API_BASE}/products`;
++      const res = await fetch(url, {
++        method: product ? "PATCH" : "POST",
++        headers: { Authorization: `Bearer ${token}` },
++        body: formData,
++      });
++      const data = await res.json().catch(() => ({}));
++      if (!res.ok) throw new Error(data.error || "Couldn't save product.");
++      onSaved();
++    } catch (err) {
++      setError(err.message || "Couldn't save product.");
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  return (
++    <div className="rounded-2xl p-4 mb-4" style={{ border: `2px solid ${colors.hairline}` }}>
++      <div className="space-y-2">
++        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name"
++          className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
++        <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" rows={2}
++          className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
++        <div className="flex gap-2">
++          <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="Price ₦"
++            className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
++          <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="Stock qty"
++            className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
++        </div>
++        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
++          className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
++          <option value="">No category</option>
++          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
++        </select>
++        <input
++          ref={fileInputRef}
++          type="file"
++          accept="image/*"
++          onChange={(e) => setFileName(e.target.files[0]?.name || null)}
++          style={{ display: "none" }}
++          id={`file-${product?.id || "new"}`}
++        />
++        <button
++          onClick={() => fileInputRef.current?.click()}
++          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm tap-glass"
++          style={{ background: colors.panelLight, color: colors.cream }}
++        >
++          <Upload size={14} /> {fileName || (product?.image_url ? "Replace photo" : "Add photo")}
++        </button>
++      </div>
++      {error && <p className="text-xs mt-2" style={{ color: "#E07A5F" }}>{error}</p>}
++      <div className="flex gap-2 mt-3">
++        <button onClick={submit} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1" style={{ background: colors.hairline, color: "#fff" }}>
++          {saving ? <Loader2 size={14} className="animate-spin" /> : null}
++          {saving ? "Saving..." : "Save product"}
++        </button>
++        <button onClick={onCancel} className="px-4 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
++          Cancel
++        </button>
++      </div>
++    </div>
++  );
++}
++
++function ProductsTab({ token }) {
++  const [categories, setCategories] = useState([]);
++  const [products, setProducts] = useState([]);
++  const [loading, setLoading] = useState(true);
++  const [showForm, setShowForm] = useState(false);
++  const [editingProduct, setEditingProduct] = useState(null);
++
++  const load = () => {
++    setLoading(true);
++    Promise.all([
++      apiFetch("/product-categories"),
++      apiFetch("/products"),
++    ]).then(([cats, prods]) => {
++      setCategories(cats);
++      setProducts(prods);
++    }).finally(() => setLoading(false));
++  };
++
++  useEffect(load, []);
++
++  const deleteProduct = async (id) => {
++    try {
++      await apiFetch(`/products/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
++      load();
++    } catch (err) {
++      alert(err.message || "Couldn't delete product.");
++    }
++  };
++
++  return (
++    <div className="px-4 py-4">
++      <div className="rounded-2xl p-4 mb-4" style={{ background: colors.panelLight }}>
++        <p className="text-xs font-semibold mb-2" style={{ color: colors.creamDim }}>CATEGORIES</p>
++        <div className="flex flex-wrap gap-2 mb-3">
++          {categories.map((c) => (
++            <span key={c.id} className="text-xs px-3 py-1.5 rounded-full" style={{ background: colors.panel, color: colors.cream, border: `1px solid ${colors.hairline}` }}>
++              {c.name}
++            </span>
++          ))}
++        </div>
++        <AddCategoryForm token={token} onAdded={load} />
++      </div>
++
++      {showForm || editingProduct ? (
++        <ProductForm
++          token={token}
++          categories={categories}
++          product={editingProduct}
++          onSaved={() => { setShowForm(false); setEditingProduct(null); load(); }}
++          onCancel={() => { setShowForm(false); setEditingProduct(null); }}
++        />
++      ) : (
++        <button
++          onClick={() => setShowForm(true)}
++          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold mb-4 tap-glass"
++          style={{ background: colors.hairline, color: "#fff" }}
++        >
++          <Plus size={16} /> Add product
++        </button>
++      )}
++
++      {loading ? (
++        <div className="pt-10 flex justify-center"><Loader2 size={24} className="animate-spin" color={colors.creamDim} /></div>
++      ) : products.length === 0 ? (
++        <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>No products yet — add your first one above.</p>
++      ) : (
++        products.map((p) => (
++          <div key={p.id} className="flex items-center gap-3 rounded-xl p-3 mb-2" style={{ border: `2px solid ${colors.hairline}` }}>
++            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0" style={{ background: colors.panelLight }}>
++              {p.image_url && <img src={p.image_url} alt="" className="w-full h-full object-cover" />}
++            </div>
++            <div className="flex-1 min-w-0">
++              <p className="text-sm font-semibold truncate" style={{ color: colors.cream }}>{p.name}</p>
++              <p className="text-xs" style={{ color: colors.creamDim }}>{naira(p.price)} · {p.stock_quantity} in stock{p.is_active === false ? " · inactive" : ""}</p>
++            </div>
++            <button onClick={() => setEditingProduct(p)} className="text-xs font-semibold px-2 py-1" style={{ color: colors.hairline }}>Edit</button>
++            <button onClick={() => deleteProduct(p.id)} className="p-2 rounded-full" style={{ border: `1px solid ${colors.hairline}` }}>
++              <Trash2 size={14} color={colors.hairline} />
++            </button>
++          </div>
++        ))
++      )}
++    </div>
++  );
++}
++
++function OrdersTab({ token }) {
++  const [orders, setOrders] = useState([]);
++  const [loading, setLoading] = useState(true);
++  const [savingId, setSavingId] = useState(null);
++
++  const load = () => {
++    setLoading(true);
++    apiFetch("/orders", { headers: { Authorization: `Bearer ${token}` } })
++      .then(setOrders)
++      .finally(() => setLoading(false));
++  };
++
++  useEffect(load, []);
++
++  const updateOrder = async (order, updates) => {
++    setSavingId(order.id);
++    try {
++      await apiFetch(`/orders/${order.id}/status`, {
++        method: "PATCH",
++        headers: { Authorization: `Bearer ${token}` },
++        body: JSON.stringify(updates),
++      });
++      load();
++    } catch (err) {
++      alert(err.message || "Couldn't update order.");
++    } finally {
++      setSavingId(null);
++    }
++  };
++
++  if (loading) return <div className="pt-10 flex justify-center"><Loader2 size={24} className="animate-spin" color={colors.creamDim} /></div>;
++  if (orders.length === 0) return <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>No orders yet.</p>;
++
++  return (
++    <div className="px-4 py-4">
++      {orders.map((o) => (
++        <div key={o.id} className="rounded-2xl p-4 mb-3" style={{ border: `2px solid ${colors.hairline}` }}>
++          <div className="flex justify-between items-start mb-1">
++            <p className="text-sm font-bold" style={{ color: colors.cream }}>Order #{o.id} · {o.customer_name}</p>
++            <p className="text-sm font-bold" style={{ color: colors.hairline }}>{naira(o.total)}</p>
++          </div>
++          <p className="text-xs mb-1" style={{ color: colors.creamDim }}>{o.customer_email}</p>
++          {o.items.map((it) => (
++            <p key={it.id} className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
++          ))}
++          <p className="text-xs mt-2" style={{ color: colors.cream }}>
++            <Package size={12} className="inline mr-1" />{o.delivery_address}{o.delivery_city ? `, ${o.delivery_city}` : ""}{o.delivery_state ? `, ${o.delivery_state}` : ""} · {o.delivery_phone}
++          </p>
++
++          <div className="flex items-center gap-2 mt-3">
++            <select
++              value={o.status}
++              onChange={(e) => updateOrder(o, { status: e.target.value })}
++              disabled={savingId === o.id}
++              className="flex-1 px-2 py-2 rounded-lg text-xs"
++              style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
++            >
++              {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
++            </select>
++            {savingId === o.id && <Loader2 size={14} className="animate-spin" color={colors.creamDim} />}
++          </div>
++
++          {(o.status === "processing" || o.status === "dispatched") && (
++            <div className="flex gap-2 mt-2">
++              <input
++                defaultValue={o.courier_name || ""}
++                placeholder="Courier name"
++                onBlur={(e) => e.target.value !== (o.courier_name || "") && updateOrder(o, { courier_name: e.target.value })}
++                className="flex-1 px-2 py-2 rounded-lg text-xs"
++                style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
++              />
++              <input
++                defaultValue={o.courier_tracking_ref || ""}
++                placeholder="Tracking ref"
++                onBlur={(e) => e.target.value !== (o.courier_tracking_ref || "") && updateOrder(o, { courier_tracking_ref: e.target.value })}
++                className="flex-1 px-2 py-2 rounded-lg text-xs"
++                style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
++              />
++            </div>
++          )}
++          {o.courier_name && <p className="text-xs mt-2 flex items-center gap-1" style={{ color: colors.creamDim }}><Truck size={12} /> {o.courier_name} {o.courier_tracking_ref}</p>}
++        </div>
++      ))}
++    </div>
++  );
++}
++
++export default function AdminMarketplaceView({ token, onBack }) {
++  const [tab, setTab] = useState("products");
++  return (
++    <div>
++      <AdminHeader title="Manage Marketplace" onBack={onBack} />
++      <div className="flex gap-2 px-4 pt-3">
++        <button
++          onClick={() => setTab("products")}
++          className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
++          style={{ background: tab === "products" ? colors.hairline : colors.panelLight, color: tab === "products" ? "#fff" : colors.cream }}
++        >
++          Products
++        </button>
++        <button
++          onClick={() => setTab("orders")}
++          className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
++          style={{ background: tab === "orders" ? colors.hairline : colors.panelLight, color: tab === "orders" ? "#fff" : colors.cream }}
++        >
++          Orders
++        </button>
++      </div>
++      {tab === "products" ? <ProductsTab token={token} /> : <OrdersTab token={token} />}
++    </div>
++  );
++}
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 3139f29..be868e0 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -1,10 +1,12 @@
+ import React, { useState, useRef, useEffect } from "react";
+ import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
++import MarketplaceView from "./Marketplace";
++import AdminMarketplaceView from "./AdminMarketplace";
+ import {
+   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
+   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
+   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
+-  UserCircle, Bell, Wallet,
++  UserCircle, Bell, Wallet, ShoppingBag,
+ } from "lucide-react";
+ 
+ // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
+@@ -4133,6 +4135,24 @@ export default function App() {
+                     <CalendarCheck size={16} /> My bookings
+                   </button>
+                 )}
++                {role === "customer" && customerAuth && (
++                  <button
++                    onClick={() => { setMenuOpen(false); setView("marketplace"); }}
++                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
++                    style={{ color: colors.cream }}
++                  >
++                    <ShoppingBag size={16} /> Marketplace
++                  </button>
++                )}
++                {customerAuth?.user?.isAdmin && (
++                  <button
++                    onClick={() => { setMenuOpen(false); setRole("customer"); setView("adminMarketplace"); }}
++                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
++                    style={{ color: colors.cream }}
++                  >
++                    <Store size={16} /> Manage Marketplace
++                  </button>
++                )}
+                 {role === "customer" && customerAuth && (
+                   <button
+                     onClick={() => { setMenuOpen(false); setView("wallet"); }}
+@@ -4295,6 +4315,18 @@ export default function App() {
+                 onBack={() => setView("home")}
+               />
+             )}
++            {view === "marketplace" && customerAuth && (
++              <MarketplaceView
++                token={customerAuth.token}
++                onBack={() => setView("home")}
++              />
++            )}
++            {view === "adminMarketplace" && customerAuth?.user?.isAdmin && (
++              <AdminMarketplaceView
++                token={customerAuth.token}
++                onBack={() => setView("home")}
++              />
++            )}
+             {view === "settings" && (
+               <SettingsView
+                 onBack={() => setView("home")}
+diff --git a/frontend/src/Marketplace.jsx b/frontend/src/Marketplace.jsx
+new file mode 100644
+index 0000000..d992b31
+--- /dev/null
++++ b/frontend/src/Marketplace.jsx
+@@ -0,0 +1,371 @@
++import React, { useState, useEffect } from "react";
++import { ChevronLeft, ShoppingBag, Plus, Minus, X, Loader2, Package, Truck } from "lucide-react";
++
++const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
++const colors = {
++  bg: "#FFFFFF", panel: "#FFFFFF", panelLight: "#F2F2F2", hairline: "#D9702E",
++  cream: "#241B14", creamDim: "#7A6F63", gold: "#D9702E", goldDim: "#A6532A", rose: "#4FA89C",
++};
++const FONT_DISPLAY = "'Baloo 2', sans-serif";
++
++async function apiFetch(path, options = {}) {
++  const res = await fetch(`${API_BASE}${path}`, {
++    ...options,
++    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
++  });
++  const data = await res.json().catch(() => ({}));
++  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
++  return data;
++}
++
++const naira = (n) => `₦${Number(n).toLocaleString()}`;
++
++function MarketplaceHeader({ title, onBack, right }) {
++  return (
++    <div
++      className="flex items-center justify-between px-4 py-5 sticky top-0 z-10"
++      style={{ background: colors.bg, borderBottom: `3px solid ${colors.hairline}` }}
++    >
++      <div className="flex items-center gap-2 min-w-0">
++        {onBack && (
++          <button
++            onClick={onBack}
++            className="p-2 -ml-1 shrink-0 rounded-full flex items-center justify-center"
++            style={{ border: `3px solid ${colors.hairline}`, width: 48, height: 48 }}
++          >
++            <ChevronLeft size={26} color={colors.cream} />
++          </button>
++        )}
++        <h1 className="truncate" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 700 }}>
++          {title}
++        </h1>
++      </div>
++      {right}
++    </div>
++  );
++}
++
++export default function MarketplaceView({ token, onBack }) {
++  const [tab, setTab] = useState("shop"); // shop | orders
++  const [categories, setCategories] = useState([]);
++  const [activeCategory, setActiveCategory] = useState(null);
++  const [products, setProducts] = useState([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState(null);
++  const [cart, setCart] = useState([]); // [{product, quantity}]
++  const [cartOpen, setCartOpen] = useState(false);
++  const [orders, setOrders] = useState([]);
++  const [ordersLoading, setOrdersLoading] = useState(false);
++  const [checkoutOpen, setCheckoutOpen] = useState(false);
++  const [checkoutForm, setCheckoutForm] = useState({ delivery_address: "", delivery_state: "", delivery_city: "", delivery_phone: "" });
++  const [placingOrder, setPlacingOrder] = useState(false);
++  const [checkoutError, setCheckoutError] = useState(null);
++
++  useEffect(() => {
++    apiFetch("/product-categories").then(setCategories).catch(() => {});
++  }, []);
++
++  useEffect(() => {
++    setLoading(true);
++    setError(null);
++    const qs = activeCategory ? `?category=${activeCategory}` : "";
++    apiFetch(`/products${qs}`)
++      .then(setProducts)
++      .catch(() => setError("Couldn't load products."))
++      .finally(() => setLoading(false));
++  }, [activeCategory]);
++
++  useEffect(() => {
++    if (tab !== "orders" || !token) return;
++    setOrdersLoading(true);
++    apiFetch("/orders/mine", { headers: { Authorization: `Bearer ${token}` } })
++      .then(setOrders)
++      .catch(() => {})
++      .finally(() => setOrdersLoading(false));
++  }, [tab, token]);
++
++  const addToCart = (product) => {
++    setCart((prev) => {
++      const existing = prev.find((i) => i.product.id === product.id);
++      if (existing) {
++        return prev.map((i) => (i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i));
++      }
++      return [...prev, { product, quantity: 1 }];
++    });
++  };
++
++  const changeQty = (productId, delta) => {
++    setCart((prev) =>
++      prev
++        .map((i) => (i.product.id === productId ? { ...i, quantity: i.quantity + delta } : i))
++        .filter((i) => i.quantity > 0)
++    );
++  };
++
++  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
++  const cartSubtotal = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
++
++  const submitOrder = async () => {
++    if (!checkoutForm.delivery_address || !checkoutForm.delivery_phone) {
++      setCheckoutError("Delivery address and phone are required.");
++      return;
++    }
++    setPlacingOrder(true);
++    setCheckoutError(null);
++    try {
++      const body = {
++        items: cart.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
++        ...checkoutForm,
++      };
++      const data = await apiFetch("/orders/checkout", {
++        method: "POST",
++        headers: { Authorization: `Bearer ${token}` },
++        body: JSON.stringify(body),
++      });
++      window.location.href = data.url;
++    } catch (err) {
++      setCheckoutError(err.message || "Couldn't start checkout.");
++      setPlacingOrder(false);
++    }
++  };
++
++  return (
++    <div style={{ paddingBottom: cart.length > 0 ? 90 : 0 }}>
++      <MarketplaceHeader
++        title="Marketplace"
++        onBack={cartOpen || checkoutOpen ? () => { setCartOpen(false); setCheckoutOpen(false); } : onBack}
++        right={
++          !checkoutOpen && (
++            <button onClick={() => setCartOpen(true)} className="relative p-2.5 rounded-full tap-glass" style={{ border: `2px solid ${colors.hairline}` }}>
++              <ShoppingBag size={20} color={colors.cream} />
++              {cartCount > 0 && (
++                <span
++                  className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-[10px] font-bold"
++                  style={{ background: colors.hairline, color: "#fff", width: 18, height: 18 }}
++                >
++                  {cartCount}
++                </span>
++              )}
++            </button>
++          )
++        }
++      />
++
++      {checkoutOpen ? (
++        <div className="px-4 py-4">
++          <h2 className="text-lg font-bold mb-3" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>Delivery details</h2>
++          <div className="space-y-3">
++            <input
++              placeholder="Delivery address"
++              value={checkoutForm.delivery_address}
++              onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_address: e.target.value }))}
++              className="w-full px-4 py-3 rounded-xl text-sm"
++              style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
++            />
++            <div className="flex gap-2">
++              <input
++                placeholder="State"
++                value={checkoutForm.delivery_state}
++                onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_state: e.target.value }))}
++                className="w-1/2 px-4 py-3 rounded-xl text-sm"
++                style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
++              />
++              <input
++                placeholder="City"
++                value={checkoutForm.delivery_city}
++                onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_city: e.target.value }))}
++                className="w-1/2 px-4 py-3 rounded-xl text-sm"
++                style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
++              />
++            </div>
++            <input
++              placeholder="Phone number"
++              value={checkoutForm.delivery_phone}
++              onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_phone: e.target.value }))}
++              className="w-full px-4 py-3 rounded-xl text-sm"
++              style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
++            />
++          </div>
++
++          <div className="mt-5 rounded-xl p-4" style={{ background: colors.panelLight }}>
++            {cart.map((i) => (
++              <div key={i.product.id} className="flex justify-between text-sm py-1" style={{ color: colors.cream }}>
++                <span>{i.product.name} × {i.quantity}</span>
++                <span>{naira(i.product.price * i.quantity)}</span>
++              </div>
++            ))}
++            <div className="flex justify-between text-sm py-1" style={{ color: colors.creamDim }}>
++              <span>Delivery fee</span><span>Calculated at checkout</span>
++            </div>
++            <div className="flex justify-between text-base font-bold pt-2 mt-2" style={{ borderTop: `2px solid ${colors.hairline}`, color: colors.cream }}>
++              <span>Subtotal</span><span>{naira(cartSubtotal)}</span>
++            </div>
++          </div>
++
++          {checkoutError && <p className="text-xs mt-3" style={{ color: "#E07A5F" }}>{checkoutError}</p>}
++
++          <button
++            onClick={submitOrder}
++            disabled={placingOrder}
++            className="w-full mt-4 py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
++            style={{ background: colors.hairline, color: "#fff" }}
++          >
++            {placingOrder ? <Loader2 size={16} className="animate-spin" /> : null}
++            {placingOrder ? "Starting checkout..." : "Continue to payment"}
++          </button>
++        </div>
++      ) : cartOpen ? (
++        <div className="px-4 py-4">
++          {cart.length === 0 ? (
++            <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>Your cart is empty.</p>
++          ) : (
++            <>
++              {cart.map((i) => (
++                <div key={i.product.id} className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${colors.panelLight}` }}>
++                  <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0" style={{ background: colors.panelLight }}>
++                    {i.product.image_url && <img src={i.product.image_url} alt="" className="w-full h-full object-cover" />}
++                  </div>
++                  <div className="flex-1 min-w-0">
++                    <p className="text-sm font-semibold truncate" style={{ color: colors.cream }}>{i.product.name}</p>
++                    <p className="text-xs" style={{ color: colors.creamDim }}>{naira(i.product.price)} each</p>
++                  </div>
++                  <div className="flex items-center gap-2">
++                    <button onClick={() => changeQty(i.product.id, -1)} className="p-1.5 rounded-full" style={{ border: `1px solid ${colors.hairline}` }}>
++                      <Minus size={12} color={colors.cream} />
++                    </button>
++                    <span className="text-sm w-4 text-center" style={{ color: colors.cream }}>{i.quantity}</span>
++                    <button onClick={() => changeQty(i.product.id, 1)} className="p-1.5 rounded-full" style={{ border: `1px solid ${colors.hairline}` }}>
++                      <Plus size={12} color={colors.cream} />
++                    </button>
++                  </div>
++                </div>
++              ))}
++              <div className="flex justify-between text-base font-bold pt-4 mt-2" style={{ color: colors.cream }}>
++                <span>Subtotal</span><span>{naira(cartSubtotal)}</span>
++              </div>
++              <button
++                onClick={() => { setCartOpen(false); setCheckoutOpen(true); }}
++                className="w-full mt-4 py-4 rounded-xl font-bold text-sm"
++                style={{ background: colors.hairline, color: "#fff" }}
++              >
++                Checkout
++              </button>
++            </>
++          )}
++        </div>
++      ) : (
++        <>
++          <div className="flex gap-2 px-4 pt-3">
++            <button
++              onClick={() => setTab("shop")}
++              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
++              style={{ background: tab === "shop" ? colors.hairline : colors.panelLight, color: tab === "shop" ? "#fff" : colors.cream }}
++            >
++              Shop
++            </button>
++            <button
++              onClick={() => setTab("orders")}
++              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
++              style={{ background: tab === "orders" ? colors.hairline : colors.panelLight, color: tab === "orders" ? "#fff" : colors.cream }}
++            >
++              My orders
++            </button>
++          </div>
++
++          {tab === "shop" ? (
++            <>
++              {categories.length > 0 && (
++                <div className="flex gap-2 px-4 py-3 overflow-x-auto">
++                  <button
++                    onClick={() => setActiveCategory(null)}
++                    className="shrink-0 px-4 py-2 rounded-full text-xs font-semibold"
++                    style={{ background: !activeCategory ? colors.hairline : colors.panelLight, color: !activeCategory ? "#fff" : colors.cream }}
++                  >
++                    All
++                  </button>
++                  {categories.map((c) => (
++                    <button
++                      key={c.id}
++                      onClick={() => setActiveCategory(c.slug)}
++                      className="shrink-0 px-4 py-2 rounded-full text-xs font-semibold"
++                      style={{ background: activeCategory === c.slug ? colors.hairline : colors.panelLight, color: activeCategory === c.slug ? "#fff" : colors.cream }}
++                    >
++                      {c.name}
++                    </button>
++                  ))}
++                </div>
++              )}
++
++              {loading ? (
++                <div className="px-4 pt-10 flex justify-center"><Loader2 size={24} className="animate-spin" color={colors.creamDim} /></div>
++              ) : error ? (
++                <p className="px-4 py-8 text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>
++              ) : products.length === 0 ? (
++                <div className="px-4 py-16 text-center">
++                  <Package size={32} color={colors.creamDim} className="mx-auto mb-2" />
++                  <p className="text-sm" style={{ color: colors.creamDim }}>No products here yet — check back soon.</p>
++                </div>
++              ) : (
++                <div className="grid grid-cols-2 gap-3 px-4 pb-4">
++                  {products.map((p) => (
++                    <div key={p.id} className="rounded-2xl overflow-hidden" style={{ border: `2px solid ${colors.hairline}` }}>
++                      <div className="aspect-square" style={{ background: colors.panelLight }}>
++                        {p.image_url && <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />}
++                      </div>
++                      <div className="p-3">
++                        <p className="text-sm font-semibold truncate" style={{ color: colors.cream }}>{p.name}</p>
++                        <p className="text-sm font-bold mt-0.5" style={{ color: colors.hairline }}>{naira(p.price)}</p>
++                        {p.stock_quantity < 1 ? (
++                          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>Out of stock</p>
++                        ) : (
++                          <button
++                            onClick={() => addToCart(p)}
++                            className="w-full mt-2 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 tap-glass"
++                            style={{ background: colors.panelLight, color: colors.cream }}
++                          >
++                            <Plus size={12} /> Add
++                          </button>
++                        )}
++                      </div>
++                    </div>
++                  ))}
++                </div>
++              )}
++            </>
++          ) : (
++            <div className="px-4 py-4">
++              {ordersLoading ? (
++                <div className="pt-10 flex justify-center"><Loader2 size={24} className="animate-spin" color={colors.creamDim} /></div>
++              ) : orders.length === 0 ? (
++                <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>No orders yet.</p>
++              ) : (
++                orders.map((o) => (
++                  <div key={o.id} className="rounded-2xl p-4 mb-3" style={{ border: `2px solid ${colors.hairline}` }}>
++                    <div className="flex justify-between items-start mb-2">
++                      <p className="text-sm font-bold" style={{ color: colors.cream }}>Order #{o.id}</p>
++                      <span
++                        className="text-xs px-2 py-1 rounded-full font-semibold"
++                        style={{ background: colors.panelLight, color: colors.hairline }}
++                      >
++                        {o.status}
++                      </span>
++                    </div>
++                    {o.items.map((it) => (
++                      <p key={it.id} className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
++                    ))}
++                    <p className="text-sm font-bold mt-2" style={{ color: colors.cream }}>{naira(o.total)}</p>
++                    {o.courier_name && (
++                      <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.creamDim }}>
++                        <Truck size={12} /> {o.courier_name}{o.courier_tracking_ref ? ` · ${o.courier_tracking_ref}` : ""}
++                      </p>
++                    )}
++                  </div>
++                ))
++              )}
++            </div>
++          )}
++        </>
++      )}
++    </div>
++  );
++}
+diff --git a/marketplace-backend.patch b/marketplace-backend.patch
+deleted file mode 100644
+index 80911f8..0000000
+--- a/marketplace-backend.patch
++++ /dev/null
+@@ -1,620 +0,0 @@
+-diff --git a/backend/db/schema.sql b/backend/db/schema.sql
+-index 55d32fe..bbf9351 100644
+---- a/backend/db/schema.sql
+-+++ b/backend/db/schema.sql
+-@@ -143,3 +143,61 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_bookings_since_reward INTEGER
+- 
+- ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_type_check;
+- ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_type_check CHECK (type IN ('fund', 'debit', 'refund', 'reward'));
+-+
+-+-- Marketplace: TheHub-curated product catalog, orders, and order line items.
+-+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
+-+
+-+CREATE TABLE IF NOT EXISTS product_categories (
+-+  id SERIAL PRIMARY KEY,
+-+  name TEXT NOT NULL,
+-+  slug TEXT UNIQUE NOT NULL,
+-+  icon_url TEXT,
+-+  created_at TIMESTAMP DEFAULT NOW()
+-+);
+-+
+-+CREATE TABLE IF NOT EXISTS products (
+-+  id SERIAL PRIMARY KEY,
+-+  category_id INTEGER REFERENCES product_categories(id),
+-+  name TEXT NOT NULL,
+-+  description TEXT,
+-+  price REAL NOT NULL,
+-+  stock_quantity INTEGER NOT NULL DEFAULT 0,
+-+  image_url TEXT,
+-+  image_public_id TEXT,
+-+  is_active BOOLEAN NOT NULL DEFAULT true,
+-+  created_at TIMESTAMP DEFAULT NOW()
+-+);
+-+
+-+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+-+
+-+CREATE TABLE IF NOT EXISTS product_orders (
+-+  id SERIAL PRIMARY KEY,
+-+  customer_id INTEGER NOT NULL REFERENCES users(id),
+-+  status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'dispatched', 'delivered', 'cancelled')) DEFAULT 'pending',
+-+  subtotal REAL NOT NULL,
+-+  delivery_fee REAL NOT NULL DEFAULT 0,
+-+  total REAL NOT NULL,
+-+  delivery_address TEXT NOT NULL,
+-+  delivery_state TEXT,
+-+  delivery_city TEXT,
+-+  delivery_phone TEXT,
+-+  courier_name TEXT,
+-+  courier_tracking_ref TEXT,
+-+  payment_status TEXT NOT NULL CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')) DEFAULT 'unpaid',
+-+  payment_method TEXT NOT NULL DEFAULT 'paystack',
+-+  paystack_reference TEXT,
+-+  created_at TIMESTAMP DEFAULT NOW()
+-+);
+-+
+-+CREATE INDEX IF NOT EXISTS idx_product_orders_customer ON product_orders(customer_id, created_at DESC);
+-+
+-+CREATE TABLE IF NOT EXISTS product_order_items (
+-+  id SERIAL PRIMARY KEY,
+-+  order_id INTEGER NOT NULL REFERENCES product_orders(id) ON DELETE CASCADE,
+-+  product_id INTEGER NOT NULL REFERENCES products(id),
+-+  product_name TEXT NOT NULL,
+-+  quantity INTEGER NOT NULL,
+-+  unit_price REAL NOT NULL
+-+);
+-+
+-+CREATE INDEX IF NOT EXISTS idx_product_order_items_order ON product_order_items(order_id);
+-diff --git a/backend/middleware/auth.js b/backend/middleware/auth.js
+-index 4608e61..13d4399 100644
+---- a/backend/middleware/auth.js
+-+++ b/backend/middleware/auth.js
+-@@ -24,4 +24,13 @@ function requireRole(role) {
+-   };
+- }
+- 
+--module.exports = { requireAuth, requireRole, JWT_SECRET };
+-+// Checks the is_admin flag on the token. Requires requireAuth to have run first,
+-+// and the JWT to include isAdmin (set at login — see auth.js).
+-+function requireAdmin(req, res, next) {
+-+  if (!req.user?.isAdmin) {
+-+    return res.status(403).json({ error: "Admin access required" });
+-+  }
+-+  next();
+-+}
+-+
+-+module.exports = { requireAuth, requireRole, requireAdmin, JWT_SECRET };
+-diff --git a/backend/routes/adminSeed.js b/backend/routes/adminSeed.js
+-index 47aa665..fcdbbf9 100644
+---- a/backend/routes/adminSeed.js
+-+++ b/backend/routes/adminSeed.js
+-@@ -121,4 +121,28 @@ router.get("/seed", async (req, res) => {
+-   }
+- });
+- 
+-+// GET /admin/promote?key=<JWT_SECRET>&email=<email>
+-+// A shell-free way to flag an account as admin (needed to manage the marketplace
+-+// catalog and orders) on hosts that don't offer shell access. Reuses JWT_SECRET
+-+// as a shared key, same convention as /admin/seed above.
+-+router.get("/promote", async (req, res) => {
+-+  if (!process.env.JWT_SECRET || req.query.key !== process.env.JWT_SECRET) {
+-+    return res.status(403).json({ error: "Missing or incorrect key" });
+-+  }
+-+  const { email } = req.query;
+-+  if (!email) return res.status(400).json({ error: "email is required" });
+-+
+-+  try {
+-+    const { rows } = await db.query(
+-+      "UPDATE users SET is_admin = true WHERE email = $1 RETURNING id, email, is_admin",
+-+      [email]
+-+    );
+-+    if (!rows[0]) return res.status(404).json({ error: "No account with that email" });
+-+    res.json({ ok: true, message: `${email} is now an admin. Log out and back in to refresh the token.` });
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't promote that account." });
+-+  }
+-+});
+-+
+- module.exports = router;
+-diff --git a/backend/routes/auth.js b/backend/routes/auth.js
+-index 57cb317..72ceaf7 100644
+---- a/backend/routes/auth.js
+-+++ b/backend/routes/auth.js
+-@@ -21,7 +21,7 @@ router.post("/signup", async (req, res) => {
+-       "INSERT INTO users (name, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+-       [name, email, phone || null, role === "owner" ? "owner" : "customer", password_hash]
+-     );
+--    const user = { id: result.rows[0].id, name, email, role: role === "owner" ? "owner" : "customer" };
+-+    const user = { id: result.rows[0].id, name, email, role: role === "owner" ? "owner" : "customer", isAdmin: false };
+-     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+-     res.status(201).json({ user, token });
+-   } catch (err) {
+-@@ -39,7 +39,7 @@ router.post("/login", async (req, res) => {
+-     if (!row || !bcrypt.compareSync(password || "", row.password_hash)) {
+-       return res.status(401).json({ error: "Incorrect email or password" });
+-     }
+--    const user = { id: row.id, name: row.name, email: row.email, role: row.role };
+-+    const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };
+-     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+-     res.json({ user, token });
+-   } catch (err) {
+-@@ -172,7 +172,7 @@ router.get("/google/callback", async (req, res) => {
+-       row = insertResult.rows[0];
+-     }
+- 
+--    const user = { id: row.id, name: row.name, email: row.email, role: row.role };
+-+    const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };
+-     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+- 
+-     res.redirect(`${process.env.FRONTEND_URL}/?token=${token}`);
+-diff --git a/backend/routes/marketplaceOrders.js b/backend/routes/marketplaceOrders.js
+-new file mode 100644
+-index 0000000..8c4c72e
+---- /dev/null
+-+++ b/backend/routes/marketplaceOrders.js
+-@@ -0,0 +1,183 @@
+-+const express = require("express");
+-+const db = require("../db");
+-+const paystack = require("../lib/paystack");
+-+const { requireAuth, requireAdmin } = require("../middleware/auth");
+-+const { notifyUser } = require("../lib/notify");
+-+
+-+const router = express.Router();
+-+const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
+-+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+-+const DELIVERY_FEE = Number(process.env.MARKETPLACE_DELIVERY_FEE || 1500); // flat fee in naira until courier integration exists
+-+
+-+// POST /orders/checkout - body: { items: [{product_id, quantity}], delivery_address, delivery_state, delivery_city, delivery_phone }
+-+router.post("/checkout", requireAuth, async (req, res) => {
+-+  const { items, delivery_address, delivery_state, delivery_city, delivery_phone } = req.body;
+-+  if (!Array.isArray(items) || items.length === 0) {
+-+    return res.status(400).json({ error: "items is required and must be a non-empty array" });
+-+  }
+-+  if (!delivery_address || !delivery_phone) {
+-+    return res.status(400).json({ error: "delivery_address and delivery_phone are required" });
+-+  }
+-+
+-+  try {
+-+    const productIds = items.map((i) => i.product_id);
+-+    const { rows: products } = await db.query(
+-+      "SELECT * FROM products WHERE id = ANY($1) AND is_active = true",
+-+      [productIds]
+-+    );
+-+
+-+    const lineItems = [];
+-+    let subtotal = 0;
+-+    for (const item of items) {
+-+      const product = products.find((p) => p.id === item.product_id);
+-+      const quantity = parseInt(item.quantity, 10);
+-+      if (!product) return res.status(404).json({ error: `Product ${item.product_id} not found or unavailable` });
+-+      if (!quantity || quantity < 1) return res.status(400).json({ error: `Invalid quantity for ${product.name}` });
+-+      if (product.stock_quantity < quantity) {
+-+        return res.status(400).json({ error: `Only ${product.stock_quantity} left of ${product.name}` });
+-+      }
+-+      subtotal += product.price * quantity;
+-+      lineItems.push({ product, quantity });
+-+    }
+-+
+-+    const total = subtotal + DELIVERY_FEE;
+-+
+-+    const { rows: orderRows } = await db.query(
+-+      `INSERT INTO product_orders
+-+        (customer_id, status, subtotal, delivery_fee, total, delivery_address, delivery_state, delivery_city, delivery_phone, payment_status)
+-+       VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8, 'unpaid') RETURNING id`,
+-+      [req.user.id, subtotal, DELIVERY_FEE, total, delivery_address, delivery_state || null, delivery_city || null, delivery_phone]
+-+    );
+-+    const orderId = orderRows[0].id;
+-+
+-+    for (const { product, quantity } of lineItems) {
+-+      await db.query(
+-+        `INSERT INTO product_order_items (order_id, product_id, product_name, quantity, unit_price)
+-+         VALUES ($1, $2, $3, $4, $5)`,
+-+        [orderId, product.id, product.name, quantity, product.price]
+-+      );
+-+    }
+-+
+-+    try {
+-+      const transaction = await paystack.post("/transaction/initialize", {
+-+        email: req.user.email,
+-+        amount: Math.round(total * 100),
+-+        currency: CURRENCY,
+-+        metadata: { order_id: orderId },
+-+        callback_url: `${FRONTEND_URL}/?order_success=1&order_id=${orderId}`,
+-+      });
+-+
+-+      await db.query("UPDATE product_orders SET paystack_reference = $1 WHERE id = $2", [transaction.reference, orderId]);
+-+      res.json({ url: transaction.authorization_url, order_id: orderId });
+-+    } catch (err) {
+-+      console.error(err);
+-+      await db.query("UPDATE product_orders SET status = 'cancelled' WHERE id = $1", [orderId]);
+-+      res.status(500).json({ error: "Couldn't start checkout. Check PAYSTACK_SECRET_KEY is set." });
+-+    }
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Something went wrong starting checkout." });
+-+  }
+-+});
+-+
+-+// GET /orders/mine - customer's own order history
+-+router.get("/mine", requireAuth, async (req, res) => {
+-+  try {
+-+    const { rows: orders } = await db.query(
+-+      "SELECT * FROM product_orders WHERE customer_id = $1 ORDER BY created_at DESC",
+-+      [req.user.id]
+-+    );
+-+    const { rows: items } = await db.query(
+-+      `SELECT * FROM product_order_items WHERE order_id = ANY($1)`,
+-+      [orders.map((o) => o.id)]
+-+    );
+-+    const withItems = orders.map((order) => ({
+-+      ...order,
+-+      items: items.filter((i) => i.order_id === order.id),
+-+    }));
+-+    res.json(withItems);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't load your orders." });
+-+  }
+-+});
+-+
+-+// GET /orders - admin only, all orders (optionally filtered by status)
+-+router.get("/", requireAuth, requireAdmin, async (req, res) => {
+-+  const { status } = req.query;
+-+  try {
+-+    let query = `
+-+      SELECT o.*, u.name AS customer_name, u.email AS customer_email
+-+      FROM product_orders o JOIN users u ON u.id = o.customer_id
+-+    `;
+-+    const params = [];
+-+    if (status) {
+-+      params.push(status);
+-+      query += ` WHERE o.status = $${params.length}`;
+-+    }
+-+    query += " ORDER BY o.created_at DESC";
+-+    const { rows: orders } = await db.query(query, params);
+-+    const { rows: items } = await db.query(
+-+      `SELECT * FROM product_order_items WHERE order_id = ANY($1)`,
+-+      [orders.map((o) => o.id)]
+-+    );
+-+    const withItems = orders.map((order) => ({
+-+      ...order,
+-+      items: items.filter((i) => i.order_id === order.id),
+-+    }));
+-+    res.json(withItems);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't load orders." });
+-+  }
+-+});
+-+
+-+// PATCH /orders/:id/status - admin only, update fulfillment status / courier info
+-+router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
+-+  const { status, courier_name, courier_tracking_ref } = req.body;
+-+  const validStatuses = ["pending", "processing", "dispatched", "delivered", "cancelled"];
+-+  if (status && !validStatuses.includes(status)) {
+-+    return res.status(400).json({ error: `status must be one of: ${validStatuses.join(", ")}` });
+-+  }
+-+
+-+  try {
+-+    const { rows: existingRows } = await db.query("SELECT * FROM product_orders WHERE id = $1", [req.params.id]);
+-+    const order = existingRows[0];
+-+    if (!order) return res.status(404).json({ error: "Order not found" });
+-+
+-+    const { rows } = await db.query(
+-+      `UPDATE product_orders SET
+-+        status = $1, courier_name = $2, courier_tracking_ref = $3
+-+       WHERE id = $4 RETURNING *`,
+-+      [
+-+        status || order.status,
+-+        courier_name ?? order.courier_name,
+-+        courier_tracking_ref ?? order.courier_tracking_ref,
+-+        req.params.id,
+-+      ]
+-+    );
+-+
+-+    if (status && status !== order.status) {
+-+      const statusMessages = {
+-+        processing: "Your order is being prepared for dispatch.",
+-+        dispatched: `Your order is on its way${courier_name ? ` via ${courier_name}` : ""}.`,
+-+        delivered: "Your order has been delivered. Thanks for shopping with TheHub!",
+-+        cancelled: "Your order was cancelled.",
+-+      };
+-+      if (statusMessages[status]) {
+-+        await notifyUser(order.customer_id, {
+-+          type: "order_status",
+-+          title: "Order update",
+-+          body: statusMessages[status],
+-+        });
+-+      }
+-+    }
+-+
+-+    res.json(rows[0]);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't update order." });
+-+  }
+-+});
+-+
+-+module.exports = router;
+-diff --git a/backend/routes/paystackWebhook.js b/backend/routes/paystackWebhook.js
+-index 6cb02a3..5b5e81f 100644
+---- a/backend/routes/paystackWebhook.js
+-+++ b/backend/routes/paystackWebhook.js
+-@@ -17,8 +17,37 @@ router.post("/", async (req, res) => {
+-   const event = JSON.parse(req.body.toString("utf8"));
+-   if (event.event === "charge.success") {
+-     const bookingId = event.data?.metadata?.booking_id;
+-+    const orderId = event.data?.metadata?.order_id;
+-     const walletFund = event.data?.metadata?.wallet_fund;
+--    if (walletFund) {
+-+    if (orderId) {
+-+      try {
+-+        const { rows } = await db.query(
+-+          `UPDATE product_orders SET payment_status = 'paid', status = 'processing'
+-+           WHERE id = $1 AND paystack_reference = $2 RETURNING *`,
+-+          [orderId, event.data.reference]
+-+        );
+-+        const order = rows[0];
+-+        if (order) {
+-+          const { rows: items } = await db.query(
+-+            "SELECT * FROM product_order_items WHERE order_id = $1",
+-+            [order.id]
+-+          );
+-+          for (const item of items) {
+-+            await db.query(
+-+              "UPDATE products SET stock_quantity = GREATEST(stock_quantity - $1, 0) WHERE id = $2",
+-+              [item.quantity, item.product_id]
+-+            );
+-+          }
+-+          await notifyUser(order.customer_id, {
+-+            type: "order_paid",
+-+            title: "Order confirmed",
+-+            body: `Payment received for order #${order.id}. We're getting it ready for dispatch.`,
+-+          });
+-+        }
+-+      } catch (err) {
+-+        console.error("Failed to update product order from webhook:", err);
+-+      }
+-+    } else if (walletFund) {
+-       try {
+-         const { rows } = await db.query(
+-           `UPDATE wallet_transactions SET status = 'success'
+-@@ -73,8 +102,27 @@ router.post("/", async (req, res) => {
+-     }
+-   } else if (event.event === "charge.failed") {
+-     const bookingId = event.data?.metadata?.booking_id;
+-+    const orderId = event.data?.metadata?.order_id;
+-     const walletFund = event.data?.metadata?.wallet_fund;
+--    if (walletFund) {
+-+    if (orderId) {
+-+      try {
+-+        const { rows } = await db.query(
+-+          `UPDATE product_orders SET payment_status = 'failed', status = 'cancelled'
+-+           WHERE id = $1 AND paystack_reference = $2 RETURNING *`,
+-+          [orderId, event.data.reference]
+-+        );
+-+        const order = rows[0];
+-+        if (order) {
+-+          await notifyUser(order.customer_id, {
+-+            type: "order_payment_failed",
+-+            title: "Payment failed",
+-+            body: `Your payment for order #${order.id} didn't go through. Please try again from your orders list.`,
+-+          });
+-+        }
+-+      } catch (err) {
+-+        console.error("Failed to handle failed order charge webhook:", err);
+-+      }
+-+    } else if (walletFund) {
+-       try {
+-         await db.query(
+-           `UPDATE wallet_transactions SET status = 'failed' WHERE paystack_reference = $1 AND status = 'pending'`,
+-diff --git a/backend/routes/products.js b/backend/routes/products.js
+-new file mode 100644
+-index 0000000..07842b5
+---- /dev/null
+-+++ b/backend/routes/products.js
+-@@ -0,0 +1,182 @@
+-+const express = require("express");
+-+const multer = require("multer");
+-+const db = require("../db");
+-+const cloudinary = require("../lib/cloudinary");
+-+const { requireAuth, requireAdmin } = require("../middleware/auth");
+-+
+-+const router = express.Router();
+-+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+-+
+-+function uploadToCloudinary(buffer) {
+-+  return new Promise((resolve, reject) => {
+-+    const stream = cloudinary.uploader.upload_stream(
+-+      { resource_type: "image", folder: "thehub/products" },
+-+      (err, result) => (err ? reject(err) : resolve(result))
+-+    );
+-+    stream.end(buffer);
+-+  });
+-+}
+-+
+-+// GET /product-categories - public, list categories
+-+router.get("/product-categories", async (req, res) => {
+-+  try {
+-+    const { rows } = await db.query("SELECT * FROM product_categories ORDER BY name ASC");
+-+    res.json(rows);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't load categories." });
+-+  }
+-+});
+-+
+-+// POST /product-categories - admin only
+-+router.post("/product-categories", requireAuth, requireAdmin, async (req, res) => {
+-+  const { name, slug, icon_url } = req.body;
+-+  if (!name || !slug) return res.status(400).json({ error: "name and slug are required" });
+-+  try {
+-+    const { rows } = await db.query(
+-+      "INSERT INTO product_categories (name, slug, icon_url) VALUES ($1, $2, $3) RETURNING *",
+-+      [name, slug, icon_url || null]
+-+    );
+-+    res.status(201).json(rows[0]);
+-+  } catch (err) {
+-+    console.error(err);
+-+    if (err.code === "23505") return res.status(409).json({ error: "A category with that slug already exists." });
+-+    res.status(500).json({ error: "Couldn't create category." });
+-+  }
+-+});
+-+
+-+// GET /products?category=slug - public, browse active products
+-+router.get("/products", async (req, res) => {
+-+  const { category } = req.query;
+-+  try {
+-+    let query = `
+-+      SELECT p.*, c.name AS category_name, c.slug AS category_slug
+-+      FROM products p
+-+      LEFT JOIN product_categories c ON c.id = p.category_id
+-+      WHERE p.is_active = true
+-+    `;
+-+    const params = [];
+-+    if (category) {
+-+      params.push(category);
+-+      query += ` AND c.slug = $${params.length}`;
+-+    }
+-+    query += " ORDER BY p.created_at DESC";
+-+    const { rows } = await db.query(query, params);
+-+    res.json(rows);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't load products." });
+-+  }
+-+});
+-+
+-+// GET /products/:id - public, product detail
+-+router.get("/products/:id", async (req, res) => {
+-+  try {
+-+    const { rows } = await db.query(
+-+      `SELECT p.*, c.name AS category_name, c.slug AS category_slug
+-+       FROM products p LEFT JOIN product_categories c ON c.id = p.category_id
+-+       WHERE p.id = $1`,
+-+      [req.params.id]
+-+    );
+-+    if (!rows[0]) return res.status(404).json({ error: "Product not found" });
+-+    res.json(rows[0]);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't load product." });
+-+  }
+-+});
+-+
+-+// POST /products - admin only, create a product with an optional image
+-+router.post("/products", requireAuth, requireAdmin, upload.single("image"), async (req, res) => {
+-+  const { name, description, price, stock_quantity, category_id } = req.body;
+-+  if (!name || !price) return res.status(400).json({ error: "name and price are required" });
+-+
+-+  try {
+-+    let image_url = null;
+-+    let image_public_id = null;
+-+    if (req.file) {
+-+      const result = await uploadToCloudinary(req.file.buffer);
+-+      image_url = result.secure_url;
+-+      image_public_id = result.public_id;
+-+    }
+-+
+-+    const { rows } = await db.query(
+-+      `INSERT INTO products (category_id, name, description, price, stock_quantity, image_url, image_public_id)
+-+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+-+      [category_id || null, name, description || null, price, stock_quantity || 0, image_url, image_public_id]
+-+    );
+-+    res.status(201).json(rows[0]);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't create product." });
+-+  }
+-+});
+-+
+-+// PATCH /products/:id - admin only, edit a product (optionally replace the image)
+-+router.patch("/products/:id", requireAuth, requireAdmin, upload.single("image"), async (req, res) => {
+-+  const { name, description, price, stock_quantity, category_id, is_active } = req.body;
+-+  try {
+-+    const { rows: existingRows } = await db.query("SELECT * FROM products WHERE id = $1", [req.params.id]);
+-+    const product = existingRows[0];
+-+    if (!product) return res.status(404).json({ error: "Product not found" });
+-+
+-+    let image_url = product.image_url;
+-+    let image_public_id = product.image_public_id;
+-+    if (req.file) {
+-+      const result = await uploadToCloudinary(req.file.buffer);
+-+      if (product.image_public_id) {
+-+        await cloudinary.uploader.destroy(product.image_public_id).catch(() => {});
+-+      }
+-+      image_url = result.secure_url;
+-+      image_public_id = result.public_id;
+-+    }
+-+
+-+    const { rows } = await db.query(
+-+      `UPDATE products SET
+-+        name = $1, description = $2, price = $3, stock_quantity = $4,
+-+        category_id = $5, is_active = $6, image_url = $7, image_public_id = $8
+-+       WHERE id = $9 RETURNING *`,
+-+      [
+-+        name ?? product.name,
+-+        description ?? product.description,
+-+        price ?? product.price,
+-+        stock_quantity ?? product.stock_quantity,
+-+        category_id ?? product.category_id,
+-+        is_active === undefined ? product.is_active : is_active === "true" || is_active === true,
+-+        image_url,
+-+        image_public_id,
+-+        req.params.id,
+-+      ]
+-+    );
+-+    res.json(rows[0]);
+-+  } catch (err) {
+-+    console.error(err);
+-+    res.status(500).json({ error: "Couldn't update product." });
+-+  }
+-+});
+-+
+-+// DELETE /products/:id - admin only
+-+router.delete("/products/:id", requireAuth, requireAdmin, async (req, res) => {
+-+  try {
+-+    const { rows } = await db.query("SELECT * FROM products WHERE id = $1", [req.params.id]);
+-+    const product = rows[0];
+-+    if (!product) return res.status(404).json({ error: "Product not found" });
+-+
+-+    if (product.image_public_id) {
+-+      await cloudinary.uploader.destroy(product.image_public_id).catch(() => {});
+-+    }
+-+    await db.query("DELETE FROM products WHERE id = $1", [req.params.id]);
+-+    res.json({ ok: true });
+-+  } catch (err) {
+-+    console.error(err);
+-+    // Products referenced by past orders can't be hard-deleted (FK constraint) —
+-+    // deactivate instead so order history stays intact.
+-+    if (err.code === "23503") {
+-+      await db.query("UPDATE products SET is_active = false WHERE id = $1", [req.params.id]);
+-+      return res.json({ ok: true, message: "Product has past orders, so it was deactivated instead of deleted." });
+-+    }
+-+    res.status(500).json({ error: "Couldn't delete product." });
+-+  }
+-+});
+-+
+-+module.exports = router;
+-diff --git a/backend/server.js b/backend/server.js
+-index ae0c43b..21885ff 100644
+---- a/backend/server.js
+-+++ b/backend/server.js
+-@@ -15,6 +15,8 @@ const notificationRoutes = require("./routes/notifications");
+- const { startReminderJob } = require("./lib/reminders");
+- const walletRoutes = require("./routes/wallet");
+- const { startAutoReleaseJob } = require("./lib/autoRelease");
+-+const productRoutes = require("./routes/products");
+-+const marketplaceOrderRoutes = require("./routes/marketplaceOrders");
+- 
+- const app = express();
+- 
+-@@ -37,6 +39,8 @@ app.use("/payments", paymentRoutes);
+- app.use("/admin", adminSeedRoutes);
+- app.use("/notifications", notificationRoutes);
+- app.use("/wallet", walletRoutes);
+-+app.use("/", productRoutes);
+-+app.use("/orders", marketplaceOrderRoutes);
+- 
+- app.use((err, req, res, next) => {
+-   console.error(err);

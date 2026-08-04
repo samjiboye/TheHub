@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
+import MarketplaceView from "./Marketplace";
+import AdminMarketplaceView from "./AdminMarketplace";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
-  UserCircle, Bell, Wallet,
+  UserCircle, Bell, Wallet, ShoppingBag,
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
@@ -4135,6 +4137,24 @@ export default function App() {
                 )}
                 {role === "customer" && customerAuth && (
                   <button
+                    onClick={() => { setMenuOpen(false); setView("marketplace"); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: colors.cream }}
+                  >
+                    <ShoppingBag size={16} /> Marketplace
+                  </button>
+                )}
+                {customerAuth?.user?.isAdmin && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setRole("customer"); setView("adminMarketplace"); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: colors.cream }}
+                  >
+                    <Store size={16} /> Manage Marketplace
+                  </button>
+                )}
+                {role === "customer" && customerAuth && (
+                  <button
                     onClick={() => { setMenuOpen(false); setView("wallet"); }}
                     className="w-full flex items-center gap-2 px-4 py-3 text-sm"
                     style={{ color: colors.cream }}
@@ -4291,6 +4311,18 @@ export default function App() {
             )}
             {view === "wallet" && customerAuth && (
               <WalletView
+                token={customerAuth.token}
+                onBack={() => setView("home")}
+              />
+            )}
+            {view === "marketplace" && customerAuth && (
+              <MarketplaceView
+                token={customerAuth.token}
+                onBack={() => setView("home")}
+              />
+            )}
+            {view === "adminMarketplace" && customerAuth?.user?.isAdmin && (
+              <AdminMarketplaceView
                 token={customerAuth.token}
                 onBack={() => setView("home")}
               />
