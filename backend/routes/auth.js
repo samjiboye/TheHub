@@ -21,7 +21,7 @@ router.post("/signup", async (req, res) => {
       "INSERT INTO users (name, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id",
       [name, email, phone || null, role === "owner" ? "owner" : "customer", password_hash]
     );
-    const user = { id: result.rows[0].id, name, email, role: role === "owner" ? "owner" : "customer" };
+    const user = { id: result.rows[0].id, name, email, role: role === "owner" ? "owner" : "customer", isAdmin: false };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
     res.status(201).json({ user, token });
   } catch (err) {
@@ -39,7 +39,7 @@ router.post("/login", async (req, res) => {
     if (!row || !bcrypt.compareSync(password || "", row.password_hash)) {
       return res.status(401).json({ error: "Incorrect email or password" });
     }
-    const user = { id: row.id, name: row.name, email: row.email, role: row.role };
+    const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
     res.json({ user, token });
   } catch (err) {
@@ -172,7 +172,7 @@ router.get("/google/callback", async (req, res) => {
       row = insertResult.rows[0];
     }
 
-    const user = { id: row.id, name: row.name, email: row.email, role: row.role };
+    const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
 
     res.redirect(`${process.env.FRONTEND_URL}/?token=${token}`);

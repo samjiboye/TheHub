@@ -15,6 +15,8 @@ const notificationRoutes = require("./routes/notifications");
 const { startReminderJob } = require("./lib/reminders");
 const walletRoutes = require("./routes/wallet");
 const { startAutoReleaseJob } = require("./lib/autoRelease");
+const productRoutes = require("./routes/products");
+const marketplaceOrderRoutes = require("./routes/marketplaceOrders");
 
 const app = express();
 
@@ -37,6 +39,8 @@ app.use("/payments", paymentRoutes);
 app.use("/admin", adminSeedRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/wallet", walletRoutes);
+app.use("/", productRoutes);
+app.use("/orders", marketplaceOrderRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

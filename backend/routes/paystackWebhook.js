@@ -17,8 +17,37 @@ router.post("/", async (req, res) => {
   const event = JSON.parse(req.body.toString("utf8"));
   if (event.event === "charge.success") {
     const bookingId = event.data?.metadata?.booking_id;
+    const orderId = event.data?.metadata?.order_id;
     const walletFund = event.data?.metadata?.wallet_fund;
-    if (walletFund) {
+    if (orderId) {
+      try {
+        const { rows } = await db.query(
+          `UPDATE product_orders SET payment_status = 'paid', status = 'processing'
+           WHERE id = $1 AND paystack_reference = $2 RETURNING *`,
+          [orderId, event.data.reference]
+        );
+        const order = rows[0];
+        if (order) {
+          const { rows: items } = await db.query(
+            "SELECT * FROM product_order_items WHERE order_id = $1",
+            [order.id]
+          );
+          for (const item of items) {
+            await db.query(
+              "UPDATE products SET stock_quantity = GREATEST(stock_quantity - $1, 0) WHERE id = $2",
+              [item.quantity, item.product_id]
+            );
+          }
+          await notifyUser(order.customer_id, {
+            type: "order_paid",
+            title: "Order confirmed",
+            body: `Payment received for order #${order.id}. We're getting it ready for dispatch.`,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to update product order from webhook:", err);
+      }
+    } else if (walletFund) {
       try {
         const { rows } = await db.query(
           `UPDATE wallet_transactions SET status = 'success'
@@ -73,8 +102,27 @@ router.post("/", async (req, res) => {
     }
   } else if (event.event === "charge.failed") {
     const bookingId = event.data?.metadata?.booking_id;
+    const orderId = event.data?.metadata?.order_id;
     const walletFund = event.data?.metadata?.wallet_fund;
-    if (walletFund) {
+    if (orderId) {
+      try {
+        const { rows } = await db.query(
+          `UPDATE product_orders SET payment_status = 'failed', status = 'cancelled'
+           WHERE id = $1 AND paystack_reference = $2 RETURNING *`,
+          [orderId, event.data.reference]
+        );
+        const order = rows[0];
+        if (order) {
+          await notifyUser(order.customer_id, {
+            type: "order_payment_failed",
+            title: "Payment failed",
+            body: `Your payment for order #${order.id} didn't go through. Please try again from your orders list.`,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to handle failed order charge webhook:", err);
+      }
+    } else if (walletFund) {
       try {
         await db.query(
           `UPDATE wallet_transactions SET status = 'failed' WHERE paystack_reference = $1 AND status = 'pending'`,

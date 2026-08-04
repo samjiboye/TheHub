@@ -121,4 +121,28 @@ router.get("/seed", async (req, res) => {
   }
 });
 
+// GET /admin/promote?key=<JWT_SECRET>&email=<email>
+// A shell-free way to flag an account as admin (needed to manage the marketplace
+// catalog and orders) on hosts that don't offer shell access. Reuses JWT_SECRET
+// as a shared key, same convention as /admin/seed above.
+router.get("/promote", async (req, res) => {
+  if (!process.env.JWT_SECRET || req.query.key !== process.env.JWT_SECRET) {
+    return res.status(403).json({ error: "Missing or incorrect key" });
+  }
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: "email is required" });
+
+  try {
+    const { rows } = await db.query(
+      "UPDATE users SET is_admin = true WHERE email = $1 RETURNING id, email, is_admin",
+      [email]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "No account with that email" });
+    res.json({ ok: true, message: `${email} is now an admin. Log out and back in to refresh the token.` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't promote that account." });
+  }
+});
+
 module.exports = router;

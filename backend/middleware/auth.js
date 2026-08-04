@@ -24,4 +24,13 @@ function requireRole(role) {
   };
 }
 
-module.exports = { requireAuth, requireRole, JWT_SECRET };
+// Checks the is_admin flag on the token. Requires requireAuth to have run first,
+// and the JWT to include isAdmin (set at login — see auth.js).
+function requireAdmin(req, res, next) {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireRole, requireAdmin, JWT_SECRET };

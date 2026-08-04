@@ -143,3 +143,61 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_bookings_since_reward INTEGER
 
 ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_type_check;
 ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_type_check CHECK (type IN ('fund', 'debit', 'refund', 'reward'));
+
+-- Marketplace: TheHub-curated product catalog, orders, and order line items.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS product_categories (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  icon_url TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id SERIAL PRIMARY KEY,
+  category_id INTEGER REFERENCES product_categories(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  price REAL NOT NULL,
+  stock_quantity INTEGER NOT NULL DEFAULT 0,
+  image_url TEXT,
+  image_public_id TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+
+CREATE TABLE IF NOT EXISTS product_orders (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES users(id),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'dispatched', 'delivered', 'cancelled')) DEFAULT 'pending',
+  subtotal REAL NOT NULL,
+  delivery_fee REAL NOT NULL DEFAULT 0,
+  total REAL NOT NULL,
+  delivery_address TEXT NOT NULL,
+  delivery_state TEXT,
+  delivery_city TEXT,
+  delivery_phone TEXT,
+  courier_name TEXT,
+  courier_tracking_ref TEXT,
+  payment_status TEXT NOT NULL CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')) DEFAULT 'unpaid',
+  payment_method TEXT NOT NULL DEFAULT 'paystack',
+  paystack_reference TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_orders_customer ON product_orders(customer_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS product_order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES product_orders(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES products(id),
+  product_name TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  unit_price REAL NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_order_items_order ON product_order_items(order_id);

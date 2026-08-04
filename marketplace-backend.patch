@@ -1,0 +1,620 @@
+diff --git a/backend/db/schema.sql b/backend/db/schema.sql
+index 55d32fe..bbf9351 100644
+--- a/backend/db/schema.sql
++++ b/backend/db/schema.sql
+@@ -143,3 +143,61 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_bookings_since_reward INTEGER
+ 
+ ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_type_check;
+ ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_type_check CHECK (type IN ('fund', 'debit', 'refund', 'reward'));
++
++-- Marketplace: TheHub-curated product catalog, orders, and order line items.
++ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
++
++CREATE TABLE IF NOT EXISTS product_categories (
++  id SERIAL PRIMARY KEY,
++  name TEXT NOT NULL,
++  slug TEXT UNIQUE NOT NULL,
++  icon_url TEXT,
++  created_at TIMESTAMP DEFAULT NOW()
++);
++
++CREATE TABLE IF NOT EXISTS products (
++  id SERIAL PRIMARY KEY,
++  category_id INTEGER REFERENCES product_categories(id),
++  name TEXT NOT NULL,
++  description TEXT,
++  price REAL NOT NULL,
++  stock_quantity INTEGER NOT NULL DEFAULT 0,
++  image_url TEXT,
++  image_public_id TEXT,
++  is_active BOOLEAN NOT NULL DEFAULT true,
++  created_at TIMESTAMP DEFAULT NOW()
++);
++
++CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
++
++CREATE TABLE IF NOT EXISTS product_orders (
++  id SERIAL PRIMARY KEY,
++  customer_id INTEGER NOT NULL REFERENCES users(id),
++  status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'dispatched', 'delivered', 'cancelled')) DEFAULT 'pending',
++  subtotal REAL NOT NULL,
++  delivery_fee REAL NOT NULL DEFAULT 0,
++  total REAL NOT NULL,
++  delivery_address TEXT NOT NULL,
++  delivery_state TEXT,
++  delivery_city TEXT,
++  delivery_phone TEXT,
++  courier_name TEXT,
++  courier_tracking_ref TEXT,
++  payment_status TEXT NOT NULL CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')) DEFAULT 'unpaid',
++  payment_method TEXT NOT NULL DEFAULT 'paystack',
++  paystack_reference TEXT,
++  created_at TIMESTAMP DEFAULT NOW()
++);
++
++CREATE INDEX IF NOT EXISTS idx_product_orders_customer ON product_orders(customer_id, created_at DESC);
++
++CREATE TABLE IF NOT EXISTS product_order_items (
++  id SERIAL PRIMARY KEY,
++  order_id INTEGER NOT NULL REFERENCES product_orders(id) ON DELETE CASCADE,
++  product_id INTEGER NOT NULL REFERENCES products(id),
++  product_name TEXT NOT NULL,
++  quantity INTEGER NOT NULL,
++  unit_price REAL NOT NULL
++);
++
++CREATE INDEX IF NOT EXISTS idx_product_order_items_order ON product_order_items(order_id);
+diff --git a/backend/middleware/auth.js b/backend/middleware/auth.js
+index 4608e61..13d4399 100644
+--- a/backend/middleware/auth.js
++++ b/backend/middleware/auth.js
+@@ -24,4 +24,13 @@ function requireRole(role) {
+   };
+ }
+ 
+-module.exports = { requireAuth, requireRole, JWT_SECRET };
++// Checks the is_admin flag on the token. Requires requireAuth to have run first,
++// and the JWT to include isAdmin (set at login — see auth.js).
++function requireAdmin(req, res, next) {
++  if (!req.user?.isAdmin) {
++    return res.status(403).json({ error: "Admin access required" });
++  }
++  next();
++}
++
++module.exports = { requireAuth, requireRole, requireAdmin, JWT_SECRET };
+diff --git a/backend/routes/adminSeed.js b/backend/routes/adminSeed.js
+index 47aa665..fcdbbf9 100644
+--- a/backend/routes/adminSeed.js
++++ b/backend/routes/adminSeed.js
+@@ -121,4 +121,28 @@ router.get("/seed", async (req, res) => {
+   }
+ });
+ 
++// GET /admin/promote?key=<JWT_SECRET>&email=<email>
++// A shell-free way to flag an account as admin (needed to manage the marketplace
++// catalog and orders) on hosts that don't offer shell access. Reuses JWT_SECRET
++// as a shared key, same convention as /admin/seed above.
++router.get("/promote", async (req, res) => {
++  if (!process.env.JWT_SECRET || req.query.key !== process.env.JWT_SECRET) {
++    return res.status(403).json({ error: "Missing or incorrect key" });
++  }
++  const { email } = req.query;
++  if (!email) return res.status(400).json({ error: "email is required" });
++
++  try {
++    const { rows } = await db.query(
++      "UPDATE users SET is_admin = true WHERE email = $1 RETURNING id, email, is_admin",
++      [email]
++    );
++    if (!rows[0]) return res.status(404).json({ error: "No account with that email" });
++    res.json({ ok: true, message: `${email} is now an admin. Log out and back in to refresh the token.` });
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't promote that account." });
++  }
++});
++
+ module.exports = router;
+diff --git a/backend/routes/auth.js b/backend/routes/auth.js
+index 57cb317..72ceaf7 100644
+--- a/backend/routes/auth.js
++++ b/backend/routes/auth.js
+@@ -21,7 +21,7 @@ router.post("/signup", async (req, res) => {
+       "INSERT INTO users (name, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+       [name, email, phone || null, role === "owner" ? "owner" : "customer", password_hash]
+     );
+-    const user = { id: result.rows[0].id, name, email, role: role === "owner" ? "owner" : "customer" };
++    const user = { id: result.rows[0].id, name, email, role: role === "owner" ? "owner" : "customer", isAdmin: false };
+     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+     res.status(201).json({ user, token });
+   } catch (err) {
+@@ -39,7 +39,7 @@ router.post("/login", async (req, res) => {
+     if (!row || !bcrypt.compareSync(password || "", row.password_hash)) {
+       return res.status(401).json({ error: "Incorrect email or password" });
+     }
+-    const user = { id: row.id, name: row.name, email: row.email, role: row.role };
++    const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };
+     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+     res.json({ user, token });
+   } catch (err) {
+@@ -172,7 +172,7 @@ router.get("/google/callback", async (req, res) => {
+       row = insertResult.rows[0];
+     }
+ 
+-    const user = { id: row.id, name: row.name, email: row.email, role: row.role };
++    const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };
+     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+ 
+     res.redirect(`${process.env.FRONTEND_URL}/?token=${token}`);
+diff --git a/backend/routes/marketplaceOrders.js b/backend/routes/marketplaceOrders.js
+new file mode 100644
+index 0000000..8c4c72e
+--- /dev/null
++++ b/backend/routes/marketplaceOrders.js
+@@ -0,0 +1,183 @@
++const express = require("express");
++const db = require("../db");
++const paystack = require("../lib/paystack");
++const { requireAuth, requireAdmin } = require("../middleware/auth");
++const { notifyUser } = require("../lib/notify");
++
++const router = express.Router();
++const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
++const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
++const DELIVERY_FEE = Number(process.env.MARKETPLACE_DELIVERY_FEE || 1500); // flat fee in naira until courier integration exists
++
++// POST /orders/checkout - body: { items: [{product_id, quantity}], delivery_address, delivery_state, delivery_city, delivery_phone }
++router.post("/checkout", requireAuth, async (req, res) => {
++  const { items, delivery_address, delivery_state, delivery_city, delivery_phone } = req.body;
++  if (!Array.isArray(items) || items.length === 0) {
++    return res.status(400).json({ error: "items is required and must be a non-empty array" });
++  }
++  if (!delivery_address || !delivery_phone) {
++    return res.status(400).json({ error: "delivery_address and delivery_phone are required" });
++  }
++
++  try {
++    const productIds = items.map((i) => i.product_id);
++    const { rows: products } = await db.query(
++      "SELECT * FROM products WHERE id = ANY($1) AND is_active = true",
++      [productIds]
++    );
++
++    const lineItems = [];
++    let subtotal = 0;
++    for (const item of items) {
++      const product = products.find((p) => p.id === item.product_id);
++      const quantity = parseInt(item.quantity, 10);
++      if (!product) return res.status(404).json({ error: `Product ${item.product_id} not found or unavailable` });
++      if (!quantity || quantity < 1) return res.status(400).json({ error: `Invalid quantity for ${product.name}` });
++      if (product.stock_quantity < quantity) {
++        return res.status(400).json({ error: `Only ${product.stock_quantity} left of ${product.name}` });
++      }
++      subtotal += product.price * quantity;
++      lineItems.push({ product, quantity });
++    }
++
++    const total = subtotal + DELIVERY_FEE;
++
++    const { rows: orderRows } = await db.query(
++      `INSERT INTO product_orders
++        (customer_id, status, subtotal, delivery_fee, total, delivery_address, delivery_state, delivery_city, delivery_phone, payment_status)
++       VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8, 'unpaid') RETURNING id`,
++      [req.user.id, subtotal, DELIVERY_FEE, total, delivery_address, delivery_state || null, delivery_city || null, delivery_phone]
++    );
++    const orderId = orderRows[0].id;
++
++    for (const { product, quantity } of lineItems) {
++      await db.query(
++        `INSERT INTO product_order_items (order_id, product_id, product_name, quantity, unit_price)
++         VALUES ($1, $2, $3, $4, $5)`,
++        [orderId, product.id, product.name, quantity, product.price]
++      );
++    }
++
++    try {
++      const transaction = await paystack.post("/transaction/initialize", {
++        email: req.user.email,
++        amount: Math.round(total * 100),
++        currency: CURRENCY,
++        metadata: { order_id: orderId },
++        callback_url: `${FRONTEND_URL}/?order_success=1&order_id=${orderId}`,
++      });
++
++      await db.query("UPDATE product_orders SET paystack_reference = $1 WHERE id = $2", [transaction.reference, orderId]);
++      res.json({ url: transaction.authorization_url, order_id: orderId });
++    } catch (err) {
++      console.error(err);
++      await db.query("UPDATE product_orders SET status = 'cancelled' WHERE id = $1", [orderId]);
++      res.status(500).json({ error: "Couldn't start checkout. Check PAYSTACK_SECRET_KEY is set." });
++    }
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Something went wrong starting checkout." });
++  }
++});
++
++// GET /orders/mine - customer's own order history
++router.get("/mine", requireAuth, async (req, res) => {
++  try {
++    const { rows: orders } = await db.query(
++      "SELECT * FROM product_orders WHERE customer_id = $1 ORDER BY created_at DESC",
++      [req.user.id]
++    );
++    const { rows: items } = await db.query(
++      `SELECT * FROM product_order_items WHERE order_id = ANY($1)`,
++      [orders.map((o) => o.id)]
++    );
++    const withItems = orders.map((order) => ({
++      ...order,
++      items: items.filter((i) => i.order_id === order.id),
++    }));
++    res.json(withItems);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load your orders." });
++  }
++});
++
++// GET /orders - admin only, all orders (optionally filtered by status)
++router.get("/", requireAuth, requireAdmin, async (req, res) => {
++  const { status } = req.query;
++  try {
++    let query = `
++      SELECT o.*, u.name AS customer_name, u.email AS customer_email
++      FROM product_orders o JOIN users u ON u.id = o.customer_id
++    `;
++    const params = [];
++    if (status) {
++      params.push(status);
++      query += ` WHERE o.status = $${params.length}`;
++    }
++    query += " ORDER BY o.created_at DESC";
++    const { rows: orders } = await db.query(query, params);
++    const { rows: items } = await db.query(
++      `SELECT * FROM product_order_items WHERE order_id = ANY($1)`,
++      [orders.map((o) => o.id)]
++    );
++    const withItems = orders.map((order) => ({
++      ...order,
++      items: items.filter((i) => i.order_id === order.id),
++    }));
++    res.json(withItems);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load orders." });
++  }
++});
++
++// PATCH /orders/:id/status - admin only, update fulfillment status / courier info
++router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
++  const { status, courier_name, courier_tracking_ref } = req.body;
++  const validStatuses = ["pending", "processing", "dispatched", "delivered", "cancelled"];
++  if (status && !validStatuses.includes(status)) {
++    return res.status(400).json({ error: `status must be one of: ${validStatuses.join(", ")}` });
++  }
++
++  try {
++    const { rows: existingRows } = await db.query("SELECT * FROM product_orders WHERE id = $1", [req.params.id]);
++    const order = existingRows[0];
++    if (!order) return res.status(404).json({ error: "Order not found" });
++
++    const { rows } = await db.query(
++      `UPDATE product_orders SET
++        status = $1, courier_name = $2, courier_tracking_ref = $3
++       WHERE id = $4 RETURNING *`,
++      [
++        status || order.status,
++        courier_name ?? order.courier_name,
++        courier_tracking_ref ?? order.courier_tracking_ref,
++        req.params.id,
++      ]
++    );
++
++    if (status && status !== order.status) {
++      const statusMessages = {
++        processing: "Your order is being prepared for dispatch.",
++        dispatched: `Your order is on its way${courier_name ? ` via ${courier_name}` : ""}.`,
++        delivered: "Your order has been delivered. Thanks for shopping with TheHub!",
++        cancelled: "Your order was cancelled.",
++      };
++      if (statusMessages[status]) {
++        await notifyUser(order.customer_id, {
++          type: "order_status",
++          title: "Order update",
++          body: statusMessages[status],
++        });
++      }
++    }
++
++    res.json(rows[0]);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't update order." });
++  }
++});
++
++module.exports = router;
+diff --git a/backend/routes/paystackWebhook.js b/backend/routes/paystackWebhook.js
+index 6cb02a3..5b5e81f 100644
+--- a/backend/routes/paystackWebhook.js
++++ b/backend/routes/paystackWebhook.js
+@@ -17,8 +17,37 @@ router.post("/", async (req, res) => {
+   const event = JSON.parse(req.body.toString("utf8"));
+   if (event.event === "charge.success") {
+     const bookingId = event.data?.metadata?.booking_id;
++    const orderId = event.data?.metadata?.order_id;
+     const walletFund = event.data?.metadata?.wallet_fund;
+-    if (walletFund) {
++    if (orderId) {
++      try {
++        const { rows } = await db.query(
++          `UPDATE product_orders SET payment_status = 'paid', status = 'processing'
++           WHERE id = $1 AND paystack_reference = $2 RETURNING *`,
++          [orderId, event.data.reference]
++        );
++        const order = rows[0];
++        if (order) {
++          const { rows: items } = await db.query(
++            "SELECT * FROM product_order_items WHERE order_id = $1",
++            [order.id]
++          );
++          for (const item of items) {
++            await db.query(
++              "UPDATE products SET stock_quantity = GREATEST(stock_quantity - $1, 0) WHERE id = $2",
++              [item.quantity, item.product_id]
++            );
++          }
++          await notifyUser(order.customer_id, {
++            type: "order_paid",
++            title: "Order confirmed",
++            body: `Payment received for order #${order.id}. We're getting it ready for dispatch.`,
++          });
++        }
++      } catch (err) {
++        console.error("Failed to update product order from webhook:", err);
++      }
++    } else if (walletFund) {
+       try {
+         const { rows } = await db.query(
+           `UPDATE wallet_transactions SET status = 'success'
+@@ -73,8 +102,27 @@ router.post("/", async (req, res) => {
+     }
+   } else if (event.event === "charge.failed") {
+     const bookingId = event.data?.metadata?.booking_id;
++    const orderId = event.data?.metadata?.order_id;
+     const walletFund = event.data?.metadata?.wallet_fund;
+-    if (walletFund) {
++    if (orderId) {
++      try {
++        const { rows } = await db.query(
++          `UPDATE product_orders SET payment_status = 'failed', status = 'cancelled'
++           WHERE id = $1 AND paystack_reference = $2 RETURNING *`,
++          [orderId, event.data.reference]
++        );
++        const order = rows[0];
++        if (order) {
++          await notifyUser(order.customer_id, {
++            type: "order_payment_failed",
++            title: "Payment failed",
++            body: `Your payment for order #${order.id} didn't go through. Please try again from your orders list.`,
++          });
++        }
++      } catch (err) {
++        console.error("Failed to handle failed order charge webhook:", err);
++      }
++    } else if (walletFund) {
+       try {
+         await db.query(
+           `UPDATE wallet_transactions SET status = 'failed' WHERE paystack_reference = $1 AND status = 'pending'`,
+diff --git a/backend/routes/products.js b/backend/routes/products.js
+new file mode 100644
+index 0000000..07842b5
+--- /dev/null
++++ b/backend/routes/products.js
+@@ -0,0 +1,182 @@
++const express = require("express");
++const multer = require("multer");
++const db = require("../db");
++const cloudinary = require("../lib/cloudinary");
++const { requireAuth, requireAdmin } = require("../middleware/auth");
++
++const router = express.Router();
++const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
++
++function uploadToCloudinary(buffer) {
++  return new Promise((resolve, reject) => {
++    const stream = cloudinary.uploader.upload_stream(
++      { resource_type: "image", folder: "thehub/products" },
++      (err, result) => (err ? reject(err) : resolve(result))
++    );
++    stream.end(buffer);
++  });
++}
++
++// GET /product-categories - public, list categories
++router.get("/product-categories", async (req, res) => {
++  try {
++    const { rows } = await db.query("SELECT * FROM product_categories ORDER BY name ASC");
++    res.json(rows);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load categories." });
++  }
++});
++
++// POST /product-categories - admin only
++router.post("/product-categories", requireAuth, requireAdmin, async (req, res) => {
++  const { name, slug, icon_url } = req.body;
++  if (!name || !slug) return res.status(400).json({ error: "name and slug are required" });
++  try {
++    const { rows } = await db.query(
++      "INSERT INTO product_categories (name, slug, icon_url) VALUES ($1, $2, $3) RETURNING *",
++      [name, slug, icon_url || null]
++    );
++    res.status(201).json(rows[0]);
++  } catch (err) {
++    console.error(err);
++    if (err.code === "23505") return res.status(409).json({ error: "A category with that slug already exists." });
++    res.status(500).json({ error: "Couldn't create category." });
++  }
++});
++
++// GET /products?category=slug - public, browse active products
++router.get("/products", async (req, res) => {
++  const { category } = req.query;
++  try {
++    let query = `
++      SELECT p.*, c.name AS category_name, c.slug AS category_slug
++      FROM products p
++      LEFT JOIN product_categories c ON c.id = p.category_id
++      WHERE p.is_active = true
++    `;
++    const params = [];
++    if (category) {
++      params.push(category);
++      query += ` AND c.slug = $${params.length}`;
++    }
++    query += " ORDER BY p.created_at DESC";
++    const { rows } = await db.query(query, params);
++    res.json(rows);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load products." });
++  }
++});
++
++// GET /products/:id - public, product detail
++router.get("/products/:id", async (req, res) => {
++  try {
++    const { rows } = await db.query(
++      `SELECT p.*, c.name AS category_name, c.slug AS category_slug
++       FROM products p LEFT JOIN product_categories c ON c.id = p.category_id
++       WHERE p.id = $1`,
++      [req.params.id]
++    );
++    if (!rows[0]) return res.status(404).json({ error: "Product not found" });
++    res.json(rows[0]);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load product." });
++  }
++});
++
++// POST /products - admin only, create a product with an optional image
++router.post("/products", requireAuth, requireAdmin, upload.single("image"), async (req, res) => {
++  const { name, description, price, stock_quantity, category_id } = req.body;
++  if (!name || !price) return res.status(400).json({ error: "name and price are required" });
++
++  try {
++    let image_url = null;
++    let image_public_id = null;
++    if (req.file) {
++      const result = await uploadToCloudinary(req.file.buffer);
++      image_url = result.secure_url;
++      image_public_id = result.public_id;
++    }
++
++    const { rows } = await db.query(
++      `INSERT INTO products (category_id, name, description, price, stock_quantity, image_url, image_public_id)
++       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
++      [category_id || null, name, description || null, price, stock_quantity || 0, image_url, image_public_id]
++    );
++    res.status(201).json(rows[0]);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't create product." });
++  }
++});
++
++// PATCH /products/:id - admin only, edit a product (optionally replace the image)
++router.patch("/products/:id", requireAuth, requireAdmin, upload.single("image"), async (req, res) => {
++  const { name, description, price, stock_quantity, category_id, is_active } = req.body;
++  try {
++    const { rows: existingRows } = await db.query("SELECT * FROM products WHERE id = $1", [req.params.id]);
++    const product = existingRows[0];
++    if (!product) return res.status(404).json({ error: "Product not found" });
++
++    let image_url = product.image_url;
++    let image_public_id = product.image_public_id;
++    if (req.file) {
++      const result = await uploadToCloudinary(req.file.buffer);
++      if (product.image_public_id) {
++        await cloudinary.uploader.destroy(product.image_public_id).catch(() => {});
++      }
++      image_url = result.secure_url;
++      image_public_id = result.public_id;
++    }
++
++    const { rows } = await db.query(
++      `UPDATE products SET
++        name = $1, description = $2, price = $3, stock_quantity = $4,
++        category_id = $5, is_active = $6, image_url = $7, image_public_id = $8
++       WHERE id = $9 RETURNING *`,
++      [
++        name ?? product.name,
++        description ?? product.description,
++        price ?? product.price,
++        stock_quantity ?? product.stock_quantity,
++        category_id ?? product.category_id,
++        is_active === undefined ? product.is_active : is_active === "true" || is_active === true,
++        image_url,
++        image_public_id,
++        req.params.id,
++      ]
++    );
++    res.json(rows[0]);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't update product." });
++  }
++});
++
++// DELETE /products/:id - admin only
++router.delete("/products/:id", requireAuth, requireAdmin, async (req, res) => {
++  try {
++    const { rows } = await db.query("SELECT * FROM products WHERE id = $1", [req.params.id]);
++    const product = rows[0];
++    if (!product) return res.status(404).json({ error: "Product not found" });
++
++    if (product.image_public_id) {
++      await cloudinary.uploader.destroy(product.image_public_id).catch(() => {});
++    }
++    await db.query("DELETE FROM products WHERE id = $1", [req.params.id]);
++    res.json({ ok: true });
++  } catch (err) {
++    console.error(err);
++    // Products referenced by past orders can't be hard-deleted (FK constraint) —
++    // deactivate instead so order history stays intact.
++    if (err.code === "23503") {
++      await db.query("UPDATE products SET is_active = false WHERE id = $1", [req.params.id]);
++      return res.json({ ok: true, message: "Product has past orders, so it was deactivated instead of deleted." });
++    }
++    res.status(500).json({ error: "Couldn't delete product." });
++  }
++});
++
++module.exports = router;
+diff --git a/backend/server.js b/backend/server.js
+index ae0c43b..21885ff 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -15,6 +15,8 @@ const notificationRoutes = require("./routes/notifications");
+ const { startReminderJob } = require("./lib/reminders");
+ const walletRoutes = require("./routes/wallet");
+ const { startAutoReleaseJob } = require("./lib/autoRelease");
++const productRoutes = require("./routes/products");
++const marketplaceOrderRoutes = require("./routes/marketplaceOrders");
+ 
+ const app = express();
+ 
+@@ -37,6 +39,8 @@ app.use("/payments", paymentRoutes);
+ app.use("/admin", adminSeedRoutes);
+ app.use("/notifications", notificationRoutes);
+ app.use("/wallet", walletRoutes);
++app.use("/", productRoutes);
++app.use("/orders", marketplaceOrderRoutes);
+ 
+ app.use((err, req, res, next) => {
+   console.error(err);
