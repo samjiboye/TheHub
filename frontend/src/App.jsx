@@ -158,7 +158,7 @@ function formatBookingDate(dateStr) {
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later — the UI already discloses it if so
-const COMMISSION_RATE = 0.15;
+const COMMISSION_RATE = 0.10;
 
 function SalonPhoto({ hue, icon: Icon, size = "h-40", imageUrl }) {
   return (
@@ -1915,7 +1915,7 @@ function OwnerDashboard({ token }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl px-4 py-3" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
-              <p className="text-xs" style={{ color: colors.creamDim }}>Platform commission ({Math.round((data.commissionRate ?? 0.15) * 100)}%)</p>
+              <p className="text-xs" style={{ color: colors.creamDim }}>Platform commission ({Math.round((data.commissionRate ?? 0.10) * 100)}%)</p>
               <p style={{ color: colors.cream }} className="text-lg mt-1">-₦{data.commission.toFixed(2)}</p>
             </div>
             <div className="rounded-2xl px-4 py-3" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
@@ -2970,7 +2970,7 @@ function WalletView({ token, onBack }) {
         <div className="mt-4 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-bold" style={{ color: colors.cream }}>🎁 Loyalty reward</p>
-            <p className="text-xs" style={{ color: colors.creamDim }}>{loyaltyCount}/{loyaltyGoal} bookings</p>
+            <p className="text-xs" style={{ color: colors.creamDim }}>{loyaltyCount}/{loyaltyGoal} points</p>
           </div>
           <div className="w-full rounded-full overflow-hidden" style={{ background: colors.panelLight, height: 10 }}>
             <div
@@ -2980,7 +2980,7 @@ function WalletView({ token, onBack }) {
           </div>
           <p className="text-xs mt-2" style={{ color: colors.creamDim }}>
             {loyaltyGoal - loyaltyCount > 0
-              ? `${loyaltyGoal - loyaltyCount} more booking${loyaltyGoal - loyaltyCount === 1 ? "" : "s"} through TheHub unlocks ₦${Number(loyaltyReward).toLocaleString()} in your wallet.`
+              ? `Earn 1 point per ₦100 you spend through TheHub. ${loyaltyGoal - loyaltyCount} more points unlocks ₦${Number(loyaltyReward).toLocaleString()} in your wallet.`
               : `Reward unlocked on your next completed booking!`}
           </p>
         </div>
@@ -3562,7 +3562,8 @@ function OnboardingView({ onDone }) {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col justify-between px-6 pt-10 pb-10 relative overflow-hidden"
+      onClick={next}
+      className="min-h-screen w-full flex flex-col justify-between px-6 pt-10 pb-10 relative overflow-hidden cursor-pointer"
       style={{
         backgroundImage: isPlain
           ? "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)"
@@ -3583,15 +3584,6 @@ function OnboardingView({ onDone }) {
             TheHub
           </span>
         </div>
-        {!isLast && (
-          <button
-            onClick={onDone}
-            className="text-base font-semibold"
-            style={{ color: isPlain ? colors.hairline : "#FFFFFF" }}
-          >
-            Skip
-          </button>
-        )}
       </div>
 
       {current.type === "categories" ? (
@@ -3682,7 +3674,7 @@ function OnboardingView({ onDone }) {
       <div className="flex items-center justify-between">
         {slide > 0 ? (
           <button
-            onClick={prev}
+            onClick={(e) => { e.stopPropagation(); prev(); }}
             className="text-base font-semibold"
             style={{ color: isPlain ? colors.hairline : "#FFFFFF" }}
           >
@@ -3706,21 +3698,13 @@ function OnboardingView({ onDone }) {
           ))}
         </div>
 
-        {isLast ? (
+        {isLast && (
           <button
-            onClick={onDone}
+            onClick={(e) => { e.stopPropagation(); onDone(); }}
             className="px-6 py-3 rounded-full text-base font-bold"
             style={{ background: "#4FA89C", color: "#FFFFFF" }}
           >
             Get Started
-          </button>
-        ) : (
-          <button
-            onClick={next}
-            className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ background: "#4FA89C" }}
-          >
-            <ArrowRight size={20} color="#FFFFFF" />
           </button>
         )}
       </div>

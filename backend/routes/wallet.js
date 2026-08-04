@@ -7,8 +7,8 @@ const router = express.Router();
 
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
-const LOYALTY_GOAL = 5;
-const LOYALTY_REWARD = 1000;
+const LOYALTY_GOAL = 150;
+const LOYALTY_REWARD = 500;
 
 router.get("/me", requireAuth, async (req, res) => {
   try {

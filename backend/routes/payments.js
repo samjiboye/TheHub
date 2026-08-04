@@ -7,7 +7,7 @@ const { notifyUser } = require("../lib/notify");
 const { getCommissionRate } = require("../lib/commission");
 const router = express.Router();
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
-const BASE_COMMISSION_RATE = 0.15; // used only as Paystack's default subaccount split; actual bookings always override this per-transaction based on tier
+const BASE_COMMISSION_RATE = 0.10; // used only as Paystack's default subaccount split; actual bookings always override this per-transaction based on tier
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 

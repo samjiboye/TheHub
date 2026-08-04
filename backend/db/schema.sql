@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   status TEXT NOT NULL CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')) DEFAULT 'pending',
   service_price REAL NOT NULL,
   booking_fee REAL NOT NULL DEFAULT 2.50,
-  commission_rate REAL NOT NULL DEFAULT 0.15,
+  commission_rate REAL NOT NULL DEFAULT 0.10,
   commission_amount REAL NOT NULL,
   payout_amount REAL NOT NULL,
   payment_status TEXT NOT NULL CHECK (payment_status IN ('unpaid', 'paid', 'failed', 'refunded')) DEFAULT 'unpaid',

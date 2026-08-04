@@ -3,8 +3,9 @@ const paystack = require("./paystack");
 const { notifyUser } = require("./notify");
 const { creditWallet } = require("./wallet");
 
-const LOYALTY_GOAL = 5; // completed in-app bookings needed per reward
-const LOYALTY_REWARD = 1000; // ₦ credited to the customer's wallet
+const POINTS_PER_NAIRA = 0.01; // 1 point per ₦100 spent
+const LOYALTY_GOAL = 150; // points needed for a reward (≈₦15,000 spent, ~5 bookings at ₦3,000)
+const LOYALTY_REWARD = 500; // ₦ credited to the customer's wallet
 
 // Marks a booking completed, releases the wallet payout to the owner if applicable
 // (card-paid bookings were already split at checkout, so there's nothing to send),
@@ -60,20 +61,26 @@ async function completeBooking(booking, salon, { auto = false } = {}) {
     bookingId: booking.id,
   });
 
-  // Loyalty: every LOYALTY_GOAL completed in-app bookings earns a wallet credit.
+  // Loyalty: earn points proportional to what was actually spent (1 point per
+  // ₦100), so a bigger booking earns more than a smaller one. Leftover points
+  // past the goal roll over into the next reward instead of being wiped.
   try {
+    const pointsEarned = Math.floor(booking.service_price * POINTS_PER_NAIRA);
     const { rows: userRows } = await db.query(
-      "UPDATE users SET loyalty_bookings_since_reward = loyalty_bookings_since_reward + 1 WHERE id = $1 RETURNING loyalty_bookings_since_reward",
-      [booking.customer_id]
+      "UPDATE users SET loyalty_bookings_since_reward = loyalty_bookings_since_reward + $2 WHERE id = $1 RETURNING loyalty_bookings_since_reward",
+      [booking.customer_id, pointsEarned]
     );
-    const count = userRows[0]?.loyalty_bookings_since_reward || 0;
-    if (count >= LOYALTY_GOAL) {
-      await db.query("UPDATE users SET loyalty_bookings_since_reward = 0 WHERE id = $1", [booking.customer_id]);
+    const points = userRows[0]?.loyalty_bookings_since_reward || 0;
+    if (points >= LOYALTY_GOAL) {
+      await db.query(
+        "UPDATE users SET loyalty_bookings_since_reward = loyalty_bookings_since_reward - $2 WHERE id = $1",
+        [booking.customer_id, LOYALTY_GOAL]
+      );
       await creditWallet(booking.customer_id, LOYALTY_REWARD, { type: "reward", bookingId: booking.id });
       await notifyUser(booking.customer_id, {
         type: "loyalty_reward",
         title: "Reward unlocked! 🎉",
-        body: `You've booked ${LOYALTY_GOAL} times through TheHub — ₦${LOYALTY_REWARD.toLocaleString()} has been added to your wallet.`,
+        body: `You've earned ${LOYALTY_GOAL} loyalty points through TheHub — ₦${LOYALTY_REWARD.toLocaleString()} has been added to your wallet.`,
         bookingId: booking.id,
       });
     }
