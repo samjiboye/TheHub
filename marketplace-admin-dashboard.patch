@@ -1,0 +1,479 @@
+diff --git a/backend/routes/adminAnalytics.js b/backend/routes/adminAnalytics.js
+new file mode 100644
+index 0000000..e183dff
+--- /dev/null
++++ b/backend/routes/adminAnalytics.js
+@@ -0,0 +1,96 @@
++const express = require("express");
++const db = require("../db");
++const { requireAuth, requireAdmin } = require("../middleware/auth");
++
++const router = express.Router();
++
++// GET /admin/analytics - admin only, platform-wide totals + 30-day trends
++router.get("/analytics", requireAuth, requireAdmin, async (req, res) => {
++  try {
++    const [
++      userRows,
++      salonRows,
++      bookingRows,
++      productRows,
++      orderRows,
++      trendRows,
++    ] = await Promise.all([
++      db.query(
++        `SELECT
++          COUNT(*) AS total,
++          COUNT(*) FILTER (WHERE role = 'customer') AS customers,
++          COUNT(*) FILTER (WHERE role = 'owner') AS owners
++         FROM users`
++      ),
++      db.query(`SELECT COUNT(*) AS total FROM salons`),
++      db.query(
++        `SELECT
++          COUNT(*) AS total,
++          COUNT(*) FILTER (WHERE status = 'completed') AS completed,
++          COALESCE(SUM(service_price) FILTER (WHERE payment_status = 'paid'), 0) AS revenue,
++          COALESCE(SUM(commission_amount) FILTER (WHERE payment_status = 'paid'), 0) AS commission
++         FROM bookings`
++      ),
++      db.query(`SELECT COUNT(*) AS total FROM products WHERE is_active = true`),
++      db.query(
++        `SELECT
++          COUNT(*) AS total,
++          COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid'), 0) AS revenue
++         FROM product_orders`
++      ),
++      db.query(
++        `WITH days AS (
++          SELECT generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day')::date AS day
++        ),
++        booking_stats AS (
++          SELECT created_at::date AS day, COUNT(*) AS count,
++            COALESCE(SUM(service_price) FILTER (WHERE payment_status = 'paid'), 0) AS revenue
++          FROM bookings GROUP BY created_at::date
++        ),
++        order_stats AS (
++          SELECT created_at::date AS day, COUNT(*) AS count,
++            COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid'), 0) AS revenue
++          FROM product_orders GROUP BY created_at::date
++        )
++        SELECT
++          days.day,
++          COALESCE(booking_stats.count, 0) AS bookings,
++          COALESCE(booking_stats.revenue, 0) AS booking_revenue,
++          COALESCE(order_stats.count, 0) AS orders,
++          COALESCE(order_stats.revenue, 0) AS order_revenue
++        FROM days
++        LEFT JOIN booking_stats ON booking_stats.day = days.day
++        LEFT JOIN order_stats ON order_stats.day = days.day
++        ORDER BY days.day`
++      ),
++    ]);
++
++    res.json({
++      totals: {
++        users: parseInt(userRows.rows[0].total, 10),
++        customers: parseInt(userRows.rows[0].customers, 10),
++        owners: parseInt(userRows.rows[0].owners, 10),
++        salons: parseInt(salonRows.rows[0].total, 10),
++        bookings: parseInt(bookingRows.rows[0].total, 10),
++        completedBookings: parseInt(bookingRows.rows[0].completed, 10),
++        bookingRevenue: parseFloat(bookingRows.rows[0].revenue),
++        commissionEarned: parseFloat(bookingRows.rows[0].commission),
++        products: parseInt(productRows.rows[0].total, 10),
++        marketplaceOrders: parseInt(orderRows.rows[0].total, 10),
++        marketplaceRevenue: parseFloat(orderRows.rows[0].revenue),
++      },
++      trends: trendRows.rows.map((r) => ({
++        date: r.day,
++        bookings: parseInt(r.bookings, 10),
++        bookingRevenue: parseFloat(r.booking_revenue),
++        orders: parseInt(r.orders, 10),
++        orderRevenue: parseFloat(r.order_revenue),
++      })),
++    });
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load analytics." });
++  }
++});
++
++module.exports = router;
+diff --git a/backend/server.js b/backend/server.js
+index 21885ff..952b493 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -17,6 +17,7 @@ const walletRoutes = require("./routes/wallet");
+ const { startAutoReleaseJob } = require("./lib/autoRelease");
+ const productRoutes = require("./routes/products");
+ const marketplaceOrderRoutes = require("./routes/marketplaceOrders");
++const adminAnalyticsRoutes = require("./routes/adminAnalytics");
+ 
+ const app = express();
+ 
+@@ -41,6 +42,7 @@ app.use("/notifications", notificationRoutes);
+ app.use("/wallet", walletRoutes);
+ app.use("/", productRoutes);
+ app.use("/orders", marketplaceOrderRoutes);
++app.use("/admin", adminAnalyticsRoutes);
+ 
+ app.use((err, req, res, next) => {
+   console.error(err);
+diff --git a/frontend/src/AdminApp.jsx b/frontend/src/AdminApp.jsx
+new file mode 100644
+index 0000000..d974fed
+--- /dev/null
++++ b/frontend/src/AdminApp.jsx
+@@ -0,0 +1,245 @@
++import React, { useState, useEffect } from "react";
++import { LogOut, Loader2, TrendingUp, Users, Store, Calendar, ShoppingBag, Package, DollarSign } from "lucide-react";
++import { ProductsTab, OrdersTab } from "./AdminMarketplace";
++
++const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
++const colors = {
++  bg: "#FFFFFF", panel: "#FFFFFF", panelLight: "#F2F2F2", hairline: "#D9702E",
++  cream: "#241B14", creamDim: "#7A6F63", gold: "#D9702E",
++};
++const FONT_DISPLAY = "'Baloo 2', sans-serif";
++
++async function apiFetch(path, options = {}) {
++  const res = await fetch(`${API_BASE}${path}`, {
++    ...options,
++    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
++  });
++  const data = await res.json().catch(() => ({}));
++  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
++  return data;
++}
++
++const naira = (n) => `₦${Number(n).toLocaleString()}`;
++
++function LoginScreen({ onAuthed }) {
++  const [email, setEmail] = useState("");
++  const [password, setPassword] = useState("");
++  const [loading, setLoading] = useState(false);
++  const [error, setError] = useState(null);
++
++  const submit = async (e) => {
++    e.preventDefault();
++    setLoading(true);
++    setError(null);
++    try {
++      const data = await apiFetch("/auth/login", {
++        method: "POST",
++        body: JSON.stringify({ email, password }),
++      });
++      if (!data.user?.isAdmin) {
++        setError("This account doesn't have admin access.");
++        setLoading(false);
++        return;
++      }
++      onAuthed(data.token, data.user);
++    } catch (err) {
++      setError(err.message || "Couldn't log in.");
++      setLoading(false);
++    }
++  };
++
++  return (
++    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: colors.panelLight }}>
++      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl p-6" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
++        <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: FONT_DISPLAY, color: colors.cream }}>TheHub Admin</h1>
++        <p className="text-sm mb-6" style={{ color: colors.creamDim }}>Sign in with your admin account</p>
++        <input
++          type="email"
++          placeholder="Email"
++          value={email}
++          onChange={(e) => setEmail(e.target.value)}
++          className="w-full px-4 py-3 rounded-xl text-sm mb-3"
++          style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
++        />
++        <input
++          type="password"
++          placeholder="Password"
++          value={password}
++          onChange={(e) => setPassword(e.target.value)}
++          className="w-full px-4 py-3 rounded-xl text-sm mb-3"
++          style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
++        />
++        {error && <p className="text-xs mb-3" style={{ color: "#E07A5F" }}>{error}</p>}
++        <button
++          type="submit"
++          disabled={loading}
++          className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
++          style={{ background: colors.hairline, color: "#fff" }}
++        >
++          {loading ? <Loader2 size={16} className="animate-spin" /> : null}
++          {loading ? "Signing in..." : "Sign in"}
++        </button>
++      </form>
++    </div>
++  );
++}
++
++function KpiCard({ icon: Icon, label, value, sub }) {
++  return (
++    <div className="rounded-2xl p-4" style={{ border: `2px solid ${colors.hairline}` }}>
++      <div className="flex items-center gap-2 mb-2">
++        <Icon size={16} color={colors.hairline} />
++        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: colors.creamDim }}>{label}</p>
++      </div>
++      <p className="text-xl font-bold" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>{value}</p>
++      {sub && <p className="text-xs mt-1" style={{ color: colors.creamDim }}>{sub}</p>}
++    </div>
++  );
++}
++
++// Lightweight dependency-free line chart (avoids pulling in a charting library for two trend lines)
++function TrendChart({ title, series, height = 160 }) {
++  const width = 600;
++  const padding = 24;
++  const allValues = series.flatMap((s) => s.values);
++  const max = Math.max(1, ...allValues);
++  const points = series[0].values.length;
++  const xStep = points > 1 ? (width - padding * 2) / (points - 1) : 0;
++
++  const toPath = (values) =>
++    values
++      .map((v, i) => {
++        const x = padding + i * xStep;
++        const y = height - padding - (v / max) * (height - padding * 2);
++        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
++      })
++      .join(" ");
++
++  return (
++    <div className="rounded-2xl p-4" style={{ border: `2px solid ${colors.hairline}` }}>
++      <div className="flex items-center justify-between mb-2">
++        <p className="text-sm font-bold" style={{ color: colors.cream }}>{title}</p>
++        <div className="flex gap-3">
++          {series.map((s) => (
++            <span key={s.label} className="flex items-center gap-1 text-xs" style={{ color: colors.creamDim }}>
++              <span style={{ width: 8, height: 8, borderRadius: 4, background: s.color, display: "inline-block" }} />
++              {s.label}
++            </span>
++          ))}
++        </div>
++      </div>
++      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }}>
++        {series.map((s) => (
++          <path key={s.label} d={toPath(s.values)} fill="none" stroke={s.color} strokeWidth={2} />
++        ))}
++      </svg>
++    </div>
++  );
++}
++
++function OverviewTab({ token }) {
++  const [data, setData] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState(null);
++
++  useEffect(() => {
++    apiFetch("/admin/analytics", { headers: { Authorization: `Bearer ${token}` } })
++      .then(setData)
++      .catch(() => setError("Couldn't load analytics."))
++      .finally(() => setLoading(false));
++  }, [token]);
++
++  if (loading) return <div className="pt-16 flex justify-center"><Loader2 size={28} className="animate-spin" color={colors.creamDim} /></div>;
++  if (error) return <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>{error}</p>;
++
++  const t = data.totals;
++  const totalRevenue = t.bookingRevenue + t.marketplaceRevenue;
++
++  return (
++    <div className="px-4 py-4 space-y-4">
++      <div className="grid grid-cols-2 gap-3">
++        <KpiCard icon={DollarSign} label="Total revenue" value={naira(totalRevenue)} sub={`${naira(t.commissionEarned)} commission earned`} />
++        <KpiCard icon={Calendar} label="Bookings" value={t.bookings} sub={`${t.completedBookings} completed`} />
++        <KpiCard icon={ShoppingBag} label="Marketplace orders" value={t.marketplaceOrders} sub={naira(t.marketplaceRevenue)} />
++        <KpiCard icon={Package} label="Active products" value={t.products} />
++        <KpiCard icon={Users} label="Users" value={t.users} sub={`${t.customers} customers · ${t.owners} owners`} />
++        <KpiCard icon={Store} label="Salons" value={t.salons} />
++      </div>
++
++      <TrendChart
++        title="Bookings & orders (last 30 days)"
++        series={[
++          { label: "Bookings", color: colors.hairline, values: data.trends.map((d) => d.bookings) },
++          { label: "Marketplace orders", color: colors.creamDim, values: data.trends.map((d) => d.orders) },
++        ]}
++      />
++      <TrendChart
++        title="Revenue (last 30 days)"
++        series={[
++          { label: "Booking revenue", color: colors.hairline, values: data.trends.map((d) => d.bookingRevenue) },
++          { label: "Marketplace revenue", color: colors.creamDim, values: data.trends.map((d) => d.orderRevenue) },
++        ]}
++      />
++    </div>
++  );
++}
++
++export default function AdminApp() {
++  const [auth, setAuth] = useState(() => {
++    try {
++      const saved = localStorage.getItem("adminAuth");
++      return saved ? JSON.parse(saved) : null;
++    } catch (e) {
++      return null;
++    }
++  });
++  const [tab, setTab] = useState("overview");
++
++  if (!auth) {
++    return (
++      <LoginScreen
++        onAuthed={(token, user) => {
++          const next = { token, user };
++          localStorage.setItem("adminAuth", JSON.stringify(next));
++          setAuth(next);
++        }}
++      />
++    );
++  }
++
++  return (
++    <div style={{ background: colors.bg, minHeight: "100vh" }}>
++      <div className="flex items-center justify-between px-4 py-5 sticky top-0 z-10" style={{ background: colors.bg, borderBottom: `3px solid ${colors.hairline}` }}>
++        <h1 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 700 }}>TheHub Admin</h1>
++        <button
++          onClick={() => { localStorage.removeItem("adminAuth"); setAuth(null); }}
++          className="p-2.5 rounded-full tap-glass"
++          style={{ border: `2px solid ${colors.hairline}` }}
++        >
++          <LogOut size={18} color={colors.hairline} />
++        </button>
++      </div>
++
++      <div className="flex gap-2 px-4 pt-3">
++        {[
++          { id: "overview", label: "Overview" },
++          { id: "products", label: "Products" },
++          { id: "orders", label: "Orders" },
++        ].map((t) => (
++          <button
++            key={t.id}
++            onClick={() => setTab(t.id)}
++            className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
++            style={{ background: tab === t.id ? colors.hairline : colors.panelLight, color: tab === t.id ? "#fff" : colors.cream }}
++          >
++            {t.label}
++          </button>
++        ))}
++      </div>
++
++      {tab === "overview" && <OverviewTab token={auth.token} />}
++      {tab === "products" && <ProductsTab token={auth.token} />}
++      {tab === "orders" && <OrdersTab token={auth.token} />}
++    </div>
++  );
++}
+diff --git a/frontend/src/AdminMarketplace.jsx b/frontend/src/AdminMarketplace.jsx
+index 1bc0c02..80bbd8e 100644
+--- a/frontend/src/AdminMarketplace.jsx
++++ b/frontend/src/AdminMarketplace.jsx
+@@ -167,7 +167,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
+   );
+ }
+ 
+-function ProductsTab({ token }) {
++export function ProductsTab({ token }) {
+   const [categories, setCategories] = useState([]);
+   const [products, setProducts] = useState([]);
+   const [loading, setLoading] = useState(true);
+@@ -253,7 +253,7 @@ function ProductsTab({ token }) {
+   );
+ }
+ 
+-function OrdersTab({ token }) {
++export function OrdersTab({ token }) {
+   const [orders, setOrders] = useState([]);
+   const [loading, setLoading] = useState(true);
+   const [savingId, setSavingId] = useState(null);
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index be868e0..a8556ca 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -1,7 +1,6 @@
+ import React, { useState, useRef, useEffect } from "react";
+ import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
+ import MarketplaceView from "./Marketplace";
+-import AdminMarketplaceView from "./AdminMarketplace";
+ import {
+   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
+   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
+@@ -4135,6 +4134,19 @@ export default function App() {
+                     <CalendarCheck size={16} /> My bookings
+                   </button>
+                 )}
++                {((role === "customer" && customerAuth) || (role === "owner" && ownerAuth)) && (
++                  <button
++                    onClick={() => {
++                      setMenuOpen(false);
++                      if (role === "owner") setOwnerPage("marketplace");
++                      else setView("marketplace");
++                    }}
++                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
++                    style={{ color: colors.cream }}
++                  >
++                    <ShoppingBag size={16} /> Marketplace
++                  </button>
++                )}
+                 {role === "customer" && customerAuth && (
+                   <button
+                     onClick={() => { setMenuOpen(false); setView("marketplace"); }}
+@@ -4243,6 +4255,8 @@ export default function App() {
+                 setOwnerAuth(null);
+               }}
+             />
++            ) : ownerPage === "marketplace" ? (
++              <MarketplaceView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+             ) : (
+               <OwnerDashboard token={ownerAuth.token} />
+             )
+@@ -4321,12 +4335,6 @@ export default function App() {
+                 onBack={() => setView("home")}
+               />
+             )}
+-            {view === "adminMarketplace" && customerAuth?.user?.isAdmin && (
+-              <AdminMarketplaceView
+-                token={customerAuth.token}
+-                onBack={() => setView("home")}
+-              />
+-            )}
+             {view === "settings" && (
+               <SettingsView
+                 onBack={() => setView("home")}
+diff --git a/frontend/src/main.jsx b/frontend/src/main.jsx
+index b91620d..edb2e24 100644
+--- a/frontend/src/main.jsx
++++ b/frontend/src/main.jsx
+@@ -1,10 +1,13 @@
+ import React from "react";
+ import ReactDOM from "react-dom/client";
+ import App from "./App.jsx";
++import AdminApp from "./AdminApp.jsx";
+ import "./index.css";
+ 
++const isAdminRoute = window.location.pathname.startsWith("/admin");
++
+ ReactDOM.createRoot(document.getElementById("root")).render(
+   <React.StrictMode>
+-    <App />
++    {isAdminRoute ? <AdminApp /> : <App />}
+   </React.StrictMode>
+ );
+diff --git a/frontend/vercel.json b/frontend/vercel.json
+new file mode 100644
+index 0000000..0d199b2
+--- /dev/null
++++ b/frontend/vercel.json
+@@ -0,0 +1,5 @@
++{
++  "rewrites": [
++    { "source": "/(.*)", "destination": "/index.html" }
++  ]
++}

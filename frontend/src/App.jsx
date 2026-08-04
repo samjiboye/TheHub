@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
 import MarketplaceView from "./Marketplace";
-import AdminMarketplaceView from "./AdminMarketplace";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
@@ -4135,6 +4134,19 @@ export default function App() {
                     <CalendarCheck size={16} /> My bookings
                   </button>
                 )}
+                {((role === "customer" && customerAuth) || (role === "owner" && ownerAuth)) && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (role === "owner") setOwnerPage("marketplace");
+                      else setView("marketplace");
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: colors.cream }}
+                  >
+                    <ShoppingBag size={16} /> Marketplace
+                  </button>
+                )}
                 {role === "customer" && customerAuth && (
                   <button
                     onClick={() => { setMenuOpen(false); setView("marketplace"); }}
@@ -4243,6 +4255,8 @@ export default function App() {
                 setOwnerAuth(null);
               }}
             />
+            ) : ownerPage === "marketplace" ? (
+              <MarketplaceView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : (
               <OwnerDashboard token={ownerAuth.token} />
             )
@@ -4317,12 +4331,6 @@ export default function App() {
             )}
             {view === "marketplace" && customerAuth && (
               <MarketplaceView
-                token={customerAuth.token}
-                onBack={() => setView("home")}
-              />
-            )}
-            {view === "adminMarketplace" && customerAuth?.user?.isAdmin && (
-              <AdminMarketplaceView
                 token={customerAuth.token}
                 onBack={() => setView("home")}
               />

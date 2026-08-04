@@ -167,7 +167,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
   );
 }
 
-function ProductsTab({ token }) {
+export function ProductsTab({ token }) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -253,7 +253,7 @@ function ProductsTab({ token }) {
   );
 }
 
-function OrdersTab({ token }) {
+export function OrdersTab({ token }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
