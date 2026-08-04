@@ -4149,24 +4149,6 @@ export default function App() {
                 )}
                 {role === "customer" && customerAuth && (
                   <button
-                    onClick={() => { setMenuOpen(false); setView("marketplace"); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                    style={{ color: colors.cream }}
-                  >
-                    <ShoppingBag size={16} /> Marketplace
-                  </button>
-                )}
-                {customerAuth?.user?.isAdmin && (
-                  <button
-                    onClick={() => { setMenuOpen(false); setRole("customer"); setView("adminMarketplace"); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                    style={{ color: colors.cream }}
-                  >
-                    <Store size={16} /> Manage Marketplace
-                  </button>
-                )}
-                {role === "customer" && customerAuth && (
-                  <button
                     onClick={() => { setMenuOpen(false); setView("wallet"); }}
                     className="w-full flex items-center gap-2 px-4 py-3 text-sm"
                     style={{ color: colors.cream }}
