@@ -116,7 +116,10 @@ router.get("/mine", requireAuth, async (req, res) => {
       [req.user.id]
     );
     const { rows: items } = await db.query(
-      `SELECT * FROM product_order_items WHERE order_id = ANY($1)`,
+      `SELECT oi.*, p.image_url AS product_image_url
+       FROM product_order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = ANY($1)`,
       [orders.map((o) => o.id)]
     );
     const withItems = orders.map((order) => ({
@@ -146,7 +149,10 @@ router.get("/", requireAuth, requireAdmin, async (req, res) => {
     query += " ORDER BY o.created_at DESC";
     const { rows: orders } = await db.query(query, params);
     const { rows: items } = await db.query(
-      `SELECT * FROM product_order_items WHERE order_id = ANY($1)`,
+      `SELECT oi.*, p.image_url AS product_image_url
+       FROM product_order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = ANY($1)`,
       [orders.map((o) => o.id)]
     );
     const withItems = orders.map((order) => ({

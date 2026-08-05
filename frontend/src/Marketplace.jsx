@@ -549,20 +549,25 @@ export default function MarketplaceView({ token, onBack }) {
                       </span>
                     </div>
                     {o.items.map((it) => (
-                      <div key={it.id}>
-                        <p className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
-                        {o.status === "delivered" && (
-                          reviewedItems.has(`${o.id}-${it.product_id}`) ? (
-                            <p className="text-xs mt-1" style={{ color: colors.creamDim }}>✓ Reviewed</p>
-                          ) : (
-                            <ReviewForm
-                              token={token}
-                              productId={it.product_id}
-                              orderId={o.id}
-                              onSubmitted={() => setReviewedItems((prev) => new Set(prev).add(`${o.id}-${it.product_id}`))}
-                            />
-                          )
-                        )}
+                      <div key={it.id} className="flex items-start gap-2 mb-1">
+                        <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0" style={{ background: colors.panelLight }}>
+                          {it.product_image_url && <img src={it.product_image_url} alt="" className="w-full h-full object-cover" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
+                          {o.status === "delivered" && (
+                            reviewedItems.has(`${o.id}-${it.product_id}`) ? (
+                              <p className="text-xs mt-1" style={{ color: colors.creamDim }}>✓ Reviewed</p>
+                            ) : (
+                              <ReviewForm
+                                token={token}
+                                productId={it.product_id}
+                                orderId={o.id}
+                                onSubmitted={() => setReviewedItems((prev) => new Set(prev).add(`${o.id}-${it.product_id}`))}
+                              />
+                            )
+                          )}
+                        </div>
                       </div>
                     ))}
                     <p className="text-sm font-bold mt-2" style={{ color: colors.cream }}>{naira(o.total)}</p>

@@ -94,6 +94,14 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
   const [fileName, setFileName] = useState(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState(product?.image_url || null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setFileName(file?.name || null);
+    if (file) setPreviewImageUrl(URL.createObjectURL(file));
+  };
 
   const submit = async () => {
     if (!name.trim() || !price) {
@@ -149,7 +157,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          onChange={(e) => setFileName(e.target.files[0]?.name || null)}
+          onChange={handleFileChange}
           style={{ display: "none" }}
           id={`file-${product?.id || "new"}`}
         />
@@ -167,10 +175,30 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
           {saving ? <Loader2 size={14} className="animate-spin" /> : null}
           {saving ? "Saving..." : "Save product"}
         </button>
+        <button onClick={() => setShowPreview((v) => !v)} className="px-4 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.hairline }}>
+          {showPreview ? "Hide preview" : "Preview"}
+        </button>
         <button onClick={onCancel} className="px-4 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
           Cancel
         </button>
       </div>
+
+      {showPreview && (
+        <div className="mt-4 pt-4" style={{ borderTop: `2px dashed ${colors.hairline}` }}>
+          <p className="text-[10px] font-bold mb-2 uppercase tracking-wide" style={{ color: colors.creamDim }}>What customers will see</p>
+          <div className="rounded-2xl overflow-hidden" style={{ border: `2px solid ${colors.hairline}` }}>
+            <div className="aspect-square" style={{ background: colors.panelLight }}>
+              {previewImageUrl && <img src={previewImageUrl} alt="" className="w-full h-full object-cover" />}
+            </div>
+            <div className="p-3">
+              <p className="text-sm font-semibold" style={{ color: colors.cream }}>{name || "Product name"}</p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: colors.hairline }}>{price ? naira(price) : "₦0"}</p>
+              <p className="text-[10px] mt-0.5" style={{ color: colors.creamDim }}>Pre-order · 4–6 weeks</p>
+              {description && <p className="text-xs mt-2" style={{ color: colors.cream }}>{description}</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -313,9 +341,14 @@ export function OrdersTab({ token }) {
               NEEDS SOURCING — place this order with your supplier
             </span>
           )}
-          <p className="text-xs mb-1" style={{ color: colors.creamDim }}>{o.customer_email}</p>
+          <p className="text-xs mb-2" style={{ color: colors.creamDim }}>{o.customer_email}</p>
           {o.items.map((it) => (
-            <p key={it.id} className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
+            <div key={it.id} className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0" style={{ background: colors.panelLight }}>
+                {it.product_image_url && <img src={it.product_image_url} alt="" className="w-full h-full object-cover" />}
+              </div>
+              <p className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
+            </div>
           ))}
           <p className="text-xs mt-2" style={{ color: colors.cream }}>
             <Package size={12} className="inline mr-1" />{o.delivery_address}{o.delivery_city ? `, ${o.delivery_city}` : ""}{o.delivery_state ? `, ${o.delivery_state}` : ""} · {o.delivery_phone}
