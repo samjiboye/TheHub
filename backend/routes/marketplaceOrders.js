@@ -8,6 +8,27 @@ const router = express.Router();
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const DELIVERY_FEE = Number(process.env.MARKETPLACE_DELIVERY_FEE || 1500); // flat fee in naira until courier integration exists
+const PREORDER_DAYS = Number(process.env.MARKETPLACE_PREORDER_DAYS || 42); // ~6 weeks — realistic overseas sourcing + shipping time
+
+// GET /orders/saved-address - the customer's most recently used delivery details, for pre-filling checkout
+router.get("/saved-address", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT saved_delivery_address, saved_delivery_state, saved_delivery_city, saved_delivery_phone FROM users WHERE id = $1",
+      [req.user.id]
+    );
+    const row = rows[0] || {};
+    res.json({
+      delivery_address: row.saved_delivery_address || "",
+      delivery_state: row.saved_delivery_state || "",
+      delivery_city: row.saved_delivery_city || "",
+      delivery_phone: row.saved_delivery_phone || "",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load saved address." });
+  }
+});
 
 // POST /orders/checkout - body: { items: [{product_id, quantity}], delivery_address, delivery_state, delivery_city, delivery_phone }
 router.post("/checkout", requireAuth, async (req, res) => {
@@ -44,11 +65,18 @@ router.post("/checkout", requireAuth, async (req, res) => {
 
     const { rows: orderRows } = await db.query(
       `INSERT INTO product_orders
-        (customer_id, status, subtotal, delivery_fee, total, delivery_address, delivery_state, delivery_city, delivery_phone, payment_status)
-       VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8, 'unpaid') RETURNING id`,
-      [req.user.id, subtotal, DELIVERY_FEE, total, delivery_address, delivery_state || null, delivery_city || null, delivery_phone]
+        (customer_id, status, subtotal, delivery_fee, total, delivery_address, delivery_state, delivery_city, delivery_phone, payment_status, estimated_delivery_days)
+       VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8, 'unpaid', $9) RETURNING id`,
+      [req.user.id, subtotal, DELIVERY_FEE, total, delivery_address, delivery_state || null, delivery_city || null, delivery_phone, PREORDER_DAYS]
     );
     const orderId = orderRows[0].id;
+
+    await db.query(
+      `UPDATE users SET
+        saved_delivery_address = $1, saved_delivery_state = $2, saved_delivery_city = $3, saved_delivery_phone = $4
+       WHERE id = $5`,
+      [delivery_address, delivery_state || null, delivery_city || null, delivery_phone, req.user.id]
+    ).catch((e) => console.error("Failed to save default delivery address:", e));
 
     for (const { product, quantity } of lineItems) {
       await db.query(
@@ -134,7 +162,7 @@ router.get("/", requireAuth, requireAdmin, async (req, res) => {
 
 // PATCH /orders/:id/status - admin only, update fulfillment status / courier info
 router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
-  const { status, courier_name, courier_tracking_ref } = req.body;
+  const { status, courier_name, courier_tracking_ref, supplier_order_ref } = req.body;
   const validStatuses = ["pending", "processing", "dispatched", "delivered", "cancelled"];
   if (status && !validStatuses.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${validStatuses.join(", ")}` });
@@ -147,12 +175,13 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
 
     const { rows } = await db.query(
       `UPDATE product_orders SET
-        status = $1, courier_name = $2, courier_tracking_ref = $3
-       WHERE id = $4 RETURNING *`,
+        status = $1, courier_name = $2, courier_tracking_ref = $3, supplier_order_ref = $4
+       WHERE id = $5 RETURNING *`,
       [
         status || order.status,
         courier_name ?? order.courier_name,
         courier_tracking_ref ?? order.courier_tracking_ref,
+        supplier_order_ref ?? order.supplier_order_ref,
         req.params.id,
       ]
     );

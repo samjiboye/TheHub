@@ -6,6 +6,13 @@ const { requireAuth, requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+const DELIVERY_FEE = Number(process.env.MARKETPLACE_DELIVERY_FEE || 1500);
+const PREORDER_DAYS = Number(process.env.MARKETPLACE_PREORDER_DAYS || 42);
+
+// GET /marketplace/config - public, so the frontend never has to hardcode/guess these values
+router.get("/marketplace/config", (req, res) => {
+  res.json({ deliveryFee: DELIVERY_FEE, preorderDays: PREORDER_DAYS });
+});
 
 function uploadToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
@@ -50,9 +57,14 @@ router.get("/products", async (req, res) => {
   const { category } = req.query;
   try {
     let query = `
-      SELECT p.*, c.name AS category_name, c.slug AS category_slug
+      SELECT p.*, c.name AS category_name, c.slug AS category_slug,
+        COALESCE(r.avg_rating, 0) AS avg_rating, COALESCE(r.review_count, 0) AS review_count
       FROM products p
       LEFT JOIN product_categories c ON c.id = p.category_id
+      LEFT JOIN (
+        SELECT product_id, AVG(rating)::numeric(2,1) AS avg_rating, COUNT(*) AS review_count
+        FROM product_reviews GROUP BY product_id
+      ) r ON r.product_id = p.id
       WHERE p.is_active = true
     `;
     const params = [];
@@ -73,8 +85,14 @@ router.get("/products", async (req, res) => {
 router.get("/products/:id", async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT p.*, c.name AS category_name, c.slug AS category_slug
-       FROM products p LEFT JOIN product_categories c ON c.id = p.category_id
+      `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
+        COALESCE(r.avg_rating, 0) AS avg_rating, COALESCE(r.review_count, 0) AS review_count
+       FROM products p
+       LEFT JOIN product_categories c ON c.id = p.category_id
+       LEFT JOIN (
+         SELECT product_id, AVG(rating)::numeric(2,1) AS avg_rating, COUNT(*) AS review_count
+         FROM product_reviews GROUP BY product_id
+       ) r ON r.product_id = p.id
        WHERE p.id = $1`,
       [req.params.id]
     );
@@ -83,6 +101,54 @@ router.get("/products/:id", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't load product." });
+  }
+});
+
+// GET /products/:id/reviews - public
+router.get("/products/:id/reviews", async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT pr.id, pr.rating, pr.comment, pr.created_at, u.name AS customer_name
+       FROM product_reviews pr JOIN users u ON u.id = pr.customer_id
+       WHERE pr.product_id = $1
+       ORDER BY pr.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load reviews." });
+  }
+});
+
+// POST /products/:id/reviews - auth required, must be a delivered order containing this product
+router.post("/products/:id/reviews", requireAuth, async (req, res) => {
+  const { order_id, rating, comment } = req.body;
+  const ratingNum = parseInt(rating, 10);
+  if (!order_id || !ratingNum || ratingNum < 1 || ratingNum > 5) {
+    return res.status(400).json({ error: "order_id and a rating from 1-5 are required" });
+  }
+  try {
+    const { rows: orderRows } = await db.query(
+      `SELECT o.* FROM product_orders o
+       JOIN product_order_items oi ON oi.order_id = o.id
+       WHERE o.id = $1 AND o.customer_id = $2 AND o.status = 'delivered' AND oi.product_id = $3`,
+      [order_id, req.user.id, req.params.id]
+    );
+    if (!orderRows[0]) {
+      return res.status(403).json({ error: "You can only review products from your own delivered orders." });
+    }
+
+    const { rows } = await db.query(
+      `INSERT INTO product_reviews (product_id, customer_id, order_id, rating, comment)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.params.id, req.user.id, order_id, ratingNum, comment || null]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    if (err.code === "23505") return res.status(409).json({ error: "You've already reviewed this product for this order." });
+    res.status(500).json({ error: "Couldn't submit review." });
   }
 });
 

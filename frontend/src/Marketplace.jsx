@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ShoppingBag, Plus, Minus, X, Loader2, Package, Truck } from "lucide-react";
+import { ChevronLeft, ShoppingBag, Plus, Minus, X, Loader2, Package, Truck, Star } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 const colors = {
@@ -19,6 +19,31 @@ async function apiFetch(path, options = {}) {
 }
 
 const naira = (n) => `₦${Number(n).toLocaleString()}`;
+const PREORDER_DAYS = 42; // matches backend default (~6 weeks for overseas-sourced pre-orders)
+const PREORDER_LABEL = "4–6 weeks"; // shown to customers — a range reads more honest than a precise day count
+
+function estimatedDeliveryDate(order) {
+  const created = new Date(order.created_at);
+  created.setDate(created.getDate() + (order.estimated_delivery_days || PREORDER_DAYS));
+  return created.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function StarRow({ rating, size = 12, onSelect }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          size={size}
+          fill={n <= Math.round(rating) ? colors.hairline : "none"}
+          color={colors.hairline}
+          onClick={onSelect ? () => onSelect(n) : undefined}
+          style={onSelect ? { cursor: "pointer" } : undefined}
+        />
+      ))}
+    </div>
+  );
+}
 
 function MarketplaceHeader({ title, onBack, right }) {
   return (
@@ -45,6 +70,128 @@ function MarketplaceHeader({ title, onBack, right }) {
   );
 }
 
+function ProductDetail({ product, onBack, onAddToCart }) {
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+
+  useEffect(() => {
+    apiFetch(`/products/${product.id}/reviews`)
+      .then(setReviews)
+      .catch(() => {})
+      .finally(() => setLoadingReviews(false));
+  }, [product.id]);
+
+  return (
+    <div className="px-4 py-4">
+      <div className="rounded-2xl overflow-hidden mb-4" style={{ background: colors.panelLight }}>
+        {product.image_url && <img src={product.image_url} alt={product.name} className="w-full aspect-square object-cover" />}
+      </div>
+      <h2 className="text-xl font-bold" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>{product.name}</h2>
+      <p className="text-lg font-bold mt-1" style={{ color: colors.hairline }}>{naira(product.price)}</p>
+      {product.review_count > 0 ? (
+        <div className="flex items-center gap-2 mt-1">
+          <StarRow rating={product.avg_rating} size={14} />
+          <span className="text-xs" style={{ color: colors.creamDim }}>{product.avg_rating} · {product.review_count} review{product.review_count === 1 ? "" : "s"}</span>
+        </div>
+      ) : (
+        <p className="text-xs mt-1" style={{ color: colors.creamDim }}>No reviews yet</p>
+      )}
+      <p className="text-xs mt-2" style={{ color: colors.creamDim }}>Pre-order · delivered in {PREORDER_LABEL}</p>
+
+      {product.description && (
+        <p className="text-sm mt-4 leading-relaxed" style={{ color: colors.cream }}>{product.description}</p>
+      )}
+
+      {product.stock_quantity < 1 ? (
+        <p className="text-sm mt-5 text-center py-3" style={{ color: colors.creamDim }}>Not available right now</p>
+      ) : (
+        <button
+          onClick={() => { onAddToCart(product); onBack(); }}
+          className="w-full mt-5 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 tap-glass"
+          style={{ background: colors.hairline, color: "#fff" }}
+        >
+          <Plus size={16} /> Add to cart
+        </button>
+      )}
+
+      <div className="mt-6">
+        <h3 className="text-sm font-bold mb-3" style={{ color: colors.cream }}>Reviews</h3>
+        {loadingReviews ? (
+          <div className="pt-4 flex justify-center"><Loader2 size={20} className="animate-spin" color={colors.creamDim} /></div>
+        ) : reviews.length === 0 ? (
+          <p className="text-xs" style={{ color: colors.creamDim }}>Be the first to review this once it's delivered to you.</p>
+        ) : (
+          reviews.map((r) => (
+            <div key={r.id} className="py-3" style={{ borderTop: `1px solid ${colors.panelLight}` }}>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold" style={{ color: colors.cream }}>{r.customer_name}</p>
+                <StarRow rating={r.rating} size={11} />
+              </div>
+              {r.comment && <p className="text-xs mt-1" style={{ color: colors.creamDim }}>{r.comment}</p>}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReviewForm({ token, productId, orderId, onSubmitted }) {
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [open, setOpen] = useState(false);
+
+  const submit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiFetch(`/products/${productId}/reviews`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ order_id: orderId, rating, comment }),
+      });
+      onSubmitted();
+    } catch (err) {
+      setError(err.message || "Couldn't submit review.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-xs font-semibold mt-1" style={{ color: colors.hairline }}>
+        Leave a review
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-2 p-3 rounded-xl" style={{ background: colors.panelLight }}>
+      <StarRow rating={rating} size={18} onSelect={setRating} />
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="What did you think? (optional)"
+        rows={2}
+        className="w-full mt-2 px-2 py-2 rounded-lg text-xs"
+        style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
+      />
+      {error && <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{error}</p>}
+      <button
+        onClick={submit}
+        disabled={saving}
+        className="mt-2 px-4 py-2 rounded-lg text-xs font-bold"
+        style={{ background: colors.hairline, color: "#fff" }}
+      >
+        {saving ? "Submitting..." : "Submit review"}
+      </button>
+    </div>
+  );
+}
+
 export default function MarketplaceView({ token, onBack }) {
   const [tab, setTab] = useState("shop"); // shop | orders
   const [categories, setCategories] = useState([]);
@@ -60,6 +207,20 @@ export default function MarketplaceView({ token, onBack }) {
   const [checkoutForm, setCheckoutForm] = useState({ delivery_address: "", delivery_state: "", delivery_city: "", delivery_phone: "" });
   const [placingOrder, setPlacingOrder] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
+  const [config, setConfig] = useState({ deliveryFee: 1500, preorderDays: PREORDER_DAYS });
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [reviewedItems, setReviewedItems] = useState(() => new Set());
+
+  useEffect(() => {
+    apiFetch("/marketplace/config").then(setConfig).catch(() => {});
+    if (token) {
+      apiFetch("/orders/saved-address", { headers: { Authorization: `Bearer ${token}` } })
+        .then((saved) => {
+          if (saved.delivery_address) setCheckoutForm(saved);
+        })
+        .catch(() => {});
+    }
+  }, [token]);
 
   useEffect(() => {
     apiFetch("/product-categories").then(setCategories).catch(() => {});
@@ -132,10 +293,16 @@ export default function MarketplaceView({ token, onBack }) {
   return (
     <div style={{ paddingBottom: cart.length > 0 ? 90 : 0 }}>
       <MarketplaceHeader
-        title="Marketplace"
-        onBack={cartOpen || checkoutOpen ? () => { setCartOpen(false); setCheckoutOpen(false); } : onBack}
+        title={selectedProduct ? selectedProduct.name : "Marketplace"}
+        onBack={
+          selectedProduct
+            ? () => setSelectedProduct(null)
+            : cartOpen || checkoutOpen
+            ? () => { setCartOpen(false); setCheckoutOpen(false); }
+            : onBack
+        }
         right={
-          !checkoutOpen && (
+          !checkoutOpen && !selectedProduct && (
             <button onClick={() => setCartOpen(true)} className="relative p-2.5 rounded-full tap-glass" style={{ border: `2px solid ${colors.hairline}` }}>
               <ShoppingBag size={20} color={colors.cream} />
               {cartCount > 0 && (
@@ -151,9 +318,14 @@ export default function MarketplaceView({ token, onBack }) {
         }
       />
 
-      {checkoutOpen ? (
+      {selectedProduct ? (
+        <ProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} onAddToCart={addToCart} />
+      ) : checkoutOpen ? (
         <div className="px-4 py-4">
-          <h2 className="text-lg font-bold mb-3" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>Delivery details</h2>
+          <h2 className="text-lg font-bold mb-1" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>Delivery details</h2>
+          {checkoutForm.delivery_address && (
+            <p className="text-xs mb-3" style={{ color: colors.creamDim }}>Using your saved details — edit anything that's changed.</p>
+          )}
           <div className="space-y-3">
             <input
               placeholder="Delivery address"
@@ -194,15 +366,22 @@ export default function MarketplaceView({ token, onBack }) {
                 <span>{naira(i.product.price * i.quantity)}</span>
               </div>
             ))}
-            <div className="flex justify-between text-sm py-1" style={{ color: colors.creamDim }}>
-              <span>Delivery fee</span><span>Calculated at checkout</span>
+            <div className="flex justify-between text-sm py-1" style={{ color: colors.cream }}>
+              <span>Delivery fee</span><span>{naira(config.deliveryFee)}</span>
             </div>
             <div className="flex justify-between text-base font-bold pt-2 mt-2" style={{ borderTop: `2px solid ${colors.hairline}`, color: colors.cream }}>
-              <span>Subtotal</span><span>{naira(cartSubtotal)}</span>
+              <span>Total</span><span>{naira(cartSubtotal + config.deliveryFee)}</span>
             </div>
           </div>
+          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>
+            The {naira(config.deliveryFee)} delivery fee covers getting your order from us to your address once it arrives — it's separate from the item price.
+          </p>
 
           {checkoutError && <p className="text-xs mt-3" style={{ color: "#E07A5F" }}>{checkoutError}</p>}
+
+          <p className="text-xs mt-4 flex items-center gap-1" style={{ color: colors.creamDim }}>
+            <Package size={12} /> This is a pre-order, sourced from overseas — expect delivery in {PREORDER_LABEL} after payment.
+          </p>
 
           <button
             onClick={submitOrder}
@@ -240,8 +419,14 @@ export default function MarketplaceView({ token, onBack }) {
                   </div>
                 </div>
               ))}
-              <div className="flex justify-between text-base font-bold pt-4 mt-2" style={{ color: colors.cream }}>
+              <div className="flex justify-between text-sm pt-4" style={{ color: colors.cream }}>
                 <span>Subtotal</span><span>{naira(cartSubtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm py-1" style={{ color: colors.cream }}>
+                <span>Delivery fee</span><span>{naira(config.deliveryFee)}</span>
+              </div>
+              <div className="flex justify-between text-base font-bold pt-2 mt-1" style={{ borderTop: `2px solid ${colors.hairline}`, color: colors.cream }}>
+                <span>Total</span><span>{naira(cartSubtotal + config.deliveryFee)}</span>
               </div>
               <button
                 onClick={() => { setCartOpen(false); setCheckoutOpen(true); }}
@@ -274,6 +459,12 @@ export default function MarketplaceView({ token, onBack }) {
 
           {tab === "shop" ? (
             <>
+              <div className="mx-4 mt-3 px-4 py-3 rounded-xl flex items-center gap-2" style={{ background: colors.panelLight }}>
+                <Package size={16} color={colors.hairline} />
+                <p className="text-xs" style={{ color: colors.cream }}>
+                  All items are pre-order, sourced from overseas — delivered in {PREORDER_LABEL} after payment.
+                </p>
+              </div>
               {categories.length > 0 && (
                 <div className="flex gap-2 px-4 py-3 overflow-x-auto">
                   <button
@@ -308,18 +499,25 @@ export default function MarketplaceView({ token, onBack }) {
               ) : (
                 <div className="grid grid-cols-2 gap-3 px-4 pb-4">
                   {products.map((p) => (
-                    <div key={p.id} className="rounded-2xl overflow-hidden" style={{ border: `2px solid ${colors.hairline}` }}>
+                    <div key={p.id} className="rounded-2xl overflow-hidden tap-glass" style={{ border: `2px solid ${colors.hairline}` }} onClick={() => setSelectedProduct(p)}>
                       <div className="aspect-square" style={{ background: colors.panelLight }}>
                         {p.image_url && <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />}
                       </div>
                       <div className="p-3">
                         <p className="text-sm font-semibold truncate" style={{ color: colors.cream }}>{p.name}</p>
                         <p className="text-sm font-bold mt-0.5" style={{ color: colors.hairline }}>{naira(p.price)}</p>
+                        {p.review_count > 0 && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <StarRow rating={p.avg_rating} size={10} />
+                            <span className="text-[10px]" style={{ color: colors.creamDim }}>({p.review_count})</span>
+                          </div>
+                        )}
+                        <p className="text-[10px] mt-0.5" style={{ color: colors.creamDim }}>Pre-order · {PREORDER_LABEL}</p>
                         {p.stock_quantity < 1 ? (
-                          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>Out of stock</p>
+                          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>Not available right now</p>
                         ) : (
                           <button
-                            onClick={() => addToCart(p)}
+                            onClick={(e) => { e.stopPropagation(); addToCart(p); }}
                             className="w-full mt-2 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 tap-glass"
                             style={{ background: colors.panelLight, color: colors.cream }}
                           >
@@ -351,9 +549,28 @@ export default function MarketplaceView({ token, onBack }) {
                       </span>
                     </div>
                     {o.items.map((it) => (
-                      <p key={it.id} className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
+                      <div key={it.id}>
+                        <p className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
+                        {o.status === "delivered" && (
+                          reviewedItems.has(`${o.id}-${it.product_id}`) ? (
+                            <p className="text-xs mt-1" style={{ color: colors.creamDim }}>✓ Reviewed</p>
+                          ) : (
+                            <ReviewForm
+                              token={token}
+                              productId={it.product_id}
+                              orderId={o.id}
+                              onSubmitted={() => setReviewedItems((prev) => new Set(prev).add(`${o.id}-${it.product_id}`))}
+                            />
+                          )
+                        )}
+                      </div>
                     ))}
                     <p className="text-sm font-bold mt-2" style={{ color: colors.cream }}>{naira(o.total)}</p>
+                    {o.status !== "delivered" && o.status !== "cancelled" && (
+                      <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.creamDim }}>
+                        <Package size={12} /> Estimated delivery: {estimatedDeliveryDate(o)}
+                      </p>
+                    )}
                     {o.courier_name && (
                       <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.creamDim }}>
                         <Truck size={12} /> {o.courier_name}{o.courier_tracking_ref ? ` · ${o.courier_tracking_ref}` : ""}

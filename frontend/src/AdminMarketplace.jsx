@@ -20,6 +20,14 @@ async function apiFetch(path, options = {}) {
 
 const naira = (n) => `₦${Number(n).toLocaleString()}`;
 const ORDER_STATUSES = ["pending", "processing", "dispatched", "delivered", "cancelled"];
+const PREORDER_DAYS = 42; // matches backend default
+
+function daysUntilDue(order) {
+  const due = new Date(order.created_at);
+  due.setDate(due.getDate() + (order.estimated_delivery_days || PREORDER_DAYS));
+  const diff = Math.ceil((due - new Date()) / (1000 * 60 * 60 * 24));
+  return diff;
+}
 
 function AdminHeader({ title, onBack }) {
   return (
@@ -129,7 +137,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
         <div className="flex gap-2">
           <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="Price ₦"
             className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
-          <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="Stock qty"
+          <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="Order limit (how many you can source)"
             className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
         </div>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
@@ -240,7 +248,8 @@ export function ProductsTab({ token }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate" style={{ color: colors.cream }}>{p.name}</p>
-              <p className="text-xs" style={{ color: colors.creamDim }}>{naira(p.price)} · {p.stock_quantity} in stock{p.is_active === false ? " · inactive" : ""}</p>
+              <p className="text-xs" style={{ color: colors.creamDim }}>{naira(p.price)} · {p.stock_quantity} orders available{p.is_active === false ? " · inactive" : ""}</p>
+              <p className="text-[10px]" style={{ color: colors.creamDim }}>Pre-order · deliver within ~6 weeks</p>
             </div>
             <button onClick={() => setEditingProduct(p)} className="text-xs font-semibold px-2 py-1" style={{ color: colors.hairline }}>Edit</button>
             <button onClick={() => deleteProduct(p.id)} className="p-2 rounded-full" style={{ border: `1px solid ${colors.hairline}` }}>
@@ -261,7 +270,10 @@ export function OrdersTab({ token }) {
   const load = () => {
     setLoading(true);
     apiFetch("/orders", { headers: { Authorization: `Bearer ${token}` } })
-      .then(setOrders)
+      .then((data) => {
+        const needsSourcing = (o) => o.payment_status === "paid" && !o.supplier_order_ref && o.status !== "delivered" && o.status !== "cancelled";
+        setOrders([...data].sort((a, b) => needsSourcing(b) - needsSourcing(a)));
+      })
       .finally(() => setLoading(false));
   };
 
@@ -288,12 +300,19 @@ export function OrdersTab({ token }) {
 
   return (
     <div className="px-4 py-4">
-      {orders.map((o) => (
-        <div key={o.id} className="rounded-2xl p-4 mb-3" style={{ border: `2px solid ${colors.hairline}` }}>
+      {orders.map((o) => {
+        const needsSourcing = o.payment_status === "paid" && !o.supplier_order_ref && o.status !== "delivered" && o.status !== "cancelled";
+        return (
+        <div key={o.id} className="rounded-2xl p-4 mb-3" style={{ border: `2px solid ${needsSourcing ? "#E07A5F" : colors.hairline}` }}>
           <div className="flex justify-between items-start mb-1">
             <p className="text-sm font-bold" style={{ color: colors.cream }}>Order #{o.id} · {o.customer_name}</p>
             <p className="text-sm font-bold" style={{ color: colors.hairline }}>{naira(o.total)}</p>
           </div>
+          {needsSourcing && (
+            <span className="inline-block text-[10px] font-bold px-2 py-1 rounded-full mb-2" style={{ background: "#E07A5F", color: "#fff" }}>
+              NEEDS SOURCING — place this order with your supplier
+            </span>
+          )}
           <p className="text-xs mb-1" style={{ color: colors.creamDim }}>{o.customer_email}</p>
           {o.items.map((it) => (
             <p key={it.id} className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
@@ -301,6 +320,21 @@ export function OrdersTab({ token }) {
           <p className="text-xs mt-2" style={{ color: colors.cream }}>
             <Package size={12} className="inline mr-1" />{o.delivery_address}{o.delivery_city ? `, ${o.delivery_city}` : ""}{o.delivery_state ? `, ${o.delivery_state}` : ""} · {o.delivery_phone}
           </p>
+          {o.status !== "delivered" && o.status !== "cancelled" && o.payment_status === "paid" && (
+            <p className="text-xs mt-1 font-semibold" style={{ color: daysUntilDue(o) < 7 ? "#E07A5F" : colors.creamDim }}>
+              {daysUntilDue(o) < 0 ? `${Math.abs(daysUntilDue(o))} days overdue` : `${daysUntilDue(o)} days left to deliver`}
+            </p>
+          )}
+
+          {o.payment_status === "paid" && (
+            <input
+              defaultValue={o.supplier_order_ref || ""}
+              placeholder="Supplier order # (e.g. AliExpress order ID)"
+              onBlur={(e) => e.target.value !== (o.supplier_order_ref || "") && updateOrder(o, { supplier_order_ref: e.target.value })}
+              className="w-full mt-2 px-2 py-2 rounded-lg text-xs"
+              style={{ border: `1px solid ${needsSourcing ? "#E07A5F" : colors.hairline}`, color: colors.cream }}
+            />
+          )}
 
           <div className="flex items-center gap-2 mt-3">
             <select
@@ -335,7 +369,8 @@ export function OrdersTab({ token }) {
           )}
           {o.courier_name && <p className="text-xs mt-2 flex items-center gap-1" style={{ color: colors.creamDim }}><Truck size={12} /> {o.courier_name} {o.courier_tracking_ref}</p>}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

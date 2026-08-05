@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const db = require("../db");
 const { notifyUser } = require("../lib/notify");
+const { sendNotificationEmail } = require("../lib/email");
 const router = express.Router();
 
 router.post("/", async (req, res) => {
@@ -41,8 +42,24 @@ router.post("/", async (req, res) => {
           await notifyUser(order.customer_id, {
             type: "order_paid",
             title: "Order confirmed",
-            body: `Payment received for order #${order.id}. We're getting it ready for dispatch.`,
+            body: `Payment received for order #${order.id}. This is a pre-order item — expect delivery in about ${order.estimated_delivery_days} days.`,
           });
+
+          if (process.env.ADMIN_EMAIL) {
+            const itemLines = items.map((i) => `${i.quantity} × ${i.product_name}`).join("<br>");
+            await sendNotificationEmail(
+              process.env.ADMIN_EMAIL,
+              `New marketplace order #${order.id} — needs sourcing`,
+              `A pre-order was just paid for and needs to be placed with your supplier.<br><br>
+               <strong>Order #${order.id}</strong><br>
+               ${itemLines}<br><br>
+               Ship to: ${order.delivery_address}${order.delivery_city ? `, ${order.delivery_city}` : ""}${order.delivery_state ? `, ${order.delivery_state}` : ""}<br>
+               Phone: ${order.delivery_phone}<br><br>
+               Go to /admin → Orders to record the supplier order reference once placed.`
+            ).catch((e) => console.error("Failed to email admin about new order:", e));
+          } else {
+            console.warn(`ADMIN_EMAIL not set — sourcing email not sent for order #${order.id}`);
+          }
         }
       } catch (err) {
         console.error("Failed to update product order from webhook:", err);

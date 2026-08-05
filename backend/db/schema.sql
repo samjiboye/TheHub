@@ -147,6 +147,13 @@ ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_type_check CH
 -- Marketplace: TheHub-curated product catalog, orders, and order line items.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
 
+-- Remembers each customer's most recently used marketplace delivery details so
+-- checkout can pre-fill them next time instead of asking again.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_address TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_state TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_city TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_phone TEXT;
+
 CREATE TABLE IF NOT EXISTS product_categories (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -201,3 +208,25 @@ CREATE TABLE IF NOT EXISTS product_order_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_product_order_items_order ON product_order_items(order_id);
+
+-- Marketplace runs as pre-order for now (no held inventory) — snapshot the promised
+-- delivery window on each order so changing the default later doesn't rewrite history.
+ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS estimated_delivery_days INTEGER NOT NULL DEFAULT 42;
+-- Fulfillment is manual-assisted: admin places the matching order on a supplier site
+-- (e.g. AliExpress) after payment and records the reference here for tracking.
+ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS supplier_order_ref TEXT;
+
+-- Product reviews — tied to a specific delivered order/item so only real buyers can review,
+-- and each buyer can only review a product once per order.
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  customer_id INTEGER NOT NULL REFERENCES users(id),
+  order_id INTEGER NOT NULL REFERENCES product_orders(id),
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (product_id, order_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(product_id);
