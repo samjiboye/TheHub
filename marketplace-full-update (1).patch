@@ -1,0 +1,1238 @@
+diff --git a/backend/db/schema.sql b/backend/db/schema.sql
+index bbf9351..22d1867 100644
+--- a/backend/db/schema.sql
++++ b/backend/db/schema.sql
+@@ -147,6 +147,13 @@ ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_type_check CH
+ -- Marketplace: TheHub-curated product catalog, orders, and order line items.
+ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
+ 
++-- Remembers each customer's most recently used marketplace delivery details so
++-- checkout can pre-fill them next time instead of asking again.
++ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_address TEXT;
++ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_state TEXT;
++ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_city TEXT;
++ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_delivery_phone TEXT;
++
+ CREATE TABLE IF NOT EXISTS product_categories (
+   id SERIAL PRIMARY KEY,
+   name TEXT NOT NULL,
+@@ -201,3 +208,25 @@ CREATE TABLE IF NOT EXISTS product_order_items (
+ );
+ 
+ CREATE INDEX IF NOT EXISTS idx_product_order_items_order ON product_order_items(order_id);
++
++-- Marketplace runs as pre-order for now (no held inventory) — snapshot the promised
++-- delivery window on each order so changing the default later doesn't rewrite history.
++ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS estimated_delivery_days INTEGER NOT NULL DEFAULT 42;
++-- Fulfillment is manual-assisted: admin places the matching order on a supplier site
++-- (e.g. AliExpress) after payment and records the reference here for tracking.
++ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS supplier_order_ref TEXT;
++
++-- Product reviews — tied to a specific delivered order/item so only real buyers can review,
++-- and each buyer can only review a product once per order.
++CREATE TABLE IF NOT EXISTS product_reviews (
++  id SERIAL PRIMARY KEY,
++  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
++  customer_id INTEGER NOT NULL REFERENCES users(id),
++  order_id INTEGER NOT NULL REFERENCES product_orders(id),
++  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
++  comment TEXT,
++  created_at TIMESTAMP DEFAULT NOW(),
++  UNIQUE (product_id, order_id)
++);
++
++CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(product_id);
+diff --git a/backend/routes/marketplaceOrders.js b/backend/routes/marketplaceOrders.js
+index 8c4c72e..f460a85 100644
+--- a/backend/routes/marketplaceOrders.js
++++ b/backend/routes/marketplaceOrders.js
+@@ -8,6 +8,27 @@ const router = express.Router();
+ const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
+ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+ const DELIVERY_FEE = Number(process.env.MARKETPLACE_DELIVERY_FEE || 1500); // flat fee in naira until courier integration exists
++const PREORDER_DAYS = Number(process.env.MARKETPLACE_PREORDER_DAYS || 42); // ~6 weeks — realistic overseas sourcing + shipping time
++
++// GET /orders/saved-address - the customer's most recently used delivery details, for pre-filling checkout
++router.get("/saved-address", requireAuth, async (req, res) => {
++  try {
++    const { rows } = await db.query(
++      "SELECT saved_delivery_address, saved_delivery_state, saved_delivery_city, saved_delivery_phone FROM users WHERE id = $1",
++      [req.user.id]
++    );
++    const row = rows[0] || {};
++    res.json({
++      delivery_address: row.saved_delivery_address || "",
++      delivery_state: row.saved_delivery_state || "",
++      delivery_city: row.saved_delivery_city || "",
++      delivery_phone: row.saved_delivery_phone || "",
++    });
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load saved address." });
++  }
++});
+ 
+ // POST /orders/checkout - body: { items: [{product_id, quantity}], delivery_address, delivery_state, delivery_city, delivery_phone }
+ router.post("/checkout", requireAuth, async (req, res) => {
+@@ -44,12 +65,19 @@ router.post("/checkout", requireAuth, async (req, res) => {
+ 
+     const { rows: orderRows } = await db.query(
+       `INSERT INTO product_orders
+-        (customer_id, status, subtotal, delivery_fee, total, delivery_address, delivery_state, delivery_city, delivery_phone, payment_status)
+-       VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8, 'unpaid') RETURNING id`,
+-      [req.user.id, subtotal, DELIVERY_FEE, total, delivery_address, delivery_state || null, delivery_city || null, delivery_phone]
++        (customer_id, status, subtotal, delivery_fee, total, delivery_address, delivery_state, delivery_city, delivery_phone, payment_status, estimated_delivery_days)
++       VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7, $8, 'unpaid', $9) RETURNING id`,
++      [req.user.id, subtotal, DELIVERY_FEE, total, delivery_address, delivery_state || null, delivery_city || null, delivery_phone, PREORDER_DAYS]
+     );
+     const orderId = orderRows[0].id;
+ 
++    await db.query(
++      `UPDATE users SET
++        saved_delivery_address = $1, saved_delivery_state = $2, saved_delivery_city = $3, saved_delivery_phone = $4
++       WHERE id = $5`,
++      [delivery_address, delivery_state || null, delivery_city || null, delivery_phone, req.user.id]
++    ).catch((e) => console.error("Failed to save default delivery address:", e));
++
+     for (const { product, quantity } of lineItems) {
+       await db.query(
+         `INSERT INTO product_order_items (order_id, product_id, product_name, quantity, unit_price)
+@@ -134,7 +162,7 @@ router.get("/", requireAuth, requireAdmin, async (req, res) => {
+ 
+ // PATCH /orders/:id/status - admin only, update fulfillment status / courier info
+ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
+-  const { status, courier_name, courier_tracking_ref } = req.body;
++  const { status, courier_name, courier_tracking_ref, supplier_order_ref } = req.body;
+   const validStatuses = ["pending", "processing", "dispatched", "delivered", "cancelled"];
+   if (status && !validStatuses.includes(status)) {
+     return res.status(400).json({ error: `status must be one of: ${validStatuses.join(", ")}` });
+@@ -147,12 +175,13 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
+ 
+     const { rows } = await db.query(
+       `UPDATE product_orders SET
+-        status = $1, courier_name = $2, courier_tracking_ref = $3
+-       WHERE id = $4 RETURNING *`,
++        status = $1, courier_name = $2, courier_tracking_ref = $3, supplier_order_ref = $4
++       WHERE id = $5 RETURNING *`,
+       [
+         status || order.status,
+         courier_name ?? order.courier_name,
+         courier_tracking_ref ?? order.courier_tracking_ref,
++        supplier_order_ref ?? order.supplier_order_ref,
+         req.params.id,
+       ]
+     );
+diff --git a/backend/routes/paystackWebhook.js b/backend/routes/paystackWebhook.js
+index 5b5e81f..6f5b1b2 100644
+--- a/backend/routes/paystackWebhook.js
++++ b/backend/routes/paystackWebhook.js
+@@ -2,6 +2,7 @@ const express = require("express");
+ const crypto = require("crypto");
+ const db = require("../db");
+ const { notifyUser } = require("../lib/notify");
++const { sendNotificationEmail } = require("../lib/email");
+ const router = express.Router();
+ 
+ router.post("/", async (req, res) => {
+@@ -41,8 +42,24 @@ router.post("/", async (req, res) => {
+           await notifyUser(order.customer_id, {
+             type: "order_paid",
+             title: "Order confirmed",
+-            body: `Payment received for order #${order.id}. We're getting it ready for dispatch.`,
++            body: `Payment received for order #${order.id}. This is a pre-order item — expect delivery in about ${order.estimated_delivery_days} days.`,
+           });
++
++          if (process.env.ADMIN_EMAIL) {
++            const itemLines = items.map((i) => `${i.quantity} × ${i.product_name}`).join("<br>");
++            await sendNotificationEmail(
++              process.env.ADMIN_EMAIL,
++              `New marketplace order #${order.id} — needs sourcing`,
++              `A pre-order was just paid for and needs to be placed with your supplier.<br><br>
++               <strong>Order #${order.id}</strong><br>
++               ${itemLines}<br><br>
++               Ship to: ${order.delivery_address}${order.delivery_city ? `, ${order.delivery_city}` : ""}${order.delivery_state ? `, ${order.delivery_state}` : ""}<br>
++               Phone: ${order.delivery_phone}<br><br>
++               Go to /admin → Orders to record the supplier order reference once placed.`
++            ).catch((e) => console.error("Failed to email admin about new order:", e));
++          } else {
++            console.warn(`ADMIN_EMAIL not set — sourcing email not sent for order #${order.id}`);
++          }
+         }
+       } catch (err) {
+         console.error("Failed to update product order from webhook:", err);
+diff --git a/backend/routes/products.js b/backend/routes/products.js
+index 07842b5..2edf88b 100644
+--- a/backend/routes/products.js
++++ b/backend/routes/products.js
+@@ -6,6 +6,13 @@ const { requireAuth, requireAdmin } = require("../middleware/auth");
+ 
+ const router = express.Router();
+ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
++const DELIVERY_FEE = Number(process.env.MARKETPLACE_DELIVERY_FEE || 1500);
++const PREORDER_DAYS = Number(process.env.MARKETPLACE_PREORDER_DAYS || 42);
++
++// GET /marketplace/config - public, so the frontend never has to hardcode/guess these values
++router.get("/marketplace/config", (req, res) => {
++  res.json({ deliveryFee: DELIVERY_FEE, preorderDays: PREORDER_DAYS });
++});
+ 
+ function uploadToCloudinary(buffer) {
+   return new Promise((resolve, reject) => {
+@@ -50,9 +57,14 @@ router.get("/products", async (req, res) => {
+   const { category } = req.query;
+   try {
+     let query = `
+-      SELECT p.*, c.name AS category_name, c.slug AS category_slug
++      SELECT p.*, c.name AS category_name, c.slug AS category_slug,
++        COALESCE(r.avg_rating, 0) AS avg_rating, COALESCE(r.review_count, 0) AS review_count
+       FROM products p
+       LEFT JOIN product_categories c ON c.id = p.category_id
++      LEFT JOIN (
++        SELECT product_id, AVG(rating)::numeric(2,1) AS avg_rating, COUNT(*) AS review_count
++        FROM product_reviews GROUP BY product_id
++      ) r ON r.product_id = p.id
+       WHERE p.is_active = true
+     `;
+     const params = [];
+@@ -73,8 +85,14 @@ router.get("/products", async (req, res) => {
+ router.get("/products/:id", async (req, res) => {
+   try {
+     const { rows } = await db.query(
+-      `SELECT p.*, c.name AS category_name, c.slug AS category_slug
+-       FROM products p LEFT JOIN product_categories c ON c.id = p.category_id
++      `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
++        COALESCE(r.avg_rating, 0) AS avg_rating, COALESCE(r.review_count, 0) AS review_count
++       FROM products p
++       LEFT JOIN product_categories c ON c.id = p.category_id
++       LEFT JOIN (
++         SELECT product_id, AVG(rating)::numeric(2,1) AS avg_rating, COUNT(*) AS review_count
++         FROM product_reviews GROUP BY product_id
++       ) r ON r.product_id = p.id
+        WHERE p.id = $1`,
+       [req.params.id]
+     );
+@@ -86,6 +104,54 @@ router.get("/products/:id", async (req, res) => {
+   }
+ });
+ 
++// GET /products/:id/reviews - public
++router.get("/products/:id/reviews", async (req, res) => {
++  try {
++    const { rows } = await db.query(
++      `SELECT pr.id, pr.rating, pr.comment, pr.created_at, u.name AS customer_name
++       FROM product_reviews pr JOIN users u ON u.id = pr.customer_id
++       WHERE pr.product_id = $1
++       ORDER BY pr.created_at DESC`,
++      [req.params.id]
++    );
++    res.json(rows);
++  } catch (err) {
++    console.error(err);
++    res.status(500).json({ error: "Couldn't load reviews." });
++  }
++});
++
++// POST /products/:id/reviews - auth required, must be a delivered order containing this product
++router.post("/products/:id/reviews", requireAuth, async (req, res) => {
++  const { order_id, rating, comment } = req.body;
++  const ratingNum = parseInt(rating, 10);
++  if (!order_id || !ratingNum || ratingNum < 1 || ratingNum > 5) {
++    return res.status(400).json({ error: "order_id and a rating from 1-5 are required" });
++  }
++  try {
++    const { rows: orderRows } = await db.query(
++      `SELECT o.* FROM product_orders o
++       JOIN product_order_items oi ON oi.order_id = o.id
++       WHERE o.id = $1 AND o.customer_id = $2 AND o.status = 'delivered' AND oi.product_id = $3`,
++      [order_id, req.user.id, req.params.id]
++    );
++    if (!orderRows[0]) {
++      return res.status(403).json({ error: "You can only review products from your own delivered orders." });
++    }
++
++    const { rows } = await db.query(
++      `INSERT INTO product_reviews (product_id, customer_id, order_id, rating, comment)
++       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
++      [req.params.id, req.user.id, order_id, ratingNum, comment || null]
++    );
++    res.status(201).json(rows[0]);
++  } catch (err) {
++    console.error(err);
++    if (err.code === "23505") return res.status(409).json({ error: "You've already reviewed this product for this order." });
++    res.status(500).json({ error: "Couldn't submit review." });
++  }
++});
++
+ // POST /products - admin only, create a product with an optional image
+ router.post("/products", requireAuth, requireAdmin, upload.single("image"), async (req, res) => {
+   const { name, description, price, stock_quantity, category_id } = req.body;
+diff --git a/frontend/src/AdminMarketplace.jsx b/frontend/src/AdminMarketplace.jsx
+index 80bbd8e..1b527bf 100644
+--- a/frontend/src/AdminMarketplace.jsx
++++ b/frontend/src/AdminMarketplace.jsx
+@@ -20,6 +20,14 @@ async function apiFetch(path, options = {}) {
+ 
+ const naira = (n) => `₦${Number(n).toLocaleString()}`;
+ const ORDER_STATUSES = ["pending", "processing", "dispatched", "delivered", "cancelled"];
++const PREORDER_DAYS = 42; // matches backend default
++
++function daysUntilDue(order) {
++  const due = new Date(order.created_at);
++  due.setDate(due.getDate() + (order.estimated_delivery_days || PREORDER_DAYS));
++  const diff = Math.ceil((due - new Date()) / (1000 * 60 * 60 * 24));
++  return diff;
++}
+ 
+ function AdminHeader({ title, onBack }) {
+   return (
+@@ -129,7 +137,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
+         <div className="flex gap-2">
+           <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="Price ₦"
+             className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
+-          <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="Stock qty"
++          <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="Order limit (how many you can source)"
+             className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
+         </div>
+         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
+@@ -240,7 +248,8 @@ export function ProductsTab({ token }) {
+             </div>
+             <div className="flex-1 min-w-0">
+               <p className="text-sm font-semibold truncate" style={{ color: colors.cream }}>{p.name}</p>
+-              <p className="text-xs" style={{ color: colors.creamDim }}>{naira(p.price)} · {p.stock_quantity} in stock{p.is_active === false ? " · inactive" : ""}</p>
++              <p className="text-xs" style={{ color: colors.creamDim }}>{naira(p.price)} · {p.stock_quantity} orders available{p.is_active === false ? " · inactive" : ""}</p>
++              <p className="text-[10px]" style={{ color: colors.creamDim }}>Pre-order · deliver within ~6 weeks</p>
+             </div>
+             <button onClick={() => setEditingProduct(p)} className="text-xs font-semibold px-2 py-1" style={{ color: colors.hairline }}>Edit</button>
+             <button onClick={() => deleteProduct(p.id)} className="p-2 rounded-full" style={{ border: `1px solid ${colors.hairline}` }}>
+@@ -261,7 +270,10 @@ export function OrdersTab({ token }) {
+   const load = () => {
+     setLoading(true);
+     apiFetch("/orders", { headers: { Authorization: `Bearer ${token}` } })
+-      .then(setOrders)
++      .then((data) => {
++        const needsSourcing = (o) => o.payment_status === "paid" && !o.supplier_order_ref && o.status !== "delivered" && o.status !== "cancelled";
++        setOrders([...data].sort((a, b) => needsSourcing(b) - needsSourcing(a)));
++      })
+       .finally(() => setLoading(false));
+   };
+ 
+@@ -288,12 +300,19 @@ export function OrdersTab({ token }) {
+ 
+   return (
+     <div className="px-4 py-4">
+-      {orders.map((o) => (
+-        <div key={o.id} className="rounded-2xl p-4 mb-3" style={{ border: `2px solid ${colors.hairline}` }}>
++      {orders.map((o) => {
++        const needsSourcing = o.payment_status === "paid" && !o.supplier_order_ref && o.status !== "delivered" && o.status !== "cancelled";
++        return (
++        <div key={o.id} className="rounded-2xl p-4 mb-3" style={{ border: `2px solid ${needsSourcing ? "#E07A5F" : colors.hairline}` }}>
+           <div className="flex justify-between items-start mb-1">
+             <p className="text-sm font-bold" style={{ color: colors.cream }}>Order #{o.id} · {o.customer_name}</p>
+             <p className="text-sm font-bold" style={{ color: colors.hairline }}>{naira(o.total)}</p>
+           </div>
++          {needsSourcing && (
++            <span className="inline-block text-[10px] font-bold px-2 py-1 rounded-full mb-2" style={{ background: "#E07A5F", color: "#fff" }}>
++              NEEDS SOURCING — place this order with your supplier
++            </span>
++          )}
+           <p className="text-xs mb-1" style={{ color: colors.creamDim }}>{o.customer_email}</p>
+           {o.items.map((it) => (
+             <p key={it.id} className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
+@@ -301,6 +320,21 @@ export function OrdersTab({ token }) {
+           <p className="text-xs mt-2" style={{ color: colors.cream }}>
+             <Package size={12} className="inline mr-1" />{o.delivery_address}{o.delivery_city ? `, ${o.delivery_city}` : ""}{o.delivery_state ? `, ${o.delivery_state}` : ""} · {o.delivery_phone}
+           </p>
++          {o.status !== "delivered" && o.status !== "cancelled" && o.payment_status === "paid" && (
++            <p className="text-xs mt-1 font-semibold" style={{ color: daysUntilDue(o) < 7 ? "#E07A5F" : colors.creamDim }}>
++              {daysUntilDue(o) < 0 ? `${Math.abs(daysUntilDue(o))} days overdue` : `${daysUntilDue(o)} days left to deliver`}
++            </p>
++          )}
++
++          {o.payment_status === "paid" && (
++            <input
++              defaultValue={o.supplier_order_ref || ""}
++              placeholder="Supplier order # (e.g. AliExpress order ID)"
++              onBlur={(e) => e.target.value !== (o.supplier_order_ref || "") && updateOrder(o, { supplier_order_ref: e.target.value })}
++              className="w-full mt-2 px-2 py-2 rounded-lg text-xs"
++              style={{ border: `1px solid ${needsSourcing ? "#E07A5F" : colors.hairline}`, color: colors.cream }}
++            />
++          )}
+ 
+           <div className="flex items-center gap-2 mt-3">
+             <select
+@@ -335,7 +369,8 @@ export function OrdersTab({ token }) {
+           )}
+           {o.courier_name && <p className="text-xs mt-2 flex items-center gap-1" style={{ color: colors.creamDim }}><Truck size={12} /> {o.courier_name} {o.courier_tracking_ref}</p>}
+         </div>
+-      ))}
++        );
++      })}
+     </div>
+   );
+ }
+diff --git a/frontend/src/Marketplace.jsx b/frontend/src/Marketplace.jsx
+index d992b31..d90605f 100644
+--- a/frontend/src/Marketplace.jsx
++++ b/frontend/src/Marketplace.jsx
+@@ -1,5 +1,5 @@
+ import React, { useState, useEffect } from "react";
+-import { ChevronLeft, ShoppingBag, Plus, Minus, X, Loader2, Package, Truck } from "lucide-react";
++import { ChevronLeft, ShoppingBag, Plus, Minus, X, Loader2, Package, Truck, Star } from "lucide-react";
+ 
+ const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+ const colors = {
+@@ -19,6 +19,31 @@ async function apiFetch(path, options = {}) {
+ }
+ 
+ const naira = (n) => `₦${Number(n).toLocaleString()}`;
++const PREORDER_DAYS = 42; // matches backend default (~6 weeks for overseas-sourced pre-orders)
++const PREORDER_LABEL = "4–6 weeks"; // shown to customers — a range reads more honest than a precise day count
++
++function estimatedDeliveryDate(order) {
++  const created = new Date(order.created_at);
++  created.setDate(created.getDate() + (order.estimated_delivery_days || PREORDER_DAYS));
++  return created.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
++}
++
++function StarRow({ rating, size = 12, onSelect }) {
++  return (
++    <div className="flex gap-0.5">
++      {[1, 2, 3, 4, 5].map((n) => (
++        <Star
++          key={n}
++          size={size}
++          fill={n <= Math.round(rating) ? colors.hairline : "none"}
++          color={colors.hairline}
++          onClick={onSelect ? () => onSelect(n) : undefined}
++          style={onSelect ? { cursor: "pointer" } : undefined}
++        />
++      ))}
++    </div>
++  );
++}
+ 
+ function MarketplaceHeader({ title, onBack, right }) {
+   return (
+@@ -45,6 +70,128 @@ function MarketplaceHeader({ title, onBack, right }) {
+   );
+ }
+ 
++function ProductDetail({ product, onBack, onAddToCart }) {
++  const [reviews, setReviews] = useState([]);
++  const [loadingReviews, setLoadingReviews] = useState(true);
++
++  useEffect(() => {
++    apiFetch(`/products/${product.id}/reviews`)
++      .then(setReviews)
++      .catch(() => {})
++      .finally(() => setLoadingReviews(false));
++  }, [product.id]);
++
++  return (
++    <div className="px-4 py-4">
++      <div className="rounded-2xl overflow-hidden mb-4" style={{ background: colors.panelLight }}>
++        {product.image_url && <img src={product.image_url} alt={product.name} className="w-full aspect-square object-cover" />}
++      </div>
++      <h2 className="text-xl font-bold" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>{product.name}</h2>
++      <p className="text-lg font-bold mt-1" style={{ color: colors.hairline }}>{naira(product.price)}</p>
++      {product.review_count > 0 ? (
++        <div className="flex items-center gap-2 mt-1">
++          <StarRow rating={product.avg_rating} size={14} />
++          <span className="text-xs" style={{ color: colors.creamDim }}>{product.avg_rating} · {product.review_count} review{product.review_count === 1 ? "" : "s"}</span>
++        </div>
++      ) : (
++        <p className="text-xs mt-1" style={{ color: colors.creamDim }}>No reviews yet</p>
++      )}
++      <p className="text-xs mt-2" style={{ color: colors.creamDim }}>Pre-order · delivered in {PREORDER_LABEL}</p>
++
++      {product.description && (
++        <p className="text-sm mt-4 leading-relaxed" style={{ color: colors.cream }}>{product.description}</p>
++      )}
++
++      {product.stock_quantity < 1 ? (
++        <p className="text-sm mt-5 text-center py-3" style={{ color: colors.creamDim }}>Not available right now</p>
++      ) : (
++        <button
++          onClick={() => { onAddToCart(product); onBack(); }}
++          className="w-full mt-5 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 tap-glass"
++          style={{ background: colors.hairline, color: "#fff" }}
++        >
++          <Plus size={16} /> Add to cart
++        </button>
++      )}
++
++      <div className="mt-6">
++        <h3 className="text-sm font-bold mb-3" style={{ color: colors.cream }}>Reviews</h3>
++        {loadingReviews ? (
++          <div className="pt-4 flex justify-center"><Loader2 size={20} className="animate-spin" color={colors.creamDim} /></div>
++        ) : reviews.length === 0 ? (
++          <p className="text-xs" style={{ color: colors.creamDim }}>Be the first to review this once it's delivered to you.</p>
++        ) : (
++          reviews.map((r) => (
++            <div key={r.id} className="py-3" style={{ borderTop: `1px solid ${colors.panelLight}` }}>
++              <div className="flex items-center justify-between">
++                <p className="text-xs font-semibold" style={{ color: colors.cream }}>{r.customer_name}</p>
++                <StarRow rating={r.rating} size={11} />
++              </div>
++              {r.comment && <p className="text-xs mt-1" style={{ color: colors.creamDim }}>{r.comment}</p>}
++            </div>
++          ))
++        )}
++      </div>
++    </div>
++  );
++}
++
++function ReviewForm({ token, productId, orderId, onSubmitted }) {
++  const [rating, setRating] = useState(5);
++  const [comment, setComment] = useState("");
++  const [saving, setSaving] = useState(false);
++  const [error, setError] = useState(null);
++  const [open, setOpen] = useState(false);
++
++  const submit = async () => {
++    setSaving(true);
++    setError(null);
++    try {
++      await apiFetch(`/products/${productId}/reviews`, {
++        method: "POST",
++        headers: { Authorization: `Bearer ${token}` },
++        body: JSON.stringify({ order_id: orderId, rating, comment }),
++      });
++      onSubmitted();
++    } catch (err) {
++      setError(err.message || "Couldn't submit review.");
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  if (!open) {
++    return (
++      <button onClick={() => setOpen(true)} className="text-xs font-semibold mt-1" style={{ color: colors.hairline }}>
++        Leave a review
++      </button>
++    );
++  }
++
++  return (
++    <div className="mt-2 p-3 rounded-xl" style={{ background: colors.panelLight }}>
++      <StarRow rating={rating} size={18} onSelect={setRating} />
++      <textarea
++        value={comment}
++        onChange={(e) => setComment(e.target.value)}
++        placeholder="What did you think? (optional)"
++        rows={2}
++        className="w-full mt-2 px-2 py-2 rounded-lg text-xs"
++        style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
++      />
++      {error && <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{error}</p>}
++      <button
++        onClick={submit}
++        disabled={saving}
++        className="mt-2 px-4 py-2 rounded-lg text-xs font-bold"
++        style={{ background: colors.hairline, color: "#fff" }}
++      >
++        {saving ? "Submitting..." : "Submit review"}
++      </button>
++    </div>
++  );
++}
++
+ export default function MarketplaceView({ token, onBack }) {
+   const [tab, setTab] = useState("shop"); // shop | orders
+   const [categories, setCategories] = useState([]);
+@@ -60,6 +207,20 @@ export default function MarketplaceView({ token, onBack }) {
+   const [checkoutForm, setCheckoutForm] = useState({ delivery_address: "", delivery_state: "", delivery_city: "", delivery_phone: "" });
+   const [placingOrder, setPlacingOrder] = useState(false);
+   const [checkoutError, setCheckoutError] = useState(null);
++  const [config, setConfig] = useState({ deliveryFee: 1500, preorderDays: PREORDER_DAYS });
++  const [selectedProduct, setSelectedProduct] = useState(null);
++  const [reviewedItems, setReviewedItems] = useState(() => new Set());
++
++  useEffect(() => {
++    apiFetch("/marketplace/config").then(setConfig).catch(() => {});
++    if (token) {
++      apiFetch("/orders/saved-address", { headers: { Authorization: `Bearer ${token}` } })
++        .then((saved) => {
++          if (saved.delivery_address) setCheckoutForm(saved);
++        })
++        .catch(() => {});
++    }
++  }, [token]);
+ 
+   useEffect(() => {
+     apiFetch("/product-categories").then(setCategories).catch(() => {});
+@@ -132,10 +293,16 @@ export default function MarketplaceView({ token, onBack }) {
+   return (
+     <div style={{ paddingBottom: cart.length > 0 ? 90 : 0 }}>
+       <MarketplaceHeader
+-        title="Marketplace"
+-        onBack={cartOpen || checkoutOpen ? () => { setCartOpen(false); setCheckoutOpen(false); } : onBack}
++        title={selectedProduct ? selectedProduct.name : "Marketplace"}
++        onBack={
++          selectedProduct
++            ? () => setSelectedProduct(null)
++            : cartOpen || checkoutOpen
++            ? () => { setCartOpen(false); setCheckoutOpen(false); }
++            : onBack
++        }
+         right={
+-          !checkoutOpen && (
++          !checkoutOpen && !selectedProduct && (
+             <button onClick={() => setCartOpen(true)} className="relative p-2.5 rounded-full tap-glass" style={{ border: `2px solid ${colors.hairline}` }}>
+               <ShoppingBag size={20} color={colors.cream} />
+               {cartCount > 0 && (
+@@ -151,9 +318,14 @@ export default function MarketplaceView({ token, onBack }) {
+         }
+       />
+ 
+-      {checkoutOpen ? (
++      {selectedProduct ? (
++        <ProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} onAddToCart={addToCart} />
++      ) : checkoutOpen ? (
+         <div className="px-4 py-4">
+-          <h2 className="text-lg font-bold mb-3" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>Delivery details</h2>
++          <h2 className="text-lg font-bold mb-1" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>Delivery details</h2>
++          {checkoutForm.delivery_address && (
++            <p className="text-xs mb-3" style={{ color: colors.creamDim }}>Using your saved details — edit anything that's changed.</p>
++          )}
+           <div className="space-y-3">
+             <input
+               placeholder="Delivery address"
+@@ -194,16 +366,23 @@ export default function MarketplaceView({ token, onBack }) {
+                 <span>{naira(i.product.price * i.quantity)}</span>
+               </div>
+             ))}
+-            <div className="flex justify-between text-sm py-1" style={{ color: colors.creamDim }}>
+-              <span>Delivery fee</span><span>Calculated at checkout</span>
++            <div className="flex justify-between text-sm py-1" style={{ color: colors.cream }}>
++              <span>Delivery fee</span><span>{naira(config.deliveryFee)}</span>
+             </div>
+             <div className="flex justify-between text-base font-bold pt-2 mt-2" style={{ borderTop: `2px solid ${colors.hairline}`, color: colors.cream }}>
+-              <span>Subtotal</span><span>{naira(cartSubtotal)}</span>
++              <span>Total</span><span>{naira(cartSubtotal + config.deliveryFee)}</span>
+             </div>
+           </div>
++          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>
++            The {naira(config.deliveryFee)} delivery fee covers getting your order from us to your address once it arrives — it's separate from the item price.
++          </p>
+ 
+           {checkoutError && <p className="text-xs mt-3" style={{ color: "#E07A5F" }}>{checkoutError}</p>}
+ 
++          <p className="text-xs mt-4 flex items-center gap-1" style={{ color: colors.creamDim }}>
++            <Package size={12} /> This is a pre-order, sourced from overseas — expect delivery in {PREORDER_LABEL} after payment.
++          </p>
++
+           <button
+             onClick={submitOrder}
+             disabled={placingOrder}
+@@ -240,9 +419,15 @@ export default function MarketplaceView({ token, onBack }) {
+                   </div>
+                 </div>
+               ))}
+-              <div className="flex justify-between text-base font-bold pt-4 mt-2" style={{ color: colors.cream }}>
++              <div className="flex justify-between text-sm pt-4" style={{ color: colors.cream }}>
+                 <span>Subtotal</span><span>{naira(cartSubtotal)}</span>
+               </div>
++              <div className="flex justify-between text-sm py-1" style={{ color: colors.cream }}>
++                <span>Delivery fee</span><span>{naira(config.deliveryFee)}</span>
++              </div>
++              <div className="flex justify-between text-base font-bold pt-2 mt-1" style={{ borderTop: `2px solid ${colors.hairline}`, color: colors.cream }}>
++                <span>Total</span><span>{naira(cartSubtotal + config.deliveryFee)}</span>
++              </div>
+               <button
+                 onClick={() => { setCartOpen(false); setCheckoutOpen(true); }}
+                 className="w-full mt-4 py-4 rounded-xl font-bold text-sm"
+@@ -274,6 +459,12 @@ export default function MarketplaceView({ token, onBack }) {
+ 
+           {tab === "shop" ? (
+             <>
++              <div className="mx-4 mt-3 px-4 py-3 rounded-xl flex items-center gap-2" style={{ background: colors.panelLight }}>
++                <Package size={16} color={colors.hairline} />
++                <p className="text-xs" style={{ color: colors.cream }}>
++                  All items are pre-order, sourced from overseas — delivered in {PREORDER_LABEL} after payment.
++                </p>
++              </div>
+               {categories.length > 0 && (
+                 <div className="flex gap-2 px-4 py-3 overflow-x-auto">
+                   <button
+@@ -308,18 +499,25 @@ export default function MarketplaceView({ token, onBack }) {
+               ) : (
+                 <div className="grid grid-cols-2 gap-3 px-4 pb-4">
+                   {products.map((p) => (
+-                    <div key={p.id} className="rounded-2xl overflow-hidden" style={{ border: `2px solid ${colors.hairline}` }}>
++                    <div key={p.id} className="rounded-2xl overflow-hidden tap-glass" style={{ border: `2px solid ${colors.hairline}` }} onClick={() => setSelectedProduct(p)}>
+                       <div className="aspect-square" style={{ background: colors.panelLight }}>
+                         {p.image_url && <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />}
+                       </div>
+                       <div className="p-3">
+                         <p className="text-sm font-semibold truncate" style={{ color: colors.cream }}>{p.name}</p>
+                         <p className="text-sm font-bold mt-0.5" style={{ color: colors.hairline }}>{naira(p.price)}</p>
++                        {p.review_count > 0 && (
++                          <div className="flex items-center gap-1 mt-0.5">
++                            <StarRow rating={p.avg_rating} size={10} />
++                            <span className="text-[10px]" style={{ color: colors.creamDim }}>({p.review_count})</span>
++                          </div>
++                        )}
++                        <p className="text-[10px] mt-0.5" style={{ color: colors.creamDim }}>Pre-order · {PREORDER_LABEL}</p>
+                         {p.stock_quantity < 1 ? (
+-                          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>Out of stock</p>
++                          <p className="text-xs mt-2" style={{ color: colors.creamDim }}>Not available right now</p>
+                         ) : (
+                           <button
+-                            onClick={() => addToCart(p)}
++                            onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+                             className="w-full mt-2 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 tap-glass"
+                             style={{ background: colors.panelLight, color: colors.cream }}
+                           >
+@@ -351,9 +549,28 @@ export default function MarketplaceView({ token, onBack }) {
+                       </span>
+                     </div>
+                     {o.items.map((it) => (
+-                      <p key={it.id} className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
++                      <div key={it.id}>
++                        <p className="text-xs" style={{ color: colors.creamDim }}>{it.product_name} × {it.quantity}</p>
++                        {o.status === "delivered" && (
++                          reviewedItems.has(`${o.id}-${it.product_id}`) ? (
++                            <p className="text-xs mt-1" style={{ color: colors.creamDim }}>✓ Reviewed</p>
++                          ) : (
++                            <ReviewForm
++                              token={token}
++                              productId={it.product_id}
++                              orderId={o.id}
++                              onSubmitted={() => setReviewedItems((prev) => new Set(prev).add(`${o.id}-${it.product_id}`))}
++                            />
++                          )
++                        )}
++                      </div>
+                     ))}
+                     <p className="text-sm font-bold mt-2" style={{ color: colors.cream }}>{naira(o.total)}</p>
++                    {o.status !== "delivered" && o.status !== "cancelled" && (
++                      <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.creamDim }}>
++                        <Package size={12} /> Estimated delivery: {estimatedDeliveryDate(o)}
++                      </p>
++                    )}
+                     {o.courier_name && (
+                       <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.creamDim }}>
+                         <Truck size={12} /> {o.courier_name}{o.courier_tracking_ref ? ` · ${o.courier_tracking_ref}` : ""}
+diff --git a/remove-duplicate-marketplace (1).patch b/remove-duplicate-marketplace (1).patch
+deleted file mode 100644
+index 8811319..0000000
+--- a/remove-duplicate-marketplace (1).patch	
++++ /dev/null
+@@ -1,514 +0,0 @@
+-diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+-index a8556ca..7250de0 100644
+---- a/frontend/src/App.jsx
+-+++ b/frontend/src/App.jsx
+-@@ -4147,24 +4147,6 @@ export default function App() {
+-                     <ShoppingBag size={16} /> Marketplace
+-                   </button>
+-                 )}
+--                {role === "customer" && customerAuth && (
+--                  <button
+--                    onClick={() => { setMenuOpen(false); setView("marketplace"); }}
+--                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+--                    style={{ color: colors.cream }}
+--                  >
+--                    <ShoppingBag size={16} /> Marketplace
+--                  </button>
+--                )}
+--                {customerAuth?.user?.isAdmin && (
+--                  <button
+--                    onClick={() => { setMenuOpen(false); setRole("customer"); setView("adminMarketplace"); }}
+--                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+--                    style={{ color: colors.cream }}
+--                  >
+--                    <Store size={16} /> Manage Marketplace
+--                  </button>
+--                )}
+-                 {role === "customer" && customerAuth && (
+-                   <button
+-                     onClick={() => { setMenuOpen(false); setView("wallet"); }}
+-diff --git a/marketplace-admin-dashboard.patch b/marketplace-admin-dashboard.patch
+-deleted file mode 100644
+-index b3984e4..0000000
+---- a/marketplace-admin-dashboard.patch
+-+++ /dev/null
+-@@ -1,479 +0,0 @@
+--diff --git a/backend/routes/adminAnalytics.js b/backend/routes/adminAnalytics.js
+--new file mode 100644
+--index 0000000..e183dff
+----- /dev/null
+--+++ b/backend/routes/adminAnalytics.js
+--@@ -0,0 +1,96 @@
+--+const express = require("express");
+--+const db = require("../db");
+--+const { requireAuth, requireAdmin } = require("../middleware/auth");
+--+
+--+const router = express.Router();
+--+
+--+// GET /admin/analytics - admin only, platform-wide totals + 30-day trends
+--+router.get("/analytics", requireAuth, requireAdmin, async (req, res) => {
+--+  try {
+--+    const [
+--+      userRows,
+--+      salonRows,
+--+      bookingRows,
+--+      productRows,
+--+      orderRows,
+--+      trendRows,
+--+    ] = await Promise.all([
+--+      db.query(
+--+        `SELECT
+--+          COUNT(*) AS total,
+--+          COUNT(*) FILTER (WHERE role = 'customer') AS customers,
+--+          COUNT(*) FILTER (WHERE role = 'owner') AS owners
+--+         FROM users`
+--+      ),
+--+      db.query(`SELECT COUNT(*) AS total FROM salons`),
+--+      db.query(
+--+        `SELECT
+--+          COUNT(*) AS total,
+--+          COUNT(*) FILTER (WHERE status = 'completed') AS completed,
+--+          COALESCE(SUM(service_price) FILTER (WHERE payment_status = 'paid'), 0) AS revenue,
+--+          COALESCE(SUM(commission_amount) FILTER (WHERE payment_status = 'paid'), 0) AS commission
+--+         FROM bookings`
+--+      ),
+--+      db.query(`SELECT COUNT(*) AS total FROM products WHERE is_active = true`),
+--+      db.query(
+--+        `SELECT
+--+          COUNT(*) AS total,
+--+          COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid'), 0) AS revenue
+--+         FROM product_orders`
+--+      ),
+--+      db.query(
+--+        `WITH days AS (
+--+          SELECT generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day')::date AS day
+--+        ),
+--+        booking_stats AS (
+--+          SELECT created_at::date AS day, COUNT(*) AS count,
+--+            COALESCE(SUM(service_price) FILTER (WHERE payment_status = 'paid'), 0) AS revenue
+--+          FROM bookings GROUP BY created_at::date
+--+        ),
+--+        order_stats AS (
+--+          SELECT created_at::date AS day, COUNT(*) AS count,
+--+            COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid'), 0) AS revenue
+--+          FROM product_orders GROUP BY created_at::date
+--+        )
+--+        SELECT
+--+          days.day,
+--+          COALESCE(booking_stats.count, 0) AS bookings,
+--+          COALESCE(booking_stats.revenue, 0) AS booking_revenue,
+--+          COALESCE(order_stats.count, 0) AS orders,
+--+          COALESCE(order_stats.revenue, 0) AS order_revenue
+--+        FROM days
+--+        LEFT JOIN booking_stats ON booking_stats.day = days.day
+--+        LEFT JOIN order_stats ON order_stats.day = days.day
+--+        ORDER BY days.day`
+--+      ),
+--+    ]);
+--+
+--+    res.json({
+--+      totals: {
+--+        users: parseInt(userRows.rows[0].total, 10),
+--+        customers: parseInt(userRows.rows[0].customers, 10),
+--+        owners: parseInt(userRows.rows[0].owners, 10),
+--+        salons: parseInt(salonRows.rows[0].total, 10),
+--+        bookings: parseInt(bookingRows.rows[0].total, 10),
+--+        completedBookings: parseInt(bookingRows.rows[0].completed, 10),
+--+        bookingRevenue: parseFloat(bookingRows.rows[0].revenue),
+--+        commissionEarned: parseFloat(bookingRows.rows[0].commission),
+--+        products: parseInt(productRows.rows[0].total, 10),
+--+        marketplaceOrders: parseInt(orderRows.rows[0].total, 10),
+--+        marketplaceRevenue: parseFloat(orderRows.rows[0].revenue),
+--+      },
+--+      trends: trendRows.rows.map((r) => ({
+--+        date: r.day,
+--+        bookings: parseInt(r.bookings, 10),
+--+        bookingRevenue: parseFloat(r.booking_revenue),
+--+        orders: parseInt(r.orders, 10),
+--+        orderRevenue: parseFloat(r.order_revenue),
+--+      })),
+--+    });
+--+  } catch (err) {
+--+    console.error(err);
+--+    res.status(500).json({ error: "Couldn't load analytics." });
+--+  }
+--+});
+--+
+--+module.exports = router;
+--diff --git a/backend/server.js b/backend/server.js
+--index 21885ff..952b493 100644
+----- a/backend/server.js
+--+++ b/backend/server.js
+--@@ -17,6 +17,7 @@ const walletRoutes = require("./routes/wallet");
+-- const { startAutoReleaseJob } = require("./lib/autoRelease");
+-- const productRoutes = require("./routes/products");
+-- const marketplaceOrderRoutes = require("./routes/marketplaceOrders");
+--+const adminAnalyticsRoutes = require("./routes/adminAnalytics");
+-- 
+-- const app = express();
+-- 
+--@@ -41,6 +42,7 @@ app.use("/notifications", notificationRoutes);
+-- app.use("/wallet", walletRoutes);
+-- app.use("/", productRoutes);
+-- app.use("/orders", marketplaceOrderRoutes);
+--+app.use("/admin", adminAnalyticsRoutes);
+-- 
+-- app.use((err, req, res, next) => {
+--   console.error(err);
+--diff --git a/frontend/src/AdminApp.jsx b/frontend/src/AdminApp.jsx
+--new file mode 100644
+--index 0000000..d974fed
+----- /dev/null
+--+++ b/frontend/src/AdminApp.jsx
+--@@ -0,0 +1,245 @@
+--+import React, { useState, useEffect } from "react";
+--+import { LogOut, Loader2, TrendingUp, Users, Store, Calendar, ShoppingBag, Package, DollarSign } from "lucide-react";
+--+import { ProductsTab, OrdersTab } from "./AdminMarketplace";
+--+
+--+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+--+const colors = {
+--+  bg: "#FFFFFF", panel: "#FFFFFF", panelLight: "#F2F2F2", hairline: "#D9702E",
+--+  cream: "#241B14", creamDim: "#7A6F63", gold: "#D9702E",
+--+};
+--+const FONT_DISPLAY = "'Baloo 2', sans-serif";
+--+
+--+async function apiFetch(path, options = {}) {
+--+  const res = await fetch(`${API_BASE}${path}`, {
+--+    ...options,
+--+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+--+  });
+--+  const data = await res.json().catch(() => ({}));
+--+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+--+  return data;
+--+}
+--+
+--+const naira = (n) => `₦${Number(n).toLocaleString()}`;
+--+
+--+function LoginScreen({ onAuthed }) {
+--+  const [email, setEmail] = useState("");
+--+  const [password, setPassword] = useState("");
+--+  const [loading, setLoading] = useState(false);
+--+  const [error, setError] = useState(null);
+--+
+--+  const submit = async (e) => {
+--+    e.preventDefault();
+--+    setLoading(true);
+--+    setError(null);
+--+    try {
+--+      const data = await apiFetch("/auth/login", {
+--+        method: "POST",
+--+        body: JSON.stringify({ email, password }),
+--+      });
+--+      if (!data.user?.isAdmin) {
+--+        setError("This account doesn't have admin access.");
+--+        setLoading(false);
+--+        return;
+--+      }
+--+      onAuthed(data.token, data.user);
+--+    } catch (err) {
+--+      setError(err.message || "Couldn't log in.");
+--+      setLoading(false);
+--+    }
+--+  };
+--+
+--+  return (
+--+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: colors.panelLight }}>
+--+      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl p-6" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+--+        <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: FONT_DISPLAY, color: colors.cream }}>TheHub Admin</h1>
+--+        <p className="text-sm mb-6" style={{ color: colors.creamDim }}>Sign in with your admin account</p>
+--+        <input
+--+          type="email"
+--+          placeholder="Email"
+--+          value={email}
+--+          onChange={(e) => setEmail(e.target.value)}
+--+          className="w-full px-4 py-3 rounded-xl text-sm mb-3"
+--+          style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
+--+        />
+--+        <input
+--+          type="password"
+--+          placeholder="Password"
+--+          value={password}
+--+          onChange={(e) => setPassword(e.target.value)}
+--+          className="w-full px-4 py-3 rounded-xl text-sm mb-3"
+--+          style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
+--+        />
+--+        {error && <p className="text-xs mb-3" style={{ color: "#E07A5F" }}>{error}</p>}
+--+        <button
+--+          type="submit"
+--+          disabled={loading}
+--+          className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
+--+          style={{ background: colors.hairline, color: "#fff" }}
+--+        >
+--+          {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+--+          {loading ? "Signing in..." : "Sign in"}
+--+        </button>
+--+      </form>
+--+    </div>
+--+  );
+--+}
+--+
+--+function KpiCard({ icon: Icon, label, value, sub }) {
+--+  return (
+--+    <div className="rounded-2xl p-4" style={{ border: `2px solid ${colors.hairline}` }}>
+--+      <div className="flex items-center gap-2 mb-2">
+--+        <Icon size={16} color={colors.hairline} />
+--+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: colors.creamDim }}>{label}</p>
+--+      </div>
+--+      <p className="text-xl font-bold" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>{value}</p>
+--+      {sub && <p className="text-xs mt-1" style={{ color: colors.creamDim }}>{sub}</p>}
+--+    </div>
+--+  );
+--+}
+--+
+--+// Lightweight dependency-free line chart (avoids pulling in a charting library for two trend lines)
+--+function TrendChart({ title, series, height = 160 }) {
+--+  const width = 600;
+--+  const padding = 24;
+--+  const allValues = series.flatMap((s) => s.values);
+--+  const max = Math.max(1, ...allValues);
+--+  const points = series[0].values.length;
+--+  const xStep = points > 1 ? (width - padding * 2) / (points - 1) : 0;
+--+
+--+  const toPath = (values) =>
+--+    values
+--+      .map((v, i) => {
+--+        const x = padding + i * xStep;
+--+        const y = height - padding - (v / max) * (height - padding * 2);
+--+        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+--+      })
+--+      .join(" ");
+--+
+--+  return (
+--+    <div className="rounded-2xl p-4" style={{ border: `2px solid ${colors.hairline}` }}>
+--+      <div className="flex items-center justify-between mb-2">
+--+        <p className="text-sm font-bold" style={{ color: colors.cream }}>{title}</p>
+--+        <div className="flex gap-3">
+--+          {series.map((s) => (
+--+            <span key={s.label} className="flex items-center gap-1 text-xs" style={{ color: colors.creamDim }}>
+--+              <span style={{ width: 8, height: 8, borderRadius: 4, background: s.color, display: "inline-block" }} />
+--+              {s.label}
+--+            </span>
+--+          ))}
+--+        </div>
+--+      </div>
+--+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }}>
+--+        {series.map((s) => (
+--+          <path key={s.label} d={toPath(s.values)} fill="none" stroke={s.color} strokeWidth={2} />
+--+        ))}
+--+      </svg>
+--+    </div>
+--+  );
+--+}
+--+
+--+function OverviewTab({ token }) {
+--+  const [data, setData] = useState(null);
+--+  const [loading, setLoading] = useState(true);
+--+  const [error, setError] = useState(null);
+--+
+--+  useEffect(() => {
+--+    apiFetch("/admin/analytics", { headers: { Authorization: `Bearer ${token}` } })
+--+      .then(setData)
+--+      .catch(() => setError("Couldn't load analytics."))
+--+      .finally(() => setLoading(false));
+--+  }, [token]);
+--+
+--+  if (loading) return <div className="pt-16 flex justify-center"><Loader2 size={28} className="animate-spin" color={colors.creamDim} /></div>;
+--+  if (error) return <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>{error}</p>;
+--+
+--+  const t = data.totals;
+--+  const totalRevenue = t.bookingRevenue + t.marketplaceRevenue;
+--+
+--+  return (
+--+    <div className="px-4 py-4 space-y-4">
+--+      <div className="grid grid-cols-2 gap-3">
+--+        <KpiCard icon={DollarSign} label="Total revenue" value={naira(totalRevenue)} sub={`${naira(t.commissionEarned)} commission earned`} />
+--+        <KpiCard icon={Calendar} label="Bookings" value={t.bookings} sub={`${t.completedBookings} completed`} />
+--+        <KpiCard icon={ShoppingBag} label="Marketplace orders" value={t.marketplaceOrders} sub={naira(t.marketplaceRevenue)} />
+--+        <KpiCard icon={Package} label="Active products" value={t.products} />
+--+        <KpiCard icon={Users} label="Users" value={t.users} sub={`${t.customers} customers · ${t.owners} owners`} />
+--+        <KpiCard icon={Store} label="Salons" value={t.salons} />
+--+      </div>
+--+
+--+      <TrendChart
+--+        title="Bookings & orders (last 30 days)"
+--+        series={[
+--+          { label: "Bookings", color: colors.hairline, values: data.trends.map((d) => d.bookings) },
+--+          { label: "Marketplace orders", color: colors.creamDim, values: data.trends.map((d) => d.orders) },
+--+        ]}
+--+      />
+--+      <TrendChart
+--+        title="Revenue (last 30 days)"
+--+        series={[
+--+          { label: "Booking revenue", color: colors.hairline, values: data.trends.map((d) => d.bookingRevenue) },
+--+          { label: "Marketplace revenue", color: colors.creamDim, values: data.trends.map((d) => d.orderRevenue) },
+--+        ]}
+--+      />
+--+    </div>
+--+  );
+--+}
+--+
+--+export default function AdminApp() {
+--+  const [auth, setAuth] = useState(() => {
+--+    try {
+--+      const saved = localStorage.getItem("adminAuth");
+--+      return saved ? JSON.parse(saved) : null;
+--+    } catch (e) {
+--+      return null;
+--+    }
+--+  });
+--+  const [tab, setTab] = useState("overview");
+--+
+--+  if (!auth) {
+--+    return (
+--+      <LoginScreen
+--+        onAuthed={(token, user) => {
+--+          const next = { token, user };
+--+          localStorage.setItem("adminAuth", JSON.stringify(next));
+--+          setAuth(next);
+--+        }}
+--+      />
+--+    );
+--+  }
+--+
+--+  return (
+--+    <div style={{ background: colors.bg, minHeight: "100vh" }}>
+--+      <div className="flex items-center justify-between px-4 py-5 sticky top-0 z-10" style={{ background: colors.bg, borderBottom: `3px solid ${colors.hairline}` }}>
+--+        <h1 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 700 }}>TheHub Admin</h1>
+--+        <button
+--+          onClick={() => { localStorage.removeItem("adminAuth"); setAuth(null); }}
+--+          className="p-2.5 rounded-full tap-glass"
+--+          style={{ border: `2px solid ${colors.hairline}` }}
+--+        >
+--+          <LogOut size={18} color={colors.hairline} />
+--+        </button>
+--+      </div>
+--+
+--+      <div className="flex gap-2 px-4 pt-3">
+--+        {[
+--+          { id: "overview", label: "Overview" },
+--+          { id: "products", label: "Products" },
+--+          { id: "orders", label: "Orders" },
+--+        ].map((t) => (
+--+          <button
+--+            key={t.id}
+--+            onClick={() => setTab(t.id)}
+--+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+--+            style={{ background: tab === t.id ? colors.hairline : colors.panelLight, color: tab === t.id ? "#fff" : colors.cream }}
+--+          >
+--+            {t.label}
+--+          </button>
+--+        ))}
+--+      </div>
+--+
+--+      {tab === "overview" && <OverviewTab token={auth.token} />}
+--+      {tab === "products" && <ProductsTab token={auth.token} />}
+--+      {tab === "orders" && <OrdersTab token={auth.token} />}
+--+    </div>
+--+  );
+--+}
+--diff --git a/frontend/src/AdminMarketplace.jsx b/frontend/src/AdminMarketplace.jsx
+--index 1bc0c02..80bbd8e 100644
+----- a/frontend/src/AdminMarketplace.jsx
+--+++ b/frontend/src/AdminMarketplace.jsx
+--@@ -167,7 +167,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
+--   );
+-- }
+-- 
+---function ProductsTab({ token }) {
+--+export function ProductsTab({ token }) {
+--   const [categories, setCategories] = useState([]);
+--   const [products, setProducts] = useState([]);
+--   const [loading, setLoading] = useState(true);
+--@@ -253,7 +253,7 @@ function ProductsTab({ token }) {
+--   );
+-- }
+-- 
+---function OrdersTab({ token }) {
+--+export function OrdersTab({ token }) {
+--   const [orders, setOrders] = useState([]);
+--   const [loading, setLoading] = useState(true);
+--   const [savingId, setSavingId] = useState(null);
+--diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+--index be868e0..a8556ca 100644
+----- a/frontend/src/App.jsx
+--+++ b/frontend/src/App.jsx
+--@@ -1,7 +1,6 @@
+-- import React, { useState, useRef, useEffect } from "react";
+-- import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
+-- import MarketplaceView from "./Marketplace";
+---import AdminMarketplaceView from "./AdminMarketplace";
+-- import {
+--   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
+--   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
+--@@ -4135,6 +4134,19 @@ export default function App() {
+--                     <CalendarCheck size={16} /> My bookings
+--                   </button>
+--                 )}
+--+                {((role === "customer" && customerAuth) || (role === "owner" && ownerAuth)) && (
+--+                  <button
+--+                    onClick={() => {
+--+                      setMenuOpen(false);
+--+                      if (role === "owner") setOwnerPage("marketplace");
+--+                      else setView("marketplace");
+--+                    }}
+--+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+--+                    style={{ color: colors.cream }}
+--+                  >
+--+                    <ShoppingBag size={16} /> Marketplace
+--+                  </button>
+--+                )}
+--                 {role === "customer" && customerAuth && (
+--                   <button
+--                     onClick={() => { setMenuOpen(false); setView("marketplace"); }}
+--@@ -4243,6 +4255,8 @@ export default function App() {
+--                 setOwnerAuth(null);
+--               }}
+--             />
+--+            ) : ownerPage === "marketplace" ? (
+--+              <MarketplaceView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+--             ) : (
+--               <OwnerDashboard token={ownerAuth.token} />
+--             )
+--@@ -4321,12 +4335,6 @@ export default function App() {
+--                 onBack={() => setView("home")}
+--               />
+--             )}
+---            {view === "adminMarketplace" && customerAuth?.user?.isAdmin && (
+---              <AdminMarketplaceView
+---                token={customerAuth.token}
+---                onBack={() => setView("home")}
+---              />
+---            )}
+--             {view === "settings" && (
+--               <SettingsView
+--                 onBack={() => setView("home")}
+--diff --git a/frontend/src/main.jsx b/frontend/src/main.jsx
+--index b91620d..edb2e24 100644
+----- a/frontend/src/main.jsx
+--+++ b/frontend/src/main.jsx
+--@@ -1,10 +1,13 @@
+-- import React from "react";
+-- import ReactDOM from "react-dom/client";
+-- import App from "./App.jsx";
+--+import AdminApp from "./AdminApp.jsx";
+-- import "./index.css";
+-- 
+--+const isAdminRoute = window.location.pathname.startsWith("/admin");
+--+
+-- ReactDOM.createRoot(document.getElementById("root")).render(
+--   <React.StrictMode>
+---    <App />
+--+    {isAdminRoute ? <AdminApp /> : <App />}
+--   </React.StrictMode>
+-- );
+--diff --git a/frontend/vercel.json b/frontend/vercel.json
+--new file mode 100644
+--index 0000000..0d199b2
+----- /dev/null
+--+++ b/frontend/vercel.json
+--@@ -0,0 +1,5 @@
+--+{
+--+  "rewrites": [
+--+    { "source": "/(.*)", "destination": "/index.html" }
+--+  ]
+--+}
