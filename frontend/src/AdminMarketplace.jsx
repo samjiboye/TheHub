@@ -73,7 +73,7 @@ function AddCategoryForm({ token, onAdded }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="New category name"
-        className="flex-1 px-3 py-2.5 rounded-xl text-sm"
+        className="flex-1 px-3 py-2.5 rounded-xl text-base"
         style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
       />
       <button onClick={submit} disabled={saving} className="p-2.5 rounded-xl" style={{ background: colors.hairline }}>
@@ -131,17 +131,17 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
     <div className="rounded-2xl p-4 mb-4" style={{ border: `2px solid ${colors.hairline}` }}>
       <div className="space-y-2">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name"
-          className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
+          className="w-full px-3 py-2.5 rounded-xl text-base" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" rows={2}
-          className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
+          className="w-full px-3 py-2.5 rounded-xl text-base" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
         <div className="flex gap-2">
           <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="Price ₦"
-            className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
+            className="w-1/2 px-3 py-2.5 rounded-xl text-base" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
           <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="Order limit (how many you can source)"
-            className="w-1/2 px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
+            className="w-1/2 px-3 py-2.5 rounded-xl text-base" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }} />
         </div>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
+          className="w-full px-3 py-2.5 rounded-xl text-base" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
           <option value="">No category</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
@@ -331,7 +331,7 @@ export function OrdersTab({ token }) {
               defaultValue={o.supplier_order_ref || ""}
               placeholder="Supplier order # (e.g. AliExpress order ID)"
               onBlur={(e) => e.target.value !== (o.supplier_order_ref || "") && updateOrder(o, { supplier_order_ref: e.target.value })}
-              className="w-full mt-2 px-2 py-2 rounded-lg text-xs"
+              className="w-full mt-2 px-2 py-2 rounded-lg text-base"
               style={{ border: `1px solid ${needsSourcing ? "#E07A5F" : colors.hairline}`, color: colors.cream }}
             />
           )}
@@ -341,7 +341,7 @@ export function OrdersTab({ token }) {
               value={o.status}
               onChange={(e) => updateOrder(o, { status: e.target.value })}
               disabled={savingId === o.id}
-              className="flex-1 px-2 py-2 rounded-lg text-xs"
+              className="flex-1 px-2 py-2 rounded-lg text-base"
               style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
             >
               {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -355,14 +355,14 @@ export function OrdersTab({ token }) {
                 defaultValue={o.courier_name || ""}
                 placeholder="Courier name"
                 onBlur={(e) => e.target.value !== (o.courier_name || "") && updateOrder(o, { courier_name: e.target.value })}
-                className="flex-1 px-2 py-2 rounded-lg text-xs"
+                className="flex-1 px-2 py-2 rounded-lg text-base"
                 style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
               />
               <input
                 defaultValue={o.courier_tracking_ref || ""}
                 placeholder="Tracking ref"
                 onBlur={(e) => e.target.value !== (o.courier_tracking_ref || "") && updateOrder(o, { courier_tracking_ref: e.target.value })}
-                className="flex-1 px-2 py-2 rounded-lg text-xs"
+                className="flex-1 px-2 py-2 rounded-lg text-base"
                 style={{ border: `1px solid ${colors.hairline}`, color: colors.cream }}
               />
             </div>

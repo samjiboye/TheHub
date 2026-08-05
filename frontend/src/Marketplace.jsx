@@ -331,7 +331,7 @@ export default function MarketplaceView({ token, onBack }) {
               placeholder="Delivery address"
               value={checkoutForm.delivery_address}
               onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_address: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl text-sm"
+              className="w-full px-4 py-3 rounded-xl text-base"
               style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
             />
             <div className="flex gap-2">
@@ -339,14 +339,14 @@ export default function MarketplaceView({ token, onBack }) {
                 placeholder="State"
                 value={checkoutForm.delivery_state}
                 onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_state: e.target.value }))}
-                className="w-1/2 px-4 py-3 rounded-xl text-sm"
+                className="w-1/2 px-4 py-3 rounded-xl text-base"
                 style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
               />
               <input
                 placeholder="City"
                 value={checkoutForm.delivery_city}
                 onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_city: e.target.value }))}
-                className="w-1/2 px-4 py-3 rounded-xl text-sm"
+                className="w-1/2 px-4 py-3 rounded-xl text-base"
                 style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
               />
             </div>
@@ -354,7 +354,7 @@ export default function MarketplaceView({ token, onBack }) {
               placeholder="Phone number"
               value={checkoutForm.delivery_phone}
               onChange={(e) => setCheckoutForm((f) => ({ ...f, delivery_phone: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl text-sm"
+              className="w-full px-4 py-3 rounded-xl text-base"
               style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
             />
           </div>
