@@ -3000,7 +3000,7 @@ function RatingsReviewsView({ token, onBack }) {
 
 
 function StarSlideRating({ booking, token, onDone }) {
-  const [stars, setStars] = useState(5);
+  const [stars, setStars] = useState(1);
   const [dragging, setDragging] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [phase, setPhase] = useState("slide"); // slide | comment | done
@@ -3026,7 +3026,7 @@ function StarSlideRating({ booking, token, onDone }) {
   useEffect(() => {
     if (trackRef.current) {
       trackWidthRef.current = trackRef.current.offsetWidth;
-      setDragX(xFromStars(5, trackWidthRef.current - handleSize));
+      setDragX(xFromStars(1, trackWidthRef.current - handleSize));
     }
   }, []);
 
@@ -4428,7 +4428,10 @@ export default function App() {
                 style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
               >
                 <button
-                  onClick={() => { setMenuOpen(false); setRole("customer"); reset(); }}
+                  onClick={() => {
+                    if (role === "owner" && !window.confirm("Switch to booking mode? You'll leave your salon dashboard.")) return;
+                    setMenuOpen(false); setRole("customer"); reset();
+                  }}
                   className="w-full flex items-center gap-2 px-4 py-3 text-sm"
                   style={{
                     color: colors.cream,
