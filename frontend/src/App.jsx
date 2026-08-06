@@ -503,6 +503,8 @@ function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
   const homeOnly = service.salon_service_available === false;
   const hasHomeOption = service.home_service_price != null;
   const [time, setTime] = useState(null);
+  const [useCustomTime, setUseCustomTime] = useState(false);
+  const [customTimeInput, setCustomTimeInput] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [location, setLocation] = useState(homeOnly ? "home" : "salon");
   const [address, setAddress] = useState("");
@@ -653,11 +655,11 @@ function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
         </h3>
         <div className="grid grid-cols-2 gap-3">
           {TIME_SLOTS.map((t) => {
-            const active = time === t;
+            const active = !useCustomTime && time === t;
             return (
               <button
                 key={t}
-                onClick={() => setTime(t)}
+                onClick={() => { setUseCustomTime(false); setTime(t); }}
                 className="py-4 rounded-2xl text-lg tap-glass"
                 style={{
                   background: active ? colors.hairline : colors.panelLight,
@@ -671,6 +673,56 @@ function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
             );
           })}
         </div>
+
+        {!useCustomTime ? (
+          <button
+            onClick={() => { setUseCustomTime(true); setTime(null); }}
+            className="w-full mt-3 py-3 rounded-2xl text-sm tap-glass"
+            style={{ border: `2px dashed ${colors.hairline}`, color: textColor, fontWeight: 600 }}
+          >
+            None of these work — pick my own time
+          </button>
+        ) : (
+          <div className="mt-3 rounded-2xl overflow-hidden" style={{ border: `2px solid ${colors.hairline}` }}>
+            <input
+              type="time"
+              value={customTimeInput}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustomTimeInput(val);
+                if (val) {
+                  const [h, m] = val.split(":").map(Number);
+                  const period = h >= 12 ? "PM" : "AM";
+                  const hour12 = h % 12 === 0 ? 12 : h % 12;
+                  setTime(`${hour12}:${String(m).padStart(2, "0")} ${period}`);
+                } else {
+                  setTime(null);
+                }
+              }}
+              className="outline-none block"
+              style={{
+                background: colors.panelLight,
+                color: colors.cream,
+                boxSizing: "border-box",
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
+                padding: "10px 8px",
+                fontSize: "0.9rem",
+                border: "none",
+              }}
+            />
+          </div>
+        )}
+        {useCustomTime && (
+          <button
+            onClick={() => { setUseCustomTime(false); setTime(null); setCustomTimeInput(""); }}
+            className="mt-2 text-sm underline"
+            style={{ color: textColor }}
+          >
+            Use a fixed time slot instead
+          </button>
+        )}
 
         <div className="mt-6 rounded-2xl px-5 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
           <div className="flex justify-between text-sm" style={{ color: colors.creamDim }}>
