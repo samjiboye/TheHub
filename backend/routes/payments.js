@@ -56,7 +56,7 @@ router.post("/checkout", requireAuth, async (req, res) => {
     const service = serviceRows[0];
 
     if (!salon || !service) return res.status(404).json({ error: "Salon or service not found" });
-    if (!salon.paystack_subaccount_code || !salon.paystack_payouts_enabled) {
+    if (!salon.paystack_payouts_enabled) {
       return res.status(400).json({ error: "This salon hasn't finished setting up payouts yet." });
     }
     if (loc === "salon" && !service.salon_service_available) {
@@ -74,20 +74,21 @@ router.post("/checkout", requireAuth, async (req, res) => {
 
     const { rows: bookingRows } = await db.query(
       `INSERT INTO bookings
-        (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12, 'unpaid') RETURNING id`,
+        (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, status, service_price, booking_fee, commission_rate, commission_amount, payout_amount, payment_status, payout_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12, 'unpaid', 'pending') RETURNING id`,
       [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, commissionRate, commission_amount, payout_amount]
     );
     const bookingId = bookingRows[0].id;
 
     try {
+      // No subaccount split here — the full payment lands in the main account, and the
+      // owner's share is transferred out only once the booking is marked completed
+      // (see completeBooking.js). This holds the money as a safety net against
+      // cancellations/disputes instead of paying the owner before service is rendered.
       const transaction = await paystack.post("/transaction/initialize", {
         email: req.user.email,
         amount: Math.round(total * 100),
         currency: CURRENCY,
-        subaccount: salon.paystack_subaccount_code,
-        transaction_charge: Math.round((commission_amount + BOOKING_FEE) * 100),
-        bearer: "subaccount",
         metadata: { booking_id: bookingId },
         callback_url: `${FRONTEND_URL}/?booking_success=1&booking_id=${bookingId}`,
       });
@@ -125,7 +126,7 @@ router.post("/checkout-wallet", requireAuth, async (req, res) => {
     const service = serviceRows[0];
 
     if (!salon || !service) return res.status(404).json({ error: "Salon or service not found" });
-    if (!salon.paystack_subaccount_code || !salon.paystack_payouts_enabled) {
+    if (!salon.paystack_payouts_enabled) {
       return res.status(400).json({ error: "This salon hasn't finished setting up payouts yet." });
     }
     if (loc === "salon" && !service.salon_service_available) {

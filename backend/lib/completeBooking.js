@@ -7,14 +7,14 @@ const POINTS_PER_NAIRA = 0.01; // 1 point per ₦100 spent
 const LOYALTY_GOAL = 150; // points needed for a reward (≈₦15,000 spent, ~5 bookings at ₦3,000)
 const LOYALTY_REWARD = 500; // ₦ credited to the customer's wallet
 
-// Marks a booking completed, releases the wallet payout to the owner if applicable
-// (card-paid bookings were already split at checkout, so there's nothing to send),
-// and notifies the customer. Shared by the owner's manual confirm-completion route
-// and the 24-hour auto-release job so payout logic only lives in one place.
+// Marks a booking completed and releases the owner's payout — held until now regardless
+// of how the customer paid, so cancellations/disputes before completion never require
+// clawing money back from the owner. Shared by the owner's manual confirm-completion
+// route and the 24-hour auto-release job so payout logic only lives in one place.
 async function completeBooking(booking, salon, { auto = false } = {}) {
   await db.query("UPDATE bookings SET status = 'completed' WHERE id = $1", [booking.id]);
 
-  if (booking.payment_method === "wallet" && booking.payout_status !== "paid" && salon) {
+  if (booking.payout_status !== "paid" && salon) {
     try {
       let recipientCode = salon.paystack_recipient_code;
       if (!recipientCode) {
