@@ -825,6 +825,63 @@ const inputStyle = {
   paddingLeft: 0,
 };
 
+function BankSelect({ banks, value, onChange, placeholder = "Select bank", className, style }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = banks.find((b) => b.code === value);
+  const filtered = query.trim()
+    ? banks.filter((b) => b.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : banks;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={className || "w-full px-4 py-3 rounded-xl text-base outline-none text-left"}
+        style={style || inputStyle}
+      >
+        {selected ? selected.name : <span style={{ color: "#9CA3AF" }}>{placeholder}</span>}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setQuery(""); }} />
+          <div
+            className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-50 shadow-lg"
+            style={{ background: "#FFFFFF", border: `2px solid ${colors.hairline}` }}
+          >
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search your bank..."
+              className="w-full px-3 py-2.5 text-sm outline-none"
+              style={{ borderBottom: `2px solid ${colors.hairline}`, color: "#241B14" }}
+            />
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
+              {filtered.length === 0 ? (
+                <p className="px-3 py-3 text-sm" style={{ color: "#7A6F63" }}>No banks match that search.</p>
+              ) : (
+                filtered.map((b) => (
+                  <button
+                    key={b.code}
+                    type="button"
+                    onClick={() => { onChange(b.code); setOpen(false); setQuery(""); }}
+                    className="w-full text-left px-3 py-2.5 text-sm tap-glass"
+                    style={{ color: "#241B14", borderBottom: "1px solid #F2F2F2" }}
+                  >
+                    {b.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function AuthGate({ role, onAuthed, allowGuest }) {
   const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
@@ -1942,17 +1999,14 @@ function OwnerDashboard({ token }) {
               style={inputStyle}
             />
 
-            <select
+            <BankSelect
+              banks={banks}
               value={bankCode}
-              onChange={(e) => { setBankCode(e.target.value); setResolvedName(null); }}
-              className="w-full mt-3 px-4 py-3 rounded-xl text-base outline-none"
+              onChange={(code) => { setBankCode(code); setResolvedName(null); }}
+              placeholder="Select your bank"
+              className="w-full mt-3 px-4 py-3 rounded-xl text-base outline-none text-left"
               style={inputStyle}
-            >
-              <option value="">Select your bank</option>
-              {banks.map((b) => (
-                <option key={b.code} value={b.code}>{b.name}</option>
-              ))}
-            </select>
+            />
 
             <input
               value={accountNumber}
@@ -2826,15 +2880,14 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                     className="w-full pb-2 text-base outline-none"
                     style={inputStyle}
                   />
-                  <select
+                  <BankSelect
+                    banks={banks}
                     value={bankCode}
-                    onChange={(e) => { setBankCode(e.target.value); setResolvedName(null); }}
-                    className="w-full pb-2 text-base outline-none"
+                    onChange={(code) => { setBankCode(code); setResolvedName(null); }}
+                    placeholder="Select bank"
+                    className="w-full pb-2 text-base outline-none text-left"
                     style={inputStyle}
-                  >
-                    <option value="">Select bank</option>
-                    {banks.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
-                  </select>
+                  />
                   <input
                     value={accountNumber}
                     onChange={(e) => { setAccountNumber(e.target.value); setResolvedName(null); }}
@@ -4327,7 +4380,24 @@ export default function App() {
                         notifications.map((n) => (
                           <button
                             key={n.id}
-                            onClick={() => !n.read && markNotificationRead(n.id)}
+                            onClick={() => {
+                              if (!n.read) markNotificationRead(n.id);
+                              const ownerTypes = ["new_booking"];
+                              const customerBookingTypes = [
+                                "booking_confirmed", "booking_accepted", "booking_declined",
+                                "booking_cancelled", "completion_requested", "booking_completed",
+                                "booking_disputed", "reminder",
+                              ];
+                              if (ownerTypes.includes(n.type)) {
+                                setNotifOpen(false);
+                                setRole("owner");
+                                setOwnerPage("dashboard");
+                              } else if (customerBookingTypes.includes(n.type)) {
+                                setNotifOpen(false);
+                                setRole("customer");
+                                setView("myBookings");
+                              }
+                            }}
                             className="w-full text-left px-4 py-3"
                             style={{
                               borderBottom: `1px solid ${colors.hairline}`,
