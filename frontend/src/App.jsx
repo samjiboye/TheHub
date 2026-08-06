@@ -2267,6 +2267,68 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
   const [deletingSalon, setDeletingSalon] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
 
+  const [editingPayout, setEditingPayout] = useState(false);
+  const [banks, setBanks] = useState([]);
+  const [businessName, setBusinessName] = useState("");
+  const [bankCode, setBankCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [resolvedName, setResolvedName] = useState(null);
+  const [resolving, setResolving] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState(null);
+
+  useEffect(() => {
+    if (!token || !editingPayout || banks.length > 0) return;
+    apiFetch("/payments/banks", { headers: { Authorization: `Bearer ${token}` } })
+      .then(setBanks)
+      .catch(() => {});
+  }, [token, editingPayout]);
+
+  const verifyPayoutAccount = async () => {
+    if (!bankCode || accountNumber.length !== 10) return;
+    setResolving(true);
+    setResolvedName(null);
+    try {
+      const { account_name } = await apiFetch(
+        `/payments/resolve-account?account_number=${accountNumber}&bank_code=${bankCode}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setResolvedName(account_name);
+    } catch (e) {
+      setResolvedName(null);
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const connectPayouts = async () => {
+    if (!salon || connecting) return;
+    if (!businessName || !bankCode || !accountNumber) {
+      setConnectError("Fill in business name, bank, and account number.");
+      return;
+    }
+    setConnecting(true);
+    setConnectError(null);
+    try {
+      await apiFetch("/payments/connect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          salon_id: salon.id,
+          business_name: businessName,
+          bank_code: bankCode,
+          account_number: accountNumber,
+        }),
+      });
+      setSalon((prev) => ({ ...prev, paystack_payouts_enabled: 1 }));
+      setEditingPayout(false);
+    } catch (e) {
+      setConnectError(e.message || "Couldn't update payout details.");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const loadSalon = () => {
     setLoading(true);
     apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } })
@@ -2639,6 +2701,68 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                   style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
                   <Plus size={16} /> Add a service
                 </button>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-2xl px-4 py-4" style={{ border: `2px solid ${colors.hairline}` }}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg">Payout details</h3>
+                {!editingPayout && (
+                  <button onClick={() => { setEditingPayout(true); setConnectError(null); }} className="text-sm font-semibold" style={{ color: colors.hairline }}>
+                    {salon.paystack_payouts_enabled ? "Update" : "Set up"}
+                  </button>
+                )}
+              </div>
+
+              {!editingPayout ? (
+                <p className="text-sm" style={{ color: colors.creamDim }}>
+                  {salon.paystack_payouts_enabled
+                    ? "Payouts are connected. You can update your bank details anytime — for example if your account number changes, or after switching from test to live payments."
+                    : "Not connected yet — you won't receive automatic payouts until this is set up."}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="Business name"
+                    className="w-full pb-2 text-base outline-none"
+                    style={inputStyle}
+                  />
+                  <select
+                    value={bankCode}
+                    onChange={(e) => { setBankCode(e.target.value); setResolvedName(null); }}
+                    className="w-full pb-2 text-base outline-none"
+                    style={inputStyle}
+                  >
+                    <option value="">Select bank</option>
+                    {banks.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
+                  </select>
+                  <input
+                    value={accountNumber}
+                    onChange={(e) => { setAccountNumber(e.target.value); setResolvedName(null); }}
+                    onBlur={verifyPayoutAccount}
+                    placeholder="Account number"
+                    maxLength={10}
+                    className="w-full pb-2 text-base outline-none"
+                    style={inputStyle}
+                  />
+                  {resolving && <p className="text-xs" style={{ color: colors.creamDim }}>Verifying...</p>}
+                  {resolvedName && <p className="text-xs font-semibold" style={{ color: colors.hairline }}>{resolvedName}</p>}
+                  {connectError && <p className="text-sm" style={{ color: "#E07A5F" }}>{connectError}</p>}
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={connectPayouts} disabled={connecting}
+                      className="flex-1 py-2 rounded-full text-sm tap-glass"
+                      style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}>
+                      {connecting ? <Loader2 size={16} className="animate-spin" /> : "Save"}
+                    </button>
+                    <button onClick={() => setEditingPayout(false)}
+                      className="flex-1 py-2 rounded-full text-sm tap-glass"
+                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 
