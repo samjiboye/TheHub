@@ -3514,9 +3514,9 @@ function SettingsView({ onBack, onWatchIntro }) {
   );
 }
 
-function Concierge({ open, onClose }) {
+function Concierge({ open, onClose, onSelectSalon }) {
   const [messages, setMessages] = useState([
-    { role: "assistant", text: "Hi, I'm Aria. Tell me what you're after — a service, a budget, how far you'll travel — and I'll point you to the right place." },
+    { role: "assistant", text: "Hi, I'm Aria. Tell me what you're after — a service, a budget, how far you'll travel — and I'll point you to the right place.", matches: [] },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -3532,17 +3532,15 @@ function Concierge({ open, onClose }) {
     setInput("");
     setLoading(true);
     try {
-      // The backend builds the live salon list and holds the Anthropic API key —
-      // the browser never talks to Anthropic directly.
-      const { text } = await apiFetch("/concierge", {
+      const { text, matches } = await apiFetch("/concierge", {
         method: "POST",
         body: JSON.stringify({
           messages: nextMessages.map((m) => ({ role: m.role, content: m.text })),
         }),
       });
-      setMessages((prev) => [...prev, { role: "assistant", text }]);
+      setMessages((prev) => [...prev, { role: "assistant", text, matches: matches || [] }]);
     } catch (e) {
-      setMessages((prev) => [...prev, { role: "assistant", text: "Aria's having trouble connecting right now — try again in a moment." }]);
+      setMessages((prev) => [...prev, { role: "assistant", text: "Aria's having trouble connecting right now — try again in a moment.", matches: [] }]);
     } finally {
       setLoading(false);
     }
@@ -3566,18 +3564,25 @@ function Concierge({ open, onClose }) {
         </div>
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
           {messages.map((m, i) => (
-            <div
-              key={i}
-              className="max-w-[85%] px-4 py-2.5 rounded-2xl text-base"
-              style={{
-                alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                background: m.role === "user" ? colors.hairline : colors.panelLight,
-                color: m.role === "user" ? "#FFFFFF" : colors.cream,
-                border: m.role === "user" ? "none" : `2px solid ${colors.hairline}`,
-                fontFamily: FONT_BODY,
-              }}
-            >
-              {m.text}
+            <div key={i} className="flex flex-col gap-2" style={{ alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
+              <div
+                className="max-w-[85%] px-4 py-2.5 rounded-2xl text-base"
+                style={{
+                  background: m.role === "user" ? colors.hairline : colors.panelLight,
+                  color: m.role === "user" ? "#FFFFFF" : colors.cream,
+                  border: m.role === "user" ? "none" : `2px solid ${colors.hairline}`,
+                  fontFamily: FONT_BODY,
+                }}
+              >
+                {m.text}
+              </div>
+              {m.matches && m.matches.length > 0 && (
+                <div className="w-full flex flex-col gap-2">
+                  {m.matches.map((s) => (
+                    <SalonCard key={s.id} salon={s} onClick={() => { onSelectSalon(s); onClose(); }} />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {loading && (
@@ -3589,7 +3594,7 @@ function Concierge({ open, onClose }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="I need a cut under $30..."
+            placeholder="I need a cut under ₦5000..."
             className="flex-1 bg-transparent outline-none text-base px-4 py-2.5 rounded-full"
             style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontFamily: FONT_BODY }}
           />
@@ -4528,7 +4533,11 @@ export default function App() {
             <MessageCircle size={20} /> Ask Aria
           </button>
         )}
-        <Concierge open={chatOpen} onClose={() => setChatOpen(false)} />
+        <Concierge
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          onSelectSalon={(s) => { setSelectedSalon(s); setRole("customer"); setView("profile"); }}
+        />
         {customerAuth && unratedQueue.length > 0 && !ratingPopupDismissed && (
           <RatingPopup
             booking={unratedQueue[0]}

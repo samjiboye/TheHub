@@ -3,6 +3,8 @@ const db = require("../db");
 const router = express.Router();
 
 // POST /concierge — proxies chat messages to Claude, keeping the API key server-side.
+// Returns both a conversational reply and structured salon matches so the frontend
+// can render tappable results instead of just prose the customer has to act on manually.
 router.post("/", async (req, res) => {
   const { messages } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -14,14 +16,25 @@ router.post("/", async (req, res) => {
 
   try {
     const { rows: salons } = await db.query("SELECT * FROM salons");
-    const salonSummary = (
-      await Promise.all(
-        salons.map(async (s) => {
-          const { rows: services } = await db.query("SELECT * FROM services WHERE salon_id = $1", [s.id]);
-          return `${s.name} (${s.category}, services: ${services.map((sv) => `${sv.name} $${sv.price}`).join(", ")})`;
-        })
+    const enrichedSalons = await Promise.all(
+      salons.map(async (s) => {
+        const { rows: services } = await db.query("SELECT * FROM services WHERE salon_id = $1", [s.id]);
+        const { rows: statRows } = await db.query(
+          "SELECT COUNT(*) FILTER (WHERE rating = 5) AS five_star_count FROM reviews WHERE salon_id = $1",
+          [s.id]
+        );
+        return { ...s, services, fiveStarCount: Number(statRows[0].five_star_count) };
+      })
+    );
+
+    const salonListForPrompt = enrichedSalons
+      .map(
+        (s) =>
+          `id=${s.id} | ${s.name} (${s.category}, ${s.city || ""} ${s.state || ""}) — services: ${
+            s.services.map((sv) => `${sv.name} ₦${sv.price}`).join(", ") || "none listed"
+          }`
       )
-    ).join("\n");
+      .join("\n");
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -33,15 +46,38 @@ router.post("/", async (req, res) => {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1000,
-        system: `You are Aria, the warm and concise front-desk concierge for TheHub, a local beauty booking app. Recommend from this exact list of salons only, referring to them by name. Keep replies to 2-4 sentences, friendly but efficient, like a good front-desk person. Salons:\n${salonSummary}`,
+        system: `You are Aria, the warm and concise front-desk concierge for TheHub, a Nigerian beauty booking app. Prices are in naira (₦).
+
+Match the customer's request (service type, budget, location, etc.) against this exact list of salons and their services — never invent salons or services not listed here:
+${salonListForPrompt}
+
+Respond with ONLY a JSON object, no markdown fences, no other text, in this exact shape:
+{"reply": "2-4 sentence friendly reply", "matchIds": [salon ids that genuinely match, best first, max 3]}
+
+If nothing genuinely matches, use an empty matchIds array and say so honestly in the reply — never force a weak match.`,
         messages,
       }),
     });
     const data = await response.json();
-    const text =
-      data?.content?.find((c) => c.type === "text")?.text ||
-      "Sorry, I couldn't quite get that — could you try asking again?";
-    res.json({ text });
+    const rawText = data?.content?.find((c) => c.type === "text")?.text || "";
+
+    let reply = "Sorry, I couldn't quite get that — could you try asking again?";
+    let matchIds = [];
+    try {
+      const cleaned = rawText.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
+      const parsed = JSON.parse(cleaned);
+      if (parsed.reply) reply = parsed.reply;
+      if (Array.isArray(parsed.matchIds)) matchIds = parsed.matchIds;
+    } catch (e) {
+      if (rawText) reply = rawText;
+    }
+
+    const matches = matchIds
+      .map((id) => enrichedSalons.find((s) => s.id === id))
+      .filter(Boolean)
+      .slice(0, 3);
+
+    res.json({ text: reply, matches });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Aria is having trouble connecting right now." });
