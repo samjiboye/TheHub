@@ -616,6 +616,15 @@ function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
           </p>
         )}
 
+        {location === "salon" && (salon.address || salon.city || salon.state) && (
+          <div className="mb-4 px-4 py-3 rounded-xl flex items-start gap-2" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+            <MapPin size={16} color={colors.hairline} className="mt-0.5 shrink-0" />
+            <p className="text-sm" style={{ color: colors.cream }}>
+              {salon.address || "Address not set"}{salon.city ? `, ${salon.city}` : ""}{salon.state ? `, ${salon.state}` : ""}
+            </p>
+          </div>
+        )}
+
         {location === "home" && (
           <input
             value={address}
@@ -2853,34 +2862,6 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                 </div>
               )}
             </div>
-
-            <div className="mt-4 rounded-2xl px-4 py-4" style={{ border: `2px solid #E07A5F` }}>
-              <h3 style={{ fontFamily: FONT_DISPLAY, color: "#E07A5F", fontWeight: 700 }} className="text-lg mb-2">Danger zone</h3>
-              <p className="text-sm mb-3" style={{ color: colors.creamDim }}>
-                Permanently delete this salon listing. This only works if it has no booking history.
-              </p>
-              {deleteError && <p className="text-sm mb-3" style={{ color: "#E07A5F" }}>{deleteError}</p>}
-              {confirmDeleteSalon ? (
-                <div className="flex gap-2">
-                  <button onClick={handleDeleteSalon} disabled={deletingSalon}
-                    className="flex-1 py-2.5 rounded-full text-sm tap-glass"
-                    style={{ background: "#E07A5F", color: "#FFFFFF", fontWeight: 700 }}>
-                    {deletingSalon ? <Loader2 size={16} className="animate-spin" /> : "Yes, delete permanently"}
-                  </button>
-                  <button onClick={() => setConfirmDeleteSalon(false)}
-                    className="flex-1 py-2.5 rounded-full text-sm tap-glass"
-                    style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}>
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setConfirmDeleteSalon(true)}
-                  className="w-full py-2.5 rounded-full text-sm font-semibold tap-glass"
-                  style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}>
-                  Delete my salon profile
-                </button>
-              )}
-            </div>
           </>
         )}
       </div>
@@ -3498,6 +3479,34 @@ function SettingsView({ onBack, onWatchIntro }) {
   const savedCustomer = JSON.parse(localStorage.getItem("customerAuth") || "null");
   const savedOwner = JSON.parse(localStorage.getItem("ownerAuth") || "null");
   const user = savedCustomer?.user || savedOwner?.user || {};
+  const ownerToken = savedOwner?.token;
+
+  const [ownerSalon, setOwnerSalon] = useState(null);
+  const [confirmDeleteSalon, setConfirmDeleteSalon] = useState(false);
+  const [deletingSalon, setDeletingSalon] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  useEffect(() => {
+    if (!ownerToken) return;
+    apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${ownerToken}` } })
+      .then((data) => setOwnerSalon(data[0] || null))
+      .catch(() => {});
+  }, [ownerToken]);
+
+  const handleDeleteSalon = async () => {
+    setDeletingSalon(true);
+    setDeleteError(null);
+    try {
+      await apiFetch(`/salons/${ownerSalon.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${ownerToken}` },
+      });
+      onBack && onBack();
+    } catch (err) {
+      setDeleteError(err.message || "Couldn't delete this salon.");
+      setDeletingSalon(false);
+    }
+  };
 
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
@@ -3532,6 +3541,35 @@ function SettingsView({ onBack, onWatchIntro }) {
           >
             Watch intro again
           </button>
+        )}
+        {ownerSalon && (
+          <div className="mt-4 rounded-2xl px-4 py-4" style={{ border: `2px solid #E07A5F` }}>
+            <h3 style={{ fontFamily: FONT_DISPLAY, color: "#E07A5F", fontWeight: 700 }} className="text-lg mb-2">Danger zone</h3>
+            <p className="text-sm mb-3" style={{ color: colors.creamDim }}>
+              Permanently delete this salon listing. This only works if it has no booking history.
+            </p>
+            {deleteError && <p className="text-sm mb-3" style={{ color: "#E07A5F" }}>{deleteError}</p>}
+            {confirmDeleteSalon ? (
+              <div className="flex gap-2">
+                <button onClick={handleDeleteSalon} disabled={deletingSalon}
+                  className="flex-1 py-2.5 rounded-full text-sm tap-glass"
+                  style={{ background: "#E07A5F", color: "#FFFFFF", fontWeight: 700 }}>
+                  {deletingSalon ? <Loader2 size={16} className="animate-spin" /> : "Yes, delete permanently"}
+                </button>
+                <button onClick={() => setConfirmDeleteSalon(false)}
+                  className="flex-1 py-2.5 rounded-full text-sm tap-glass"
+                  style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDeleteSalon(true)}
+                className="w-full py-2.5 rounded-full text-sm font-semibold tap-glass"
+                style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}>
+                Delete my salon profile
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
