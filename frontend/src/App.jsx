@@ -198,7 +198,7 @@ function SalonCard({ salon, onClick }) {
       className="text-left rounded-3xl overflow-hidden w-full transition-transform active:scale-[0.97]"
       style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}
     >
-      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-32" imageUrl={salon.profile_image_url} />
+      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-48" imageUrl={salon.profile_image_url} />
       <div className="relative px-4 pt-5 pb-4">
         <TicketNotch top />
         <div className="flex items-center justify-between gap-2">
@@ -2330,6 +2330,7 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
   const [confirmDeleteSalon, setConfirmDeleteSalon] = useState(false);
   const [deletingSalon, setDeletingSalon] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [editingPayout, setEditingPayout] = useState(false);
   const [banks, setBanks] = useState([]);
@@ -2607,6 +2608,29 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                   Remove photo
                 </button>
               )}
+            </div>
+
+            <div className="mt-8 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+              <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg mb-1">Your booking link</h3>
+              <p className="text-xs mb-3" style={{ color: colors.creamDim }}>
+                Share this with clients — it takes them straight to booking you, no searching needed.
+              </p>
+              <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+                <p className="flex-1 text-xs break-all" style={{ color: colors.cream }}>
+                  {window.location.origin}/?salon={salon.id}
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/?salon=${salon.id}`);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                  className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold tap-glass"
+                  style={{ background: colors.hairline, color: "#FFFFFF" }}
+                >
+                  {linkCopied ? "Copied!" : "Copy"}
+                </button>
+              </div>
             </div>
 
             <div className="mt-8 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
