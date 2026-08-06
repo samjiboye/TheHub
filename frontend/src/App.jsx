@@ -4224,7 +4224,7 @@ export default function App() {
             {(role === "customer" ? customerAuth : ownerAuth) && (
               <div className="relative">
                 <button
-                  onClick={() => setNotifOpen((o) => !o)}
+                  onClick={() => setNotifOpen((o) => { if (!o) setMenuOpen(false); return !o; })}
                   className="p-2.5 rounded-full tap-glass relative"
                   style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
                 >
@@ -4279,7 +4279,7 @@ export default function App() {
             )}
             <div className="relative">
             <button
-              onClick={() => setMenuOpen((o) => !o)}
+              onClick={() => setMenuOpen((o) => { if (!o) setNotifOpen(false); return !o; })}
               className="p-2.5 rounded-full tap-glass"
               style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
             >
