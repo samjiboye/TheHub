@@ -1495,6 +1495,7 @@ function SwipeToComplete({ onComplete }) {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onClick={handleTrackClick}
     >
       <div
         className="absolute inset-y-0 left-0 rounded-full"
@@ -1523,6 +1524,8 @@ function SwipeToPay({ onConfirm, disabled, submitting }) {
   const [dragging, setDragging] = useState(false);
   const startXRef = useRef(0);
   const trackWidthRef = useRef(0);
+  const dragStartXRef = useRef(0);
+  const movedRef = useRef(false);
   const handleSize = 56;
 
   function handlePointerDown(e) {
@@ -1531,12 +1534,15 @@ function SwipeToPay({ onConfirm, disabled, submitting }) {
     setDragging(true);
     trackWidthRef.current = trackRef.current.offsetWidth;
     startXRef.current = e.clientX - dragX;
+    dragStartXRef.current = dragX;
+    movedRef.current = false;
   }
   function handlePointerMove(e) {
     if (!dragging) return;
     const maxX = trackWidthRef.current - handleSize;
     let next = e.clientX - startXRef.current;
     next = Math.max(0, Math.min(next, maxX));
+    if (Math.abs(next - dragStartXRef.current) > 5) movedRef.current = true;
     setDragX(next);
   }
   function handlePointerUp() {
@@ -1549,6 +1555,12 @@ function SwipeToPay({ onConfirm, disabled, submitting }) {
     } else {
       setDragX(0);
     }
+  }
+  function handleTrackClick() {
+    if (disabled || submitting || movedRef.current) return;
+    const maxX = trackWidthRef.current - handleSize;
+    setDragX(maxX);
+    onConfirm();
   }
 
   return (
@@ -1574,7 +1586,7 @@ function SwipeToPay({ onConfirm, disabled, submitting }) {
         className="absolute inset-0 flex items-center justify-center text-lg font-bold pointer-events-none"
         style={{ color: colors.cream }}
       >
-        {submitting ? "Processing..." : "Slide to pay & book"}
+        {submitting ? "Processing..." : "Tap or slide to pay & book"}
       </div>
       <div
         onPointerDown={handlePointerDown}
