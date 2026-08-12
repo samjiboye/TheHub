@@ -6,7 +6,7 @@ const db = require("../db");
 // only ever affects bookings made after they've earned it, never retroactively.
 const TIERS = [
   { minCompleted: 200, rate: 0.05 },
-  { minCompleted: 0, rate: 0.10 },
+  { minCompleted: 0, rate: 0.15 },
 ];
 
 async function getCompletedCount(salonId) {

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
 import MarketplaceView from "./Marketplace";
 import {
-  Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2,
+  Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2, Gem, PenTool,
   ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
   UserCircle, Bell, Wallet, ShoppingBag,
@@ -61,9 +61,11 @@ const FONT_MONO = "'Baloo 2', sans-serif";
 const CATEGORIES = [
   { name: "Barbing", icon: Scissors, photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
   { name: "Hairdressing", icon: Wand2, photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
-  { name: "Nails", icon: Palette, photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
+  { name: "Lashes & Nails", icon: Palette, photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
   { name: "Makeup", icon: Sparkles, photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
   { name: "Spa", icon: Flower2, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
+  { name: "Piercing", icon: Gem, photo: null },
+  { name: "Tattoos", icon: PenTool, photo: null },
 ];
 
 // Category-specific hero background treatments — used behind the search screen
@@ -73,7 +75,9 @@ const CATEGORIES = [
 const CATEGORY_THEMES = {
   Barbing: { gradient: "linear-gradient(160deg, #0D1B2A 0%, #1B4965 50%, #A9D6E5 100%)" },
   Hairdressing: { gradient: "linear-gradient(160deg, #241019 0%, #5C2740 50%, #D98CA6 100%)" },
-  Nails: { gradient: "linear-gradient(160deg, #241214 0%, #6B333B 50%, #E7A9A0 100%)" },
+  "Lashes & Nails": { gradient: "linear-gradient(160deg, #241214 0%, #6B333B 50%, #E7A9A0 100%)" },
+  Piercing: { gradient: "linear-gradient(160deg, #1A1A1D 0%, #4A4E69 50%, #C9CBFF 100%)" },
+  Tattoos: { gradient: "linear-gradient(160deg, #1A0F0F 0%, #4A1212 50%, #C97A7A 100%)" },
   Makeup: { gradient: "linear-gradient(160deg, #180E20 0%, #451D54 50%, #C9A0DC 100%)" },
   Spa: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
 };
@@ -106,7 +110,7 @@ const SALONS = [
     ],
   },
   {
-    id: 3, name: "Nailed It Studio", category: "Nails", rating: 4.7, reviews: 188,
+    id: 3, name: "Nailed It Studio", category: "Lashes & Nails", rating: 4.7, reviews: 188,
     distance: 0.5, priceRange: "$20–60", hue: 350, address: "21 Marchmont Rd",
     hours: "10:00 AM – 6:30 PM",
     bio: "Hand-painted sets and long-wear gel, done by appointment so you're never rushed.",
@@ -397,15 +401,24 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
                 border: `2px solid ${category === c.name ? colors.gold : colors.hairline}`,
               }}
             >
-              <div
-                className="w-7 h-7 rounded-full shrink-0"
-                style={{
-                  backgroundImage: `url(${c.photo})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  border: "2px solid rgba(255,255,255,0.8)",
-                }}
-              />
+              {c.photo ? (
+                <div
+                  className="w-7 h-7 rounded-full shrink-0"
+                  style={{
+                    backgroundImage: `url(${c.photo})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    border: "2px solid rgba(255,255,255,0.8)",
+                  }}
+                />
+              ) : (
+                <div
+                  className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center"
+                  style={{ background: colors.gold, border: "2px solid rgba(255,255,255,0.8)" }}
+                >
+                  <c.icon size={14} color="#FFFFFF" />
+                </div>
+              )}
               {c.name}
             </button>
           ))}
@@ -3843,18 +3856,22 @@ const ONBOARDING_SLIDES = [
     type: "categories",
     title: "Explore what we offer",
     photo: null,
-    categories: [
-      { name: "Braids", photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
-      { name: "Barbing", photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
-      { name: "Nails", photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
-      { name: "Makeup", photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
-      { name: "Spa", photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
-    ],
+    categories: CATEGORIES,
   },
 ];
 
 function OnboardingView({ onDone }) {
   const [slide, setSlide] = useState(0);
+
+  useEffect(() => {
+    const urls = ONBOARDING_SLIDES.flatMap((s) =>
+      s.type === "categories" ? s.categories.map((c) => c.photo) : [s.photo]
+    ).filter(Boolean);
+    urls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, []);
   const isLast = slide === ONBOARDING_SLIDES.length - 1;
   const current = ONBOARDING_SLIDES[slide];
 
@@ -3893,6 +3910,18 @@ function OnboardingView({ onDone }) {
             TheHub
           </span>
         </div>
+        {!isLast && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDone(); }}
+            className="text-sm font-semibold px-4 py-2 rounded-full"
+            style={{
+              color: isPlain ? colors.hairline : "#FFFFFF",
+              background: isPlain ? "rgba(217,112,46,0.12)" : "rgba(255,255,255,0.18)",
+            }}
+          >
+            Skip
+          </button>
+        )}
       </div>
 
       {current.type === "categories" ? (
@@ -3910,15 +3939,24 @@ function OnboardingView({ onDone }) {
             <div className="grid grid-cols-3 gap-x-4 gap-y-5">
               {current.categories.map((cat) => (
                 <div key={cat.name} className="flex flex-col items-center gap-2">
-                  <div
-                    className="w-20 h-20 rounded-full shadow-lg"
-                    style={{
-                      backgroundImage: `url(${cat.photo})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      border: `3px solid ${colors.hairline}`,
-                    }}
-                  />
+                  {cat.photo ? (
+                    <div
+                      className="w-20 h-20 rounded-full shadow-lg"
+                      style={{
+                        backgroundImage: `url(${cat.photo})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        border: `3px solid ${colors.hairline}`,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="w-20 h-20 rounded-full shadow-lg flex items-center justify-center"
+                      style={{ background: colors.gold, border: `3px solid ${colors.hairline}` }}
+                    >
+                      <cat.icon size={28} color="#FFFFFF" />
+                    </div>
+                  )}
                   <span className="text-xs font-semibold text-center" style={{ color: colors.hairline }}>{cat.name}</span>
                 </div>
               ))}

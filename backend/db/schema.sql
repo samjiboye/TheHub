@@ -230,3 +230,9 @@ CREATE TABLE IF NOT EXISTS product_reviews (
 );
 
 CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(product_id);
+
+
+-- Add Lashes & Nails (renamed from Nails), Piercing, and Tattoos as salon categories
+UPDATE salons SET category = 'Lashes & Nails' WHERE category = 'Nails';
+ALTER TABLE salons DROP CONSTRAINT IF EXISTS salons_category_check;
+ALTER TABLE salons ADD CONSTRAINT salons_category_check CHECK (category IN ('Barbing', 'Hairdressing', 'Lashes & Nails', 'Makeup', 'Spa', 'Piercing', 'Tattoos'));
