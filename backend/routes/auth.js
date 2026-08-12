@@ -7,7 +7,7 @@ const router = express.Router();
 
 // POST /auth/signup
 router.post("/signup", async (req, res) => {
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role, referralCode } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "name, email, and password are required" });
   }
@@ -21,7 +21,28 @@ router.post("/signup", async (req, res) => {
       "INSERT INTO users (name, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id",
       [name, email, phone || null, role === "owner" ? "owner" : "customer", password_hash]
     );
-    const user = { id: result.rows[0].id, name, email, role: role === "owner" ? "owner" : "customer", isAdmin: false };
+    const newUserId = result.rows[0].id;
+
+    // Every user gets their own shareable code. If they entered someone else's
+    // code at signup, we remember who referred them - but no points are awarded
+    // yet, that only happens once this new user completes their first booking.
+    let referredBy = null;
+    if (referralCode) {
+      const { rows: referrerRows } = await db.query(
+        "SELECT id FROM users WHERE referral_code = $1",
+        [String(referralCode).trim().toUpperCase()]
+      );
+      if (referrerRows[0] && referrerRows[0].id !== newUserId) {
+        referredBy = referrerRows[0].id;
+      }
+    }
+    const ownReferralCode = `HUB${String(newUserId).padStart(5, "0")}`;
+    await db.query(
+      "UPDATE users SET referral_code = $1, referred_by = $2 WHERE id = $3",
+      [ownReferralCode, referredBy, newUserId]
+    );
+
+    const user = { id: newUserId, name, email, role: role === "owner" ? "owner" : "customer", isAdmin: false };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
     res.status(201).json({ user, token });
   } catch (err) {
@@ -170,6 +191,8 @@ router.get("/google/callback", async (req, res) => {
         [name || email.split("@")[0], email, null, "customer", password_hash]
       );
       row = insertResult.rows[0];
+      const ownReferralCode = `HUB${String(row.id).padStart(5, "0")}`;
+      await db.query("UPDATE users SET referral_code = $1 WHERE id = $2", [ownReferralCode, row.id]);
     }
 
     const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };

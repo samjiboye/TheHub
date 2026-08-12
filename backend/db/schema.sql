@@ -236,3 +236,11 @@ CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(produc
 UPDATE salons SET category = 'Lashes & Nails' WHERE category = 'Nails';
 ALTER TABLE salons DROP CONSTRAINT IF EXISTS salons_category_check;
 ALTER TABLE salons ADD CONSTRAINT salons_category_check CHECK (category IN ('Barbing', 'Hairdressing', 'Lashes & Nails', 'Makeup', 'Spa', 'Piercing', 'Tattoos'));
+
+
+-- Referral program: shareable code per user, who referred them, and
+-- a guard so the bonus can only ever be awarded once per referred user.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_bonus_awarded BOOLEAN NOT NULL DEFAULT false;
+UPDATE users SET referral_code = 'HUB' || LPAD(id::text, 5, '0') WHERE referral_code IS NULL;

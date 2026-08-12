@@ -18,7 +18,11 @@ router.get("/me", requireAuth, async (req, res) => {
       [req.user.id]
     );
     const { rows: loyaltyRows } = await db.query(
-      "SELECT loyalty_bookings_since_reward FROM users WHERE id = $1",
+      "SELECT loyalty_bookings_since_reward, referral_code FROM users WHERE id = $1",
+      [req.user.id]
+    );
+    const { rows: referralCountRows } = await db.query(
+      "SELECT COUNT(*) AS count FROM users WHERE referred_by = $1 AND referral_bonus_awarded = true",
       [req.user.id]
     );
     res.json({
@@ -27,6 +31,8 @@ router.get("/me", requireAuth, async (req, res) => {
       loyaltyCount: loyaltyRows[0]?.loyalty_bookings_since_reward || 0,
       loyaltyGoal: LOYALTY_GOAL,
       loyaltyReward: LOYALTY_REWARD,
+      referralCode: loyaltyRows[0]?.referral_code || null,
+      referralsCompleted: Number(referralCountRows[0]?.count || 0),
     });
   } catch (err) {
     console.error(err);

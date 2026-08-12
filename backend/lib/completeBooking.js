@@ -2,10 +2,14 @@ const db = require("../db");
 const paystack = require("./paystack");
 const { notifyUser } = require("./notify");
 const { creditWallet } = require("./wallet");
+const { addLoyaltyPoints } = require("./loyalty");
 
 const POINTS_PER_NAIRA = 0.01; // 1 point per ₦100 spent
-const LOYALTY_GOAL = 150; // points needed for a reward (≈₦15,000 spent, ~5 bookings at ₦3,000)
-const LOYALTY_REWARD = 500; // ₦ credited to the customer's wallet
+// Referral bonus: sized against a typical ₦3,000 booking earning ₦450 at
+// 15% commission, so paying both sides out still leaves margin on booking #1
+// alone, even if the referred customer never books again.
+const REFERRAL_REFERRER_POINTS = 60; // ≈₦200
+const REFERRAL_REFERRED_POINTS = 30; // ≈₦100
 
 // Marks a booking completed and releases the owner's payout — held until now regardless
 // of how the customer paid, so cancellations/disputes before completion never require
@@ -62,30 +66,49 @@ async function completeBooking(booking, salon, { auto = false } = {}) {
   });
 
   // Loyalty: earn points proportional to what was actually spent (1 point per
-  // ₦100), so a bigger booking earns more than a smaller one. Leftover points
-  // past the goal roll over into the next reward instead of being wiped.
+  // ₦100), so a bigger booking earns more than a smaller one.
   try {
     const pointsEarned = Math.floor(booking.service_price * POINTS_PER_NAIRA);
-    const { rows: userRows } = await db.query(
-      "UPDATE users SET loyalty_bookings_since_reward = loyalty_bookings_since_reward + $2 WHERE id = $1 RETURNING loyalty_bookings_since_reward",
-      [booking.customer_id, pointsEarned]
-    );
-    const points = userRows[0]?.loyalty_bookings_since_reward || 0;
-    if (points >= LOYALTY_GOAL) {
-      await db.query(
-        "UPDATE users SET loyalty_bookings_since_reward = loyalty_bookings_since_reward - $2 WHERE id = $1",
-        [booking.customer_id, LOYALTY_GOAL]
-      );
-      await creditWallet(booking.customer_id, LOYALTY_REWARD, { type: "reward", bookingId: booking.id });
-      await notifyUser(booking.customer_id, {
-        type: "loyalty_reward",
-        title: "Reward unlocked! 🎉",
-        body: `You've earned ${LOYALTY_GOAL} loyalty points through TheHub — ₦${LOYALTY_REWARD.toLocaleString()} has been added to your wallet.`,
-        bookingId: booking.id,
-      });
-    }
+    await addLoyaltyPoints(booking.customer_id, pointsEarned, { bookingId: booking.id });
   } catch (err) {
     console.error(`Loyalty reward tracking failed for booking #${booking.id}:`, err);
+  }
+
+  // Referral bonus: fires once, only when the referred customer completes their
+  // very first paid booking (not on signup) - ties the reward to real revenue
+  // instead of free signups, and referral_bonus_awarded guards against it ever
+  // firing twice for the same person.
+  try {
+    const { rows: customerRows } = await db.query(
+      "SELECT referred_by, referral_bonus_awarded FROM users WHERE id = $1",
+      [booking.customer_id]
+    );
+    const customerRow = customerRows[0];
+    if (customerRow?.referred_by && !customerRow.referral_bonus_awarded) {
+      const { rows: countRows } = await db.query(
+        "SELECT COUNT(*) AS count FROM bookings WHERE customer_id = $1 AND status = 'completed'",
+        [booking.customer_id]
+      );
+      if (Number(countRows[0].count) === 1) {
+        await db.query("UPDATE users SET referral_bonus_awarded = true WHERE id = $1", [booking.customer_id]);
+        await addLoyaltyPoints(booking.customer_id, REFERRAL_REFERRED_POINTS, { bookingId: booking.id });
+        await addLoyaltyPoints(customerRow.referred_by, REFERRAL_REFERRER_POINTS, { bookingId: booking.id });
+        await notifyUser(booking.customer_id, {
+          type: "referral_bonus",
+          title: "Referral bonus! 🎁",
+          body: `You earned ${REFERRAL_REFERRED_POINTS} loyalty points for completing your first booking through a referral.`,
+          bookingId: booking.id,
+        });
+        await notifyUser(customerRow.referred_by, {
+          type: "referral_bonus",
+          title: "Your referral just booked! 🎉",
+          body: `Someone you referred completed their first booking — you earned ${REFERRAL_REFERRER_POINTS} loyalty points.`,
+          bookingId: booking.id,
+        });
+      }
+    }
+  } catch (err) {
+    console.error(`Referral bonus tracking failed for booking #${booking.id}:`, err);
   }
 }
 

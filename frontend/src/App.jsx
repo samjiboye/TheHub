@@ -58,6 +58,15 @@ const FONT_DISPLAY = "'Baloo 2', sans-serif";
 const FONT_BODY = "'Baloo 2', sans-serif";
 const FONT_MONO = "'Baloo 2', sans-serif";
 
+// Typical booking on TheHub runs about ₦3,000, so these buckets are
+// centered around that rather than generic round numbers.
+const PRICE_BUCKETS = [
+  { id: "u2k", label: "Under ₦2,000", min: 0, max: 2000 },
+  { id: "2to5k", label: "₦2,000–₦5,000", min: 2000, max: 5000 },
+  { id: "5to10k", label: "₦5,000–₦10,000", min: 5000, max: 10000 },
+  { id: "10kplus", label: "₦10,000+", min: 10000, max: Infinity },
+];
+
 const CATEGORIES = [
   { name: "Barbing", icon: Scissors, photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
   { name: "Hairdressing", icon: Wand2, photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
@@ -268,9 +277,15 @@ function Header({ title, onBack, right }) {
   );
 }
 
-function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon }) {
+function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon }) {
   const filtered = salons
     .filter((s) => (category ? s.category === category : true))
+    .filter((s) => {
+      if (!priceFilter) return true;
+      const bucket = PRICE_BUCKETS.find((b) => b.id === priceFilter);
+      if (!bucket) return true;
+      return (s.services || []).some((svc) => svc.price >= bucket.min && svc.price < bucket.max);
+    })
     .sort((a, b) => (a.distance ?? 999) - (b.distance ?? 999));
 
   const citiesForState = (NIGERIA_LOCATIONS.find((s) => s.state === searchState)?.cities) || [];
@@ -420,6 +435,23 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
                 </div>
               )}
               {c.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 mt-2">
+          {PRICE_BUCKETS.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => setPriceFilter(priceFilter === b.id ? null : b.id)}
+              className="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap tap-glass shrink-0"
+              style={{
+                background: priceFilter === b.id ? colors.gold : colors.panelLight,
+                color: priceFilter === b.id ? "#FFFFFF" : colors.cream,
+                border: `2px solid ${priceFilter === b.id ? colors.gold : colors.hairline}`,
+              }}
+            >
+              {b.label}
             </button>
           ))}
         </div>
@@ -909,6 +941,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
   const [resetError, setResetError] = useState(null);
   const [resetSent, setResetSent] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
 
   const submit = async (e) => {
     e.preventDefault();
@@ -917,7 +950,9 @@ function AuthGate({ role, onAuthed, allowGuest }) {
     setError(null);
     try {
       const body =
-        mode === "login" ? { email, password } : { name, email, password, role };
+        mode === "login"
+          ? { email, password }
+          : { name, email, password, role, referralCode: referralCode || undefined };
       const { token, user } = await apiFetch(mode === "login" ? "/auth/login" : "/auth/signup", {
         method: "POST",
         body: JSON.stringify(body),
@@ -1008,6 +1043,15 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
+            className="pb-2 text-base outline-none"
+            style={inputStyle}
+          />
+        )}
+        {mode === "signup" && role === "customer" && (
+          <input
+            value={referralCode}
+            onChange={(e) => setReferralCode(e.target.value)}
+            placeholder="Referral code (optional)"
             className="pb-2 text-base outline-none"
             style={inputStyle}
           />
@@ -3176,6 +3220,9 @@ function WalletView({ token, onBack }) {
   const [loyaltyCount, setLoyaltyCount] = useState(0);
   const [loyaltyGoal, setLoyaltyGoal] = useState(5);
   const [loyaltyReward, setLoyaltyReward] = useState(1000);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralsCompleted, setReferralsCompleted] = useState(0);
+  const [referralCopied, setReferralCopied] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -3187,6 +3234,8 @@ function WalletView({ token, onBack }) {
         setLoyaltyCount(data.loyaltyCount || 0);
         setLoyaltyGoal(data.loyaltyGoal || 5);
         setLoyaltyReward(data.loyaltyReward || 1000);
+        setReferralCode(data.referralCode || "");
+        setReferralsCompleted(data.referralsCompleted || 0);
         setError(null);
       })
       .catch(() => setError("Couldn't load your wallet."))
@@ -3244,6 +3293,36 @@ function WalletView({ token, onBack }) {
               : `Reward unlocked on your next completed booking!`}
           </p>
         </div>
+
+        {referralCode && (
+          <div className="mt-4 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
+            <p className="text-sm font-bold mb-1" style={{ color: colors.cream }}>👥 Invite friends, earn points</p>
+            <p className="text-xs mb-3" style={{ color: colors.creamDim }}>
+              You earn 60 points and they earn 30 once their first booking is complete.
+              {referralsCompleted > 0 ? ` ${referralsCompleted} friend${referralsCompleted === 1 ? '' : 's'} joined so far.` : ""}
+            </p>
+            <div className="flex items-center gap-2">
+              <div
+                className="flex-1 px-4 py-3 rounded-xl text-base font-bold text-center tracking-wide"
+                style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+              >
+                {referralCode}
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(referralCode).then(() => {
+                    setReferralCopied(true);
+                    setTimeout(() => setReferralCopied(false), 2000);
+                  });
+                }}
+                className="px-4 py-3 rounded-xl text-sm font-bold shrink-0"
+                style={{ background: colors.hairline, color: "#FFFFFF" }}
+              >
+                {referralCopied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <h3 className="mt-6 mb-3 text-lg" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }}>
           Top up
@@ -4064,6 +4143,7 @@ export default function App() {
   const [ownerPage, setOwnerPage] = useState("dashboard");
   const [role, setRole] = useState("customer");
   const [category, setCategory] = useState(null);
+  const [priceFilter, setPriceFilter] = useState(null);
   const [selectedSalon, setSelectedSalon] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -4628,6 +4708,7 @@ export default function App() {
               <HomeView
                 salons={salons}
                 category={category} setCategory={setCategory}
+                priceFilter={priceFilter} setPriceFilter={setPriceFilter}
                 searchQuery={searchQuery} setSearchQuery={setSearchQuery}
                 searchState={searchState} setSearchState={setSearchState}
                 searchCity={searchCity} setSearchCity={setSearchCity}
