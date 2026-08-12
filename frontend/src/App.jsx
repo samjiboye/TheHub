@@ -3868,7 +3868,7 @@ function OnboardingView({ onDone }) {
       s.type === "categories" ? s.categories.map((c) => c.photo) : [s.photo]
     ).filter(Boolean);
     urls.forEach((url) => {
-      const img = new Image();
+      const img = new window.Image();
       img.src = url;
     });
   }, []);
