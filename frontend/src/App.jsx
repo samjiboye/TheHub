@@ -195,7 +195,7 @@ function TicketNotch({ top }) {
 }
 
 function SalonCard({ salon, onClick }) {
-  const cat = CATEGORIES.find((c) => c.name === salon.category);
+  const cat = CATEGORIES.find((c) => c.name === salon.category) || { icon: Sparkles };
   return (
     <button
       onClick={onClick}
@@ -439,7 +439,7 @@ function HomeView({ salons, category, setCategory, searchQuery, setSearchQuery, 
   );
 }
 function ProfileView({ salon, onBack, onBook }) {
-  const cat = CATEGORIES.find((c) => c.name === salon.category);
+  const cat = CATEGORIES.find((c) => c.name === salon.category) || { icon: Sparkles };
   const heroTheme = CATEGORY_THEMES[salon.category] || null;
   const textColor = heroTheme ? "#FFFFFF" : colors.cream;
   const textColorDim = heroTheme ? "rgba(255,255,255,0.78)" : colors.creamDim;
