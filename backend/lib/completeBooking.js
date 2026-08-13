@@ -10,6 +10,12 @@ const POINTS_PER_NAIRA = 0.01; // 1 point per ₦100 spent
 // alone, even if the referred customer never books again.
 const REFERRAL_REFERRER_POINTS = 60; // ≈₦200
 const REFERRAL_REFERRED_POINTS = 30; // ≈₦100
+// Owner-to-owner referrals pay more than customer ones since bringing a whole
+// new salon onto the platform is worth more than one customer - but the reward
+// never shows side-by-side with the customer numbers, so there's no framing
+// that nudges people to register as an owner just to chase a bigger number.
+const OWNER_REFERRAL_REFERRER_POINTS = 100; // ≈₦330
+const OWNER_REFERRAL_REFERRED_POINTS = 50; // ≈₦165
 
 // Marks a booking completed and releases the owner's payout — held until now regardless
 // of how the customer paid, so cancellations/disputes before completion never require
@@ -109,6 +115,44 @@ async function completeBooking(booking, salon, { auto = false } = {}) {
     }
   } catch (err) {
     console.error(`Referral bonus tracking failed for booking #${booking.id}:`, err);
+  }
+
+  // Owner-to-owner referral bonus: fires once, only when the referred owner's
+  // salon gets its first-ever completed booking - i.e. once they've actually
+  // brought in real, paying business, not just registered an account.
+  try {
+    if (salon) {
+      const { rows: ownerRows } = await db.query(
+        "SELECT referred_by, referral_bonus_awarded FROM users WHERE id = $1",
+        [salon.owner_id]
+      );
+      const ownerRow = ownerRows[0];
+      if (ownerRow?.referred_by && !ownerRow.referral_bonus_awarded) {
+        const { rows: salonCountRows } = await db.query(
+          "SELECT COUNT(*) AS count FROM bookings WHERE salon_id = $1 AND status = 'completed'",
+          [salon.id]
+        );
+        if (Number(salonCountRows[0].count) === 1) {
+          await db.query("UPDATE users SET referral_bonus_awarded = true WHERE id = $1", [salon.owner_id]);
+          await addLoyaltyPoints(salon.owner_id, OWNER_REFERRAL_REFERRED_POINTS, { bookingId: booking.id });
+          await addLoyaltyPoints(ownerRow.referred_by, OWNER_REFERRAL_REFERRER_POINTS, { bookingId: booking.id });
+          await notifyUser(salon.owner_id, {
+            type: "referral_bonus",
+            title: "Referral bonus! 🎁",
+            body: `You earned ${OWNER_REFERRAL_REFERRED_POINTS} loyalty points for your salon's first completed booking.`,
+            bookingId: booking.id,
+          });
+          await notifyUser(ownerRow.referred_by, {
+            type: "referral_bonus",
+            title: "The salon you referred just booked! 🎉",
+            body: `A salon you referred completed its first booking — you earned ${OWNER_REFERRAL_REFERRER_POINTS} loyalty points.`,
+            bookingId: booking.id,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`Owner referral bonus tracking failed for booking #${booking.id}:`, err);
   }
 }
 

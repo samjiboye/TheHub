@@ -3,6 +3,7 @@ const db = require("../db");
 const paystack = require("../lib/paystack");
 const { requireAuth, requireAdmin } = require("../middleware/auth");
 const { notifyUser } = require("../lib/notify");
+const { debitWallet, getBalance } = require("../lib/wallet");
 
 const router = express.Router();
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
@@ -30,9 +31,11 @@ router.get("/saved-address", requireAuth, async (req, res) => {
   }
 });
 
-// POST /orders/checkout - body: { items: [{product_id, quantity}], delivery_address, delivery_state, delivery_city, delivery_phone }
+// POST /orders/checkout - body: { items: [{product_id, quantity}], delivery_address, delivery_state, delivery_city, delivery_phone, payment_method }
+// payment_method is "paystack" (default) or "wallet" - lets accumulated loyalty/referral
+// points (already convertible to wallet balance) be spent directly on marketplace products.
 router.post("/checkout", requireAuth, async (req, res) => {
-  const { items, delivery_address, delivery_state, delivery_city, delivery_phone } = req.body;
+  const { items, delivery_address, delivery_state, delivery_city, delivery_phone, payment_method } = req.body;
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "items is required and must be a non-empty array" });
   }
@@ -84,6 +87,22 @@ router.post("/checkout", requireAuth, async (req, res) => {
          VALUES ($1, $2, $3, $4, $5)`,
         [orderId, product.id, product.name, quantity, product.price]
       );
+    }
+
+    if (payment_method === "wallet") {
+      const balance = await getBalance(req.user.id);
+      if (balance < total) {
+        await db.query("UPDATE product_orders SET status = 'cancelled' WHERE id = $1", [orderId]);
+        return res.status(400).json({ error: `Your wallet balance (₦${balance.toLocaleString()}) doesn't cover this order (₦${total.toLocaleString()}).`, balance });
+      }
+      const paid = await debitWallet(req.user.id, total, { orderId });
+      if (!paid) {
+        await db.query("UPDATE product_orders SET status = 'cancelled' WHERE id = $1", [orderId]);
+        return res.status(400).json({ error: "Couldn't debit your wallet — try again." });
+      }
+      await db.query("UPDATE product_orders SET payment_status = 'paid' WHERE id = $1", [orderId]);
+      res.json({ paidWithWallet: true, order_id: orderId });
+      return;
     }
 
     try {

@@ -5,15 +5,15 @@ async function getBalance(userId) {
   return rows[0]?.wallet_balance || 0;
 }
 
-async function debitWallet(userId, amount, { bookingId = null } = {}) {
+async function debitWallet(userId, amount, { bookingId = null, orderId = null } = {}) {
   const result = await db.query(
     "UPDATE users SET wallet_balance = wallet_balance - $1 WHERE id = $2 AND wallet_balance >= $1 RETURNING wallet_balance",
     [amount, userId]
   );
   if (result.rowCount === 0) return false;
   await db.query(
-    `INSERT INTO wallet_transactions (user_id, type, amount, booking_id, status) VALUES ($1, 'debit', $2, $3, 'success')`,
-    [userId, amount, bookingId]
+    `INSERT INTO wallet_transactions (user_id, type, amount, booking_id, order_id, status) VALUES ($1, 'debit', $2, $3, $4, 'success')`,
+    [userId, amount, bookingId, orderId]
   );
   return true;
 }

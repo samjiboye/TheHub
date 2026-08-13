@@ -204,6 +204,9 @@ export default function MarketplaceView({ token, onBack }) {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("paystack");
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [walletOrderSuccess, setWalletOrderSuccess] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState({ delivery_address: "", delivery_state: "", delivery_city: "", delivery_phone: "" });
   const [placingOrder, setPlacingOrder] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
@@ -266,6 +269,13 @@ export default function MarketplaceView({ token, onBack }) {
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
   const cartSubtotal = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
+  useEffect(() => {
+    if (!checkoutOpen || !token) return;
+    apiFetch("/wallet/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => setWalletBalance(data.balance || 0))
+      .catch(() => setWalletBalance(null));
+  }, [checkoutOpen, token]);
+
   const submitOrder = async () => {
     if (!checkoutForm.delivery_address || !checkoutForm.delivery_phone) {
       setCheckoutError("Delivery address and phone are required.");
@@ -277,12 +287,19 @@ export default function MarketplaceView({ token, onBack }) {
       const body = {
         items: cart.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
         ...checkoutForm,
+        payment_method: paymentMethod,
       };
       const data = await apiFetch("/orders/checkout", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
+      if (data.paidWithWallet) {
+        setCart([]);
+        setWalletOrderSuccess(true);
+        setPlacingOrder(false);
+        return;
+      }
       window.location.href = data.url;
     } catch (err) {
       setCheckoutError(err.message || "Couldn't start checkout.");
@@ -320,6 +337,20 @@ export default function MarketplaceView({ token, onBack }) {
 
       {selectedProduct ? (
         <ProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} onAddToCart={addToCart} />
+      ) : checkoutOpen && walletOrderSuccess ? (
+        <div className="px-4 py-10 text-center">
+          <h2 className="text-lg font-bold mb-2" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>Order placed! 🎉</h2>
+          <p className="text-sm mb-6" style={{ color: colors.creamDim }}>
+            Paid from your wallet balance. We'll notify you once it ships — expect delivery in {PREORDER_LABEL}.
+          </p>
+          <button
+            onClick={() => { setCheckoutOpen(false); setWalletOrderSuccess(false); }}
+            className="px-6 py-3 rounded-xl font-bold text-sm"
+            style={{ background: colors.hairline, color: "#fff" }}
+          >
+            Back to Marketplace
+          </button>
+        </div>
       ) : checkoutOpen ? (
         <div className="px-4 py-4">
           <h2 className="text-lg font-bold mb-1" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>Delivery details</h2>
@@ -377,6 +408,42 @@ export default function MarketplaceView({ token, onBack }) {
             The {naira(config.deliveryFee)} delivery fee covers getting your order from us to your address once it arrives — it's separate from the item price.
           </p>
 
+          {walletBalance !== null && (
+            <div className="mt-5">
+              <p className="text-xs font-bold mb-2" style={{ color: colors.cream }}>How would you like to pay?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPaymentMethod("paystack")}
+                  className="flex-1 px-3 py-3 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: paymentMethod === "paystack" ? colors.hairline : colors.panelLight,
+                    color: paymentMethod === "paystack" ? "#fff" : colors.cream,
+                    border: `2px solid ${colors.hairline}`,
+                  }}
+                >
+                  Card / bank
+                </button>
+                <button
+                  onClick={() => setPaymentMethod("wallet")}
+                  disabled={walletBalance < cartSubtotal + config.deliveryFee}
+                  className="flex-1 px-3 py-3 rounded-xl text-sm font-semibold disabled:opacity-40"
+                  style={{
+                    background: paymentMethod === "wallet" ? colors.hairline : colors.panelLight,
+                    color: paymentMethod === "wallet" ? "#fff" : colors.cream,
+                    border: `2px solid ${colors.hairline}`,
+                  }}
+                >
+                  Wallet ({naira(walletBalance)})
+                </button>
+              </div>
+              {paymentMethod === "wallet" && walletBalance < cartSubtotal + config.deliveryFee && (
+                <p className="text-xs mt-2" style={{ color: colors.creamDim }}>
+                  Your wallet balance isn't enough for this order yet — pay by card or add more to your cart's worth first.
+                </p>
+              )}
+            </div>
+          )}
+
           {checkoutError && <p className="text-xs mt-3" style={{ color: "#E07A5F" }}>{checkoutError}</p>}
 
           <p className="text-xs mt-4 flex items-center gap-1" style={{ color: colors.creamDim }}>
@@ -385,12 +452,12 @@ export default function MarketplaceView({ token, onBack }) {
 
           <button
             onClick={submitOrder}
-            disabled={placingOrder}
+            disabled={placingOrder || (paymentMethod === "wallet" && walletBalance < cartSubtotal + config.deliveryFee)}
             className="w-full mt-4 py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
             style={{ background: colors.hairline, color: "#fff" }}
           >
             {placingOrder ? <Loader2 size={16} className="animate-spin" /> : null}
-            {placingOrder ? "Starting checkout..." : "Continue to payment"}
+            {placingOrder ? "Placing order..." : paymentMethod === "wallet" ? "Pay with wallet" : "Continue to payment"}
           </button>
         </div>
       ) : cartOpen ? (

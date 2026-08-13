@@ -1047,7 +1047,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             style={inputStyle}
           />
         )}
-        {mode === "signup" && role === "customer" && (
+        {mode === "signup" && (
           <input
             value={referralCode}
             onChange={(e) => setReferralCode(e.target.value)}

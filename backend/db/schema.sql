@@ -244,3 +244,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_bonus_awarded BOOLEAN NOT NULL DEFAULT false;
 UPDATE users SET referral_code = 'HUB' || LPAD(id::text, 5, '0') WHERE referral_code IS NULL;
+
+
+-- Wallet-funded marketplace purchases reference an order instead of a booking.
+ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS order_id INTEGER REFERENCES product_orders(id) ON DELETE SET NULL;
