@@ -2457,6 +2457,16 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
   const [businessName, setBusinessName] = useState("");
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
+
+  // The edit form used to always open blank, which made it look like saved
+  // payout details had vanished even when they hadn't. Pre-fill from what's
+  // actually on the salon record every time editing opens.
+  useEffect(() => {
+    if (!editingPayout || !salon) return;
+    setBusinessName(salon.name || "");
+    setBankCode(salon.bank_code || "");
+    setAccountNumber(salon.account_number || "");
+  }, [editingPayout, salon]);
   const [resolvedName, setResolvedName] = useState(null);
   const [resolving, setResolving] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -2943,7 +2953,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
               {!editingPayout ? (
                 <p className="text-sm" style={{ color: colors.creamDim }}>
                   {salon.paystack_payouts_enabled
-                    ? "Payouts are connected. You can update your bank details anytime — for example if your account number changes, or after switching from test to live payments."
+                    ? `Payouts are connected${salon.account_number ? ` — account ending in ${salon.account_number.slice(-4)}` : ""}. You can update your bank details anytime — for example if your account number changes, or after switching from test to live payments.`
                     : "Not connected yet — you won't receive automatic payouts until this is set up."}
                 </p>
               ) : (
