@@ -2425,7 +2425,7 @@ function TierStars({ fiveStarCount = 0, size = 20 }) {
 }
 
 
-function OwnerProfileView({ token, onBack, onDeleted }) {
+function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
   const [salon, setSalon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -2749,6 +2749,24 @@ function OwnerProfileView({ token, onBack, onDeleted }) {
                   style={{ background: colors.hairline, color: "#FFFFFF" }}
                 >
                   {linkCopied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-8 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg">Wallet</h3>
+                  <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
+                    Balance, loyalty points, and your referral code
+                  </p>
+                </div>
+                <button
+                  onClick={onOpenWallet}
+                  className="shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold tap-glass"
+                  style={{ background: colors.hairline, color: "#FFFFFF" }}
+                >
+                  Open
                 </button>
               </div>
             </div>
@@ -4682,9 +4700,12 @@ export default function App() {
                 localStorage.removeItem("ownerAuth");
                 setOwnerAuth(null);
               }}
+              onOpenWallet={() => setOwnerPage("wallet")}
             />
             ) : ownerPage === "marketplace" ? (
               <MarketplaceView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+            ) : ownerPage === "wallet" ? (
+              <WalletView token={ownerAuth.token} onBack={() => setOwnerPage("profile")} />
             ) : (
               <OwnerDashboard token={ownerAuth.token} />
             )
