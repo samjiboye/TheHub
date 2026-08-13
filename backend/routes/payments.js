@@ -7,7 +7,6 @@ const { notifyUser } = require("../lib/notify");
 const { getCommissionRate } = require("../lib/commission");
 const router = express.Router();
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
-const BASE_COMMISSION_RATE = 0.10; // used only as Paystack's default subaccount split; actual bookings always override this per-transaction based on tier
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -192,19 +191,19 @@ router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
     if (!salon) return res.status(404).json({ error: "Salon not found" });
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
-    const subaccount = await paystack.post("/subaccount", {
-      business_name,
-      bank_code,
-      account_number,
-      percentage_charge: BASE_COMMISSION_RATE * 100,
-    });
-
-    await db.query(
-      "UPDATE salons SET paystack_subaccount_code = $1, paystack_payouts_enabled = 1, bank_code = $2, account_number = $3 WHERE id = $4",
-      [subaccount.subaccount_code, bank_code, account_number, salon.id]
+    // No subaccount here - payouts go through Transfer Recipients (created lazily in
+    // completeBooking.js the first time this salon earns a payout), not subaccounts.
+    // This just confirms the account is real before saving it.
+    const resolved = await paystack.get(
+      `/bank/resolve?account_number=${encodeURIComponent(account_number)}&bank_code=${encodeURIComponent(bank_code)}`
     );
 
-    res.json({ ok: true, subaccount_code: subaccount.subaccount_code, account_name: subaccount.account_name });
+    await db.query(
+      "UPDATE salons SET paystack_payouts_enabled = 1, bank_code = $1, account_number = $2 WHERE id = $3",
+      [bank_code, account_number, salon.id]
+    );
+
+    res.json({ ok: true, account_name: resolved.account_name });
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: err.message || "Couldn't set up payouts for this salon." });
