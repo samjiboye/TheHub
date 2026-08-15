@@ -3318,11 +3318,13 @@ function CustomerProfileView({ token, onBack }) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const data = await apiFetch("/users/me/photo", {
+      const res = await fetch(`${API_BASE}/users/me/photo`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Upload failed");
       setProfile((prev) => ({ ...prev, profile_photo_url: data.profile_photo_url }));
     } catch (err) {
       setError(err.message || "Couldn't upload that photo.");
@@ -4449,6 +4451,7 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [headerWalletBalance, setHeaderWalletBalance] = useState(null);
+  const [customerPhotoUrl, setCustomerPhotoUrl] = useState(null);
   const [salons, setSalons] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
     const [locationStatus, setLocationStatus] = useState("idle"); // idle | loading | granted | denied | unsupported
@@ -4518,6 +4521,12 @@ export default function App() {
     fetchBalance();
     const interval = setInterval(fetchBalance, 15000);
     return () => clearInterval(interval);
+  }, [role, customerAuth?.token, view]);
+  useEffect(() => {
+    if (role !== "customer" || !customerAuth?.token) { setCustomerPhotoUrl(null); return; }
+    apiFetch("/users/me", { headers: { Authorization: `Bearer ${customerAuth.token}` } })
+      .then((data) => setCustomerPhotoUrl(data.profile_photo_url || null))
+      .catch(() => {});
   }, [role, customerAuth?.token, view]);
   const markNotificationRead = (id) => {
     const activeAuth = role === "customer" ? customerAuth : ownerAuth;
@@ -4716,9 +4725,20 @@ export default function App() {
       <div className="w-full relative" style={{ minHeight: "100vh", maxWidth: "1600px", margin: "0 auto" }}>
         <div className="flex px-4 pt-4 justify-between items-center">
           <div>
-            <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
-              TheHub
-            </span>
+            {role === "customer" && customerAuth && customerPhotoUrl ? (
+              <button onClick={() => setView("profile")} className="tap-glass block">
+                <img
+                  src={customerPhotoUrl}
+                  alt="Your profile"
+                  className="w-9 h-9 rounded-full object-cover"
+                  style={{ border: `2px solid ${colors.hairline}` }}
+                />
+              </button>
+            ) : (
+              <span style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 700 }}>
+                TheHub
+              </span>
+            )}
             {role === "customer" && customerAuth && headerWalletBalance !== null && (
               <button
                 onClick={() => setView("wallet")}
