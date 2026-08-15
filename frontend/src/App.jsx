@@ -73,8 +73,8 @@ const CATEGORIES = [
   { name: "Lashes & Nails", icon: Palette, photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
   { name: "Makeup", icon: Sparkles, photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
   { name: "Spa", icon: Flower2, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
-  { name: "Piercing", icon: Gem, photo: null },
-  { name: "Tattoos", icon: PenTool, photo: null },
+  { name: "Piercing", icon: Gem, photo: "https://images.pexels.com/photos/10005259/pexels-photo-10005259.jpeg" },
+  { name: "Tattoos", icon: PenTool, photo: "https://images.pexels.com/photos/35714996/pexels-photo-35714996.jpeg" },
 ];
 
 // Category-specific hero background treatments — used behind the search screen
