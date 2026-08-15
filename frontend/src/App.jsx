@@ -2284,6 +2284,7 @@ function OwnerDashboard({ token }) {
                       </button>
                     )}
                   </div>
+                  <LocationShareBlock bookingId={a.id} token={token} otherLabel="client" />
                   {completingId === a.id && (
                     <div className="flex flex-col gap-2 w-full">
                       <p className="text-xs" style={{ color: colors.creamDim }}>
@@ -3657,6 +3658,111 @@ function WalletView({ token, onBack }) {
   );
 }
 
+function LocationShareBlock({ bookingId, token, otherLabel }) {
+  const [shares, setShares] = useState([]);
+  const [myUserId, setMyUserId] = useState(null);
+  const [sharing, setSharing] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("customerAuth") || localStorage.getItem("ownerAuth") || "null");
+      setMyUserId(saved?.user?.id || null);
+    } catch (e) {}
+  }, []);
+
+  const fetchShares = () => {
+    apiFetch(`/bookings/${bookingId}/location`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => setShares(data))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchShares();
+    const interval = setInterval(fetchShares, 20000);
+    return () => clearInterval(interval);
+  }, [bookingId]);
+
+  const mine = shares.find((s) => s.shared_by === myUserId);
+  const theirs = shares.find((s) => s.shared_by !== myUserId);
+
+  const shareLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Location isn't available on this device.");
+      return;
+    }
+    setSharing(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await apiFetch(`/bookings/${bookingId}/location`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          });
+          fetchShares();
+        } catch (err) {
+          setError(err.message || "Couldn't share your location.");
+        } finally {
+          setSharing(false);
+        }
+      },
+      () => {
+        setError("Couldn't get your location — check location permission for this site.");
+        setSharing(false);
+      }
+    );
+  };
+
+  const stopSharing = async () => {
+    try {
+      await apiFetch(`/bookings/${bookingId}/location`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchShares();
+    } catch (err) {}
+  };
+
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={shareLocation}
+          disabled={sharing}
+          className="text-xs font-semibold px-3 py-1.5 rounded-full tap-glass flex items-center gap-1"
+          style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}
+        >
+          <MapPin size={12} />
+          {sharing ? "Sharing…" : mine ? "Update my location" : "Share my location"}
+        </button>
+        {mine && (
+          <button
+            onClick={stopSharing}
+            className="text-xs font-semibold px-3 py-1.5 rounded-full tap-glass"
+            style={{ color: colors.creamDim }}
+          >
+            Stop sharing
+          </button>
+        )}
+        {theirs && (
+          <a
+            href={`https://maps.google.com/?q=${theirs.lat},${theirs.lng}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-semibold px-3 py-1.5 rounded-full tap-glass flex items-center gap-1"
+            style={{ background: colors.hairline, color: "#FFFFFF" }}
+          >
+            <MapPin size={12} /> View {otherLabel}'s location
+          </a>
+        )}
+      </div>
+      {error && <p className="text-xs" style={{ color: "#E07A5F" }}>{error}</p>}
+    </div>
+  );
+}
+
 function MyBookingsView({ token, onBack }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3782,6 +3888,9 @@ function MyBookingsView({ token, onBack }) {
                   <p className="text-xs mt-2" style={{ color: "#E07A5F" }}>
                     ⚠️ You disputed this booking — TheHub is reviewing it.
                   </p>
+                )}
+                {b.status === "confirmed" && (
+                  <LocationShareBlock bookingId={b.id} token={token} otherLabel="salon" />
                 )}
                 {b.status === "confirmed" && b.completion_requested_at && !b.disputed_at && (
                   <div className="mt-2 flex flex-col gap-2">

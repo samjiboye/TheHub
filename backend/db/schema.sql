@@ -255,3 +255,17 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS address_state TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS address_city TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS address_street TEXT;
+
+
+-- Location sharing: one-tap, expiring shares tied to a specific booking,
+-- not continuous background tracking.
+CREATE TABLE IF NOT EXISTS location_shares (
+  id SERIAL PRIMARY KEY,
+  booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  shared_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  lat REAL NOT NULL,
+  lng REAL NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_location_shares_booking ON location_shares(booking_id);

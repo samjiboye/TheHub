@@ -429,4 +429,95 @@ router.post("/:id/dispute", requireAuth, async (req, res) => {
   }
 });
 
+// POST /bookings/:id/location - share your current position once (customer or owner side
+// of the booking). Expires after 1 hour - not continuous tracking, a fresh explicit share.
+router.post("/:id/location", requireAuth, async (req, res) => {
+  const { lat, lng } = req.body;
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    return res.status(400).json({ error: "lat and lng are required" });
+  }
+  try {
+    const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+    const isCustomer = booking.customer_id === req.user.id;
+    const isOwner = salon && salon.owner_id === req.user.id;
+    if (!isCustomer && !isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    const existing = await db.query(
+      "SELECT id FROM location_shares WHERE booking_id = $1 AND shared_by = $2",
+      [booking.id, req.user.id]
+    );
+    const isFirstShare = existing.rows.length === 0;
+    if (!isFirstShare) {
+      await db.query(
+        "UPDATE location_shares SET lat = $1, lng = $2, expires_at = NOW() + INTERVAL '1 hour', updated_at = NOW() WHERE id = $3",
+        [lat, lng, existing.rows[0].id]
+      );
+    } else {
+      await db.query(
+        "INSERT INTO location_shares (booking_id, shared_by, lat, lng, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 hour')",
+        [booking.id, req.user.id, lat, lng]
+      );
+    }
+
+    // Only notify on the first share, not every refresh - otherwise updating your pin
+    // a few times would spam the other person with notifications.
+    if (isFirstShare) {
+      const otherUserId = isCustomer ? salon?.owner_id : booking.customer_id;
+      if (otherUserId) {
+        await notifyUser(otherUserId, {
+          type: "location_shared",
+          title: "Live location shared",
+          body: `${isCustomer ? "The client" : "The salon"} shared their live location for booking #${booking.id}.`,
+          bookingId: booking.id,
+        });
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't share your location." });
+  }
+});
+
+// GET /bookings/:id/location - any active (non-expired) shares for this booking
+router.get("/:id/location", requireAuth, async (req, res) => {
+  try {
+    const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    const salon = salonRows[0];
+    const isCustomer = booking.customer_id === req.user.id;
+    const isOwner = salon && salon.owner_id === req.user.id;
+    if (!isCustomer && !isOwner) return res.status(403).json({ error: "Not your booking" });
+
+    const { rows } = await db.query(
+      "SELECT shared_by, lat, lng, updated_at, expires_at FROM location_shares WHERE booking_id = $1 AND expires_at > NOW()",
+      [booking.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load shared locations." });
+  }
+});
+
+// DELETE /bookings/:id/location - stop sharing your own location for this booking
+router.delete("/:id/location", requireAuth, async (req, res) => {
+  try {
+    await db.query("DELETE FROM location_shares WHERE booking_id = $1 AND shared_by = $2", [req.params.id, req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't stop sharing." });
+  }
+});
+
 module.exports = router;
