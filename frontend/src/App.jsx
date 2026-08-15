@@ -4361,16 +4361,24 @@ function OnboardingView({ onDone }) {
     >
       <div className="flex justify-between items-center">
         <div
-          className="px-4 py-2.5 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center gap-2 shadow-lg"
-          style={{ background: "#FFFFFF" }}
+          className="pl-2.5 pr-4 py-2 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center gap-2 shadow-lg"
+          style={{ background: "#F6F1E9" }}
         >
-          <img src="/icon-192.png" alt="" className="w-6 h-6 rounded-lg" />
-          <span
-            className="text-sm font-extrabold tracking-wide"
-            style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
-          >
-            TheHub
-          </span>
+          <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-lg shrink-0" />
+          <div className="flex flex-col leading-tight">
+            <span
+              className="text-sm font-extrabold tracking-wide"
+              style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
+            >
+              TheHub
+            </span>
+            <span
+              className="text-[9px] font-semibold tracking-widest"
+              style={{ color: "#9C4A31" }}
+            >
+              BOOKING
+            </span>
+          </div>
         </div>
         {!isLast && (
           <button
@@ -4465,15 +4473,22 @@ function OnboardingView({ onDone }) {
           <div className="flex-1 flex items-center justify-center py-10">
             {slide === 0 && (
               <div
-                className="w-44 h-36 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex flex-col items-center justify-center gap-1.5 shadow-2xl"
-                style={{ background: "#FFFFFF" }}
+                className="w-52 h-48 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex flex-col items-center justify-center gap-1.5 shadow-2xl px-4"
+                style={{ background: "#F6F1E9" }}
               >
-                <img src="/icon-192.png" alt="" className="w-12 h-12 rounded-2xl" />
+                <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-2xl" />
                 <span
                   className="text-xl font-extrabold"
                   style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
                 >
                   TheHub
+                </span>
+                <div className="w-14 h-px" style={{ background: colors.hairline, opacity: 0.25 }} />
+                <span
+                  className="text-[10px] font-semibold tracking-widest"
+                  style={{ color: "#9C4A31" }}
+                >
+                  BOOKING
                 </span>
               </div>
             )}
