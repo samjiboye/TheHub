@@ -18,6 +18,7 @@ const { startAutoReleaseJob } = require("./lib/autoRelease");
 const productRoutes = require("./routes/products");
 const marketplaceOrderRoutes = require("./routes/marketplaceOrders");
 const adminAnalyticsRoutes = require("./routes/adminAnalytics");
+const userRoutes = require("./routes/users");
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/wallet", walletRoutes);
 app.use("/", productRoutes);
 app.use("/orders", marketplaceOrderRoutes);
 app.use("/admin", adminAnalyticsRoutes);
+app.use("/users", userRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

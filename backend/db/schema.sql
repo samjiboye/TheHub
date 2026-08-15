@@ -248,3 +248,10 @@ UPDATE users SET referral_code = 'HUB' || LPAD(id::text, 5, '0') WHERE referral_
 
 -- Wallet-funded marketplace purchases reference an order instead of a booking.
 ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS order_id INTEGER REFERENCES product_orders(id) ON DELETE SET NULL;
+
+
+-- Customer profile: photo and a saved home address for home-service bookings.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address_state TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address_city TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address_street TEXT;

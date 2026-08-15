@@ -323,7 +323,7 @@ router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res)
     totals.bookingCount = Number(totals.bookingCount);
 
     const { rows: upcoming } = await db.query(
-      `SELECT b.*, s.name AS service_name, u.name AS customer_name
+      `SELECT b.*, s.name AS service_name, u.name AS customer_name, u.profile_photo_url AS customer_photo_url
        FROM bookings b
        JOIN services s ON s.id = b.service_id
        JOIN users u ON u.id = b.customer_id
@@ -359,7 +359,7 @@ router.get("/:id/completed-bookings", requireAuth, requireRole("owner"), async (
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
     const { rows: completed } = await db.query(
-      `SELECT b.*, s.name AS service_name, u.name AS customer_name
+      `SELECT b.*, s.name AS service_name, u.name AS customer_name, u.profile_photo_url AS customer_photo_url
        FROM bookings b
        JOIN services s ON s.id = b.service_id
        JOIN users u ON u.id = b.customer_id
