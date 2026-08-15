@@ -4361,9 +4361,10 @@ function OnboardingView({ onDone }) {
     >
       <div className="flex justify-between items-center">
         <div
-          className="px-5 py-4 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-lg"
+          className="px-4 py-2.5 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center gap-2 shadow-lg"
           style={{ background: "#FFFFFF" }}
         >
+          <img src="/icon-192.png" alt="" className="w-6 h-6 rounded-lg" />
           <span
             className="text-sm font-extrabold tracking-wide"
             style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
@@ -4464,11 +4465,12 @@ function OnboardingView({ onDone }) {
           <div className="flex-1 flex items-center justify-center py-10">
             {slide === 0 && (
               <div
-                className="w-44 h-36 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex items-center justify-center shadow-2xl"
+                className="w-44 h-36 rounded-[50%_50%_50%_10%/60%_60%_40%_40%] flex flex-col items-center justify-center gap-1.5 shadow-2xl"
                 style={{ background: "#FFFFFF" }}
               >
+                <img src="/icon-192.png" alt="" className="w-12 h-12 rounded-2xl" />
                 <span
-                  className="text-2xl font-extrabold"
+                  className="text-xl font-extrabold"
                   style={{ color: colors.hairline, fontFamily: FONT_DISPLAY }}
                 >
                   TheHub
