@@ -5,7 +5,13 @@ const cloudinary = require("../lib/cloudinary");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    cb(null, file.mimetype.startsWith("image/"));
+  },
+});
 
 function uploadToCloudinary(buffer) {
   return new Promise((resolve, reject) => {

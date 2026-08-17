@@ -5,6 +5,14 @@ const { requireAuth, requireRole } = require("../middleware/auth");
 const { getCommissionRate, getCompletedCount, TIERS } = require("../lib/commission");
 const router = express.Router();
 
+// Strip payout details before sending a salon to the public - these are
+// only ever needed internally when firing a payout, never by anyone
+// browsing salons or viewing a booking.
+function sanitizeSalon(salon) {
+  const { bank_code, account_number, paystack_recipient_code, paystack_subaccount_code, ...safe } = salon;
+  return safe;
+}
+
 // Haversine distance in miles
 function distanceMiles(lat1, lng1, lat2, lng2) {
   if ([lat1, lng1, lat2, lng2].some((v) => v === null || v === undefined)) return null;
@@ -56,7 +64,7 @@ router.get("/", async (req, res) => {
       );
       const completedCount = Number(bookingStatRows[0].count);
         return {
-          ...s,
+          ...sanitizeSalon(s),
           services,
           rating: reviewStats.avg ? Math.round(Number(reviewStats.avg) * 10) / 10 : null,
           reviewCount: Number(reviewStats.count),
@@ -111,7 +119,7 @@ router.get("/:id", async (req, res) => {
     );
     const reviewStats = statRows[0];
     res.json({
-      ...salon,
+      ...sanitizeSalon(salon),
       services,
       reviews,
       rating: reviewStats.avg ? Math.round(Number(reviewStats.avg) * 10) / 10 : null,

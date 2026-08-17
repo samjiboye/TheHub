@@ -10,7 +10,13 @@ const { completeBooking } = require("../lib/completeBooking");
 const { refundBooking } = require("../lib/refund");
 const { getCommissionRate } = require("../lib/commission");
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    cb(null, file.mimetype.startsWith("image/"));
+  },
+});
 const BOOKING_FEE = 0; // set above 0 to reintroduce a booking fee later
 
 function uploadToCloudinary(buffer) {
