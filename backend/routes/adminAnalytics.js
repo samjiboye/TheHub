@@ -93,4 +93,102 @@ router.get("/analytics", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// GET /admin/users - every user on the platform, with basic activity counts
+router.get("/users", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT
+         u.id, u.name, u.email, u.phone, u.role, u.created_at,
+         (SELECT COUNT(*) FROM bookings WHERE customer_id = u.id) AS bookings_made,
+         (SELECT COUNT(*) FROM salons WHERE owner_id = u.id) AS salons_owned
+       FROM users u
+       ORDER BY u.created_at DESC`
+    );
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        role: r.role,
+        createdAt: r.created_at,
+        bookingsMade: Number(r.bookings_made),
+        salonsOwned: Number(r.salons_owned),
+      }))
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load users." });
+  }
+});
+
+// GET /admin/users/:id - one user's profile plus their real activity
+router.get("/users/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows: userRows } = await db.query(
+      "SELECT id, name, email, phone, role, created_at, profile_photo_url, address_state, address_city, address_street, referral_code FROM users WHERE id = $1",
+      [req.params.id]
+    );
+    const user = userRows[0];
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (user.role === "owner") {
+      const { rows: salons } = await db.query("SELECT id, name, category FROM salons WHERE owner_id = $1", [user.id]);
+      const salonIds = salons.map((s) => s.id);
+      let bookings = [];
+      if (salonIds.length > 0) {
+        const { rows } = await db.query(
+          `SELECT b.id, b.status, b.payment_status, b.service_price, b.created_at,
+                  s.name AS service_name, sa.name AS salon_name, u.name AS customer_name
+           FROM bookings b
+           JOIN services s ON s.id = b.service_id
+           JOIN salons sa ON sa.id = b.salon_id
+           JOIN users u ON u.id = b.customer_id
+           WHERE b.salon_id = ANY($1)
+           ORDER BY b.created_at DESC`,
+          [salonIds]
+        );
+        bookings = rows;
+      }
+      res.json({ user, salons, bookings });
+    } else {
+      const { rows: bookings } = await db.query(
+        `SELECT b.id, b.status, b.payment_status, b.service_price, b.created_at,
+                s.name AS service_name, sa.name AS salon_name
+         FROM bookings b
+         JOIN services s ON s.id = b.service_id
+         JOIN salons sa ON sa.id = b.salon_id
+         WHERE b.customer_id = $1
+         ORDER BY b.created_at DESC`,
+        [user.id]
+      );
+      res.json({ user, bookings });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load that user." });
+  }
+});
+
+// GET /admin/bookings - every booking platform-wide: who booked who,
+// what they paid, whether it went through and whether it's done
+router.get("/bookings", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT b.id, b.status, b.payment_status, b.service_price, b.commission_amount, b.created_at,
+              s.name AS service_name, sa.name AS salon_name, u.name AS customer_name, u.id AS customer_id, sa.id AS salon_id
+       FROM bookings b
+       JOIN services s ON s.id = b.service_id
+       JOIN salons sa ON sa.id = b.salon_id
+       JOIN users u ON u.id = b.customer_id
+       ORDER BY b.created_at DESC
+       LIMIT 200`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load bookings." });
+  }
+});
+
 module.exports = router;
