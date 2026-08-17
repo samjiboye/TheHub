@@ -3,10 +3,11 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 const { JWT_SECRET } = require("../middleware/auth");
+const { loginLimiter, authLimiter } = require("../middleware/rateLimiters");
 const router = express.Router();
 
 // POST /auth/signup
-router.post("/signup", async (req, res) => {
+router.post("/signup", authLimiter, async (req, res) => {
   const { name, email, phone, password, role, referralCode } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "name, email, and password are required" });
@@ -52,7 +53,7 @@ router.post("/signup", async (req, res) => {
 });
 
 // POST /auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   try {
     const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
@@ -74,7 +75,7 @@ const { sendPasswordResetEmail } = require("../lib/email");
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // POST /auth/forgot-password
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", authLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "email is required" });
 
@@ -103,7 +104,7 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 // POST /auth/reset-password
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", authLimiter, async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) {
     return res.status(400).json({ error: "token and password are required" });

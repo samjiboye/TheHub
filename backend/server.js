@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 
 const authRoutes = require("./routes/auth");
 const salonRoutes = require("./routes/salons");
@@ -21,6 +22,11 @@ const adminAnalyticsRoutes = require("./routes/adminAnalytics");
 const userRoutes = require("./routes/users");
 
 const app = express();
+
+// Security headers - safe defaults for a JSON-only API (no HTML pages
+// served here, so the default Content-Security-Policy has nothing to
+// conflict with).
+app.use(helmet());
 
 const corsOrigin = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: corsOrigin }));
