@@ -4,6 +4,7 @@ const paystack = require("../lib/paystack");
 const { requireAuth, requireAdmin } = require("../middleware/auth");
 const { notifyUser } = require("../lib/notify");
 const { debitWallet, getBalance } = require("../lib/wallet");
+const { refundOrder } = require("../lib/refund");
 
 const router = express.Router();
 const CURRENCY = process.env.PAYSTACK_CURRENCY || "NGN";
@@ -198,6 +199,14 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
     const order = existingRows[0];
     if (!order) return res.status(404).json({ error: "Order not found" });
 
+    // Cancelling a paid order refunds the customer — wallet-paid orders get credited
+    // back instantly, card-paid orders go through Paystack's refund API.
+    let refundNote = "";
+    if (status === "cancelled" && order.status !== "cancelled" && order.payment_status === "paid") {
+      const result = await refundOrder(order);
+      refundNote = result.refundNote;
+    }
+
     const { rows } = await db.query(
       `UPDATE product_orders SET
         status = $1, courier_name = $2, courier_tracking_ref = $3, supplier_order_ref = $4
@@ -216,7 +225,7 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
         processing: "Your order is being prepared for dispatch.",
         dispatched: `Your order is on its way${courier_name ? ` via ${courier_name}` : ""}.`,
         delivered: "Your order has been delivered. Thanks for shopping with TheHub!",
-        cancelled: "Your order was cancelled.",
+        cancelled: `Your order was cancelled.${refundNote}`,
       };
       if (statusMessages[status]) {
         await notifyUser(order.customer_id, {
