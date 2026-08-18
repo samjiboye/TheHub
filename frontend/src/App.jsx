@@ -3,7 +3,7 @@ import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
 import MarketplaceView from "./Marketplace";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2, Gem, PenTool,
-  ChevronLeft, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
+  ChevronLeft, ChevronDown, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
   UserCircle, Bell, Wallet, ShoppingBag,
 } from "lucide-react";
@@ -277,7 +277,24 @@ function Header({ title, onBack, right }) {
   );
 }
 
-function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon }) {
+function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon, topOffset = 64 }) {
+  const [searchOpen, setSearchOpen] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY;
+      if (y <= 40) {
+        setSearchOpen(true);
+      } else if (y > lastScrollY.current + 4) {
+        setSearchOpen(false);
+      }
+      lastScrollY.current = y;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const filtered = salons
     .filter((s) => (category ? s.category === category : true))
     .filter((s) => {
@@ -328,69 +345,90 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
       </div>
 
       <div
-        className="sticky top-0 z-20 px-4 pt-4 pb-3 transition-[background] duration-500"
-        style={{ background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT, borderBottom: `2px solid ${colors.hairline}` }}
+        className="sticky z-20 px-4 pt-4 pb-3 transition-[background] duration-500"
+        style={{ top: topOffset, background: heroTheme ? heroTheme.gradient : NEUTRAL_HERO_GRADIENT, borderBottom: `2px solid ${colors.hairline}` }}
       >
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name or location"
-          className="w-full mb-3 px-4 py-3 rounded-xl text-base outline-none"
-          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-        />
-
-        <button
-          onClick={onRequestLocation}
-          disabled={locationStatus === "loading"}
-          className="w-full mb-1 px-4 py-3 rounded-xl text-sm flex items-center justify-center gap-2 tap-glass"
-          style={{
-            background: locationStatus === "granted" ? colors.hairline : colors.panelLight,
-            border: `2px solid ${colors.hairline}`,
-            color: locationStatus === "granted" ? "#FFFFFF" : colors.cream,
-            fontWeight: 600,
-          }}
+        <div
+          className="overflow-hidden transition-[max-height,opacity] duration-300 ease-out"
+          style={{ maxHeight: searchOpen ? 420 : 0, opacity: searchOpen ? 1 : 0 }}
         >
-          {locationStatus === "loading" ? (
-            <><Loader2 size={16} className="animate-spin" /> Finding your location…</>
-          ) : locationStatus === "granted" ? (
-            <><MapPin size={16} /> Showing results near you — tap to refresh</>
-          ) : (
-            <><MapPin size={16} /> Find services near me</>
-          )}
-        </button>
-        {locationStatus === "denied" && (
-          <p className="text-xs text-center mb-2" style={{ color: colors.creamDim }}>
-            Location is blocked. Enable it in your browser's site settings, then tap the button above again.
-          </p>
-        )}
-        {locationStatus === "unsupported" && (
-          <p className="text-xs text-center mb-2" style={{ color: colors.creamDim }}>
-            Your browser doesn't support location search — try the state/city filters below instead.
-          </p>
-        )}
-        <div className="mb-3" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or location"
+            className="w-full mb-3 px-4 py-3 rounded-xl text-base outline-none"
+            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          />
 
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <select
-            value={searchState}
-            onChange={(e) => { setSearchState(e.target.value); setSearchCity(""); }}
-            className="px-3 py-3 rounded-xl text-sm outline-none"
-            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          <button
+            onClick={onRequestLocation}
+            disabled={locationStatus === "loading"}
+            className="w-full mb-1 px-4 py-3 rounded-xl text-sm flex items-center justify-center gap-2 tap-glass"
+            style={{
+              background: locationStatus === "granted" ? colors.hairline : colors.panelLight,
+              border: `2px solid ${colors.hairline}`,
+              color: locationStatus === "granted" ? "#FFFFFF" : colors.cream,
+              fontWeight: 600,
+            }}
           >
-            <option value="">All states</option>
-            {NIGERIA_LOCATIONS.map((s) => <option key={s.state} value={s.state}>{s.state}</option>)}
-          </select>
-          <select
-            value={searchCity}
-            onChange={(e) => setSearchCity(e.target.value)}
-            disabled={!searchState}
-            className="px-3 py-3 rounded-xl text-sm outline-none"
-            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-          >
-            <option value="">All cities</option>
-            {citiesForState.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+            {locationStatus === "loading" ? (
+              <><Loader2 size={16} className="animate-spin" /> Finding your location…</>
+            ) : locationStatus === "granted" ? (
+              <><MapPin size={16} /> Showing results near you — tap to refresh</>
+            ) : (
+              <><MapPin size={16} /> Find services near me</>
+            )}
+          </button>
+          {locationStatus === "denied" && (
+            <p className="text-xs text-center mb-2" style={{ color: colors.creamDim }}>
+              Location is blocked. Enable it in your browser's site settings, then tap the button above again.
+            </p>
+          )}
+          {locationStatus === "unsupported" && (
+            <p className="text-xs text-center mb-2" style={{ color: colors.creamDim }}>
+              Your browser doesn't support location search — try the state/city filters below instead.
+            </p>
+          )}
+          <div className="mb-3" />
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <select
+              value={searchState}
+              onChange={(e) => { setSearchState(e.target.value); setSearchCity(""); }}
+              className="px-3 py-3 rounded-xl text-sm outline-none"
+              style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+            >
+              <option value="">All states</option>
+              {NIGERIA_LOCATIONS.map((s) => <option key={s.state} value={s.state}>{s.state}</option>)}
+            </select>
+            <select
+              value={searchCity}
+              onChange={(e) => setSearchCity(e.target.value)}
+              disabled={!searchState}
+              className="px-3 py-3 rounded-xl text-sm outline-none"
+              style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+            >
+              <option value="">All cities</option>
+              {citiesForState.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
+
+        {!searchOpen && (
+          <button
+            onClick={() => setSearchOpen(true)}
+            aria-label="Show search and location filters"
+            className="w-full flex items-center justify-center mb-2 tap-glass"
+            style={{ padding: "4px 0" }}
+          >
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{ width: 36, height: 22, background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+            >
+              <ChevronDown size={16} color={colors.cream} />
+            </div>
+          </button>
+        )}
 
         <div ref={chipRowRef} className="flex gap-2 overflow-x-auto pb-1 relative">
           <div
@@ -4547,6 +4585,17 @@ export default function App() {
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const iconBarRef = useRef(null);
+  const [iconBarHeight, setIconBarHeight] = useState(64);
+
+  useEffect(() => {
+    const measure = () => {
+      if (iconBarRef.current) setIconBarHeight(iconBarRef.current.offsetHeight);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  });
   const [customerAuth, setCustomerAuth] = useState(() => {
     try {
       const saved = localStorage.getItem("customerAuth");
@@ -4849,7 +4898,11 @@ export default function App() {
         }
       `}</style>
       <div className="w-full relative" style={{ minHeight: "100vh", maxWidth: "1600px", margin: "0 auto" }}>
-        <div className="flex px-4 pt-4 justify-between items-center">
+        <div
+          ref={iconBarRef}
+          className="flex px-4 pt-4 pb-3 justify-between items-center sticky top-0 z-30"
+          style={{ background: colors.bg }}
+        >
           <div>
             {role === "customer" && customerAuth && customerPhotoUrl ? (
               <button onClick={() => setView("profile")} className="tap-glass block">
@@ -5143,6 +5196,7 @@ export default function App() {
                 searchCity={searchCity} setSearchCity={setSearchCity}
                 locationStatus={locationStatus} onRequestLocation={requestLocation}
                 onSelectSalon={(s) => { setSelectedSalon(s); setView("profile"); }}
+                topOffset={iconBarHeight}
               />
             )}
             {view === "profile" && selectedSalon && (
