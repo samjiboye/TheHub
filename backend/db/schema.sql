@@ -177,6 +177,19 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 
+-- Extra gallery photos for a product, beyond the single cover image on products.image_url.
+-- Customers can swipe through these on the product detail screen.
+CREATE TABLE IF NOT EXISTS product_images (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  image_public_id TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id, position);
+
 CREATE TABLE IF NOT EXISTS product_orders (
   id SERIAL PRIMARY KEY,
   customer_id INTEGER NOT NULL REFERENCES users(id),

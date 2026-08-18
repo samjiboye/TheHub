@@ -84,6 +84,106 @@ function AddCategoryForm({ token, onAdded }) {
   );
 }
 
+function ProductGalleryManager({ token, productId }) {
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const load = () => {
+    setLoading(true);
+    apiFetch(`/products/${productId}`)
+      .then((data) => setImages(data.images || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(load, [productId]);
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append("images", f));
+      const res = await fetch(`${API_BASE}/products/${productId}/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn't add photos.");
+      load();
+    } catch (err) {
+      setError(err.message || "Couldn't add photos.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const deleteImage = async (imageId) => {
+    try {
+      await apiFetch(`/products/${productId}/images/${imageId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+    } catch (err) {
+      alert(err.message || "Couldn't delete photo.");
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3" style={{ borderTop: `2px dashed ${colors.hairline}` }}>
+      <p className="text-[10px] font-bold mb-2 uppercase tracking-wide" style={{ color: colors.creamDim }}>
+        Gallery photos (extra, in addition to the cover photo above)
+      </p>
+      {loading ? (
+        <div className="py-3 flex justify-center"><Loader2 size={16} className="animate-spin" color={colors.creamDim} /></div>
+      ) : (
+        images.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
+            {images.map((img) => (
+              <div key={img.id} className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden" style={{ background: colors.panelLight }}>
+                <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => deleteImage(img.id)}
+                  className="absolute top-0.5 right-0.5 rounded-full flex items-center justify-center"
+                  style={{ width: 18, height: 18, background: "rgba(0,0,0,0.6)" }}
+                >
+                  <Trash2 size={10} color="#fff" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFiles}
+        style={{ display: "none" }}
+      />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm tap-glass"
+        style={{ background: colors.panelLight, color: colors.cream }}
+      >
+        {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+        {uploading ? "Uploading..." : "Add photos (swipeable gallery)"}
+      </button>
+      {error && <p className="text-xs mt-2" style={{ color: "#E07A5F" }}>{error}</p>}
+    </div>
+  );
+}
+
 function ProductForm({ token, categories, product, onSaved, onCancel }) {
   const [name, setName] = useState(product?.name || "");
   const [description, setDescription] = useState(product?.description || "");
@@ -127,7 +227,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Couldn't save product.");
-      onSaved();
+      onSaved(data);
     } catch (err) {
       setError(err.message || "Couldn't save product.");
     } finally {
@@ -166,7 +266,7 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
           className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm tap-glass"
           style={{ background: colors.panelLight, color: colors.cream }}
         >
-          <Upload size={14} /> {fileName || (product?.image_url ? "Replace photo" : "Add photo")}
+          <Upload size={14} /> {fileName || (product?.image_url ? "Replace cover photo" : "Add cover photo")}
         </button>
       </div>
       {error && <p className="text-xs mt-2" style={{ color: "#E07A5F" }}>{error}</p>}
@@ -179,9 +279,11 @@ function ProductForm({ token, categories, product, onSaved, onCancel }) {
           {showPreview ? "Hide preview" : "Preview"}
         </button>
         <button onClick={onCancel} className="px-4 py-2.5 rounded-xl text-sm" style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
-          Cancel
+          {product?.id ? "Done" : "Cancel"}
         </button>
       </div>
+
+      {product?.id && <ProductGalleryManager token={token} productId={product.id} />}
 
       {showPreview && (
         <div className="mt-4 pt-4" style={{ borderTop: `2px dashed ${colors.hairline}` }}>
@@ -251,7 +353,7 @@ export function ProductsTab({ token }) {
           token={token}
           categories={categories}
           product={editingProduct}
-          onSaved={() => { setShowForm(false); setEditingProduct(null); load(); }}
+          onSaved={(saved) => { setShowForm(false); setEditingProduct(saved); load(); }}
           onCancel={() => { setShowForm(false); setEditingProduct(null); }}
         />
       ) : (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ShoppingBag, Plus, Minus, X, Loader2, Package, Truck, Star } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
@@ -70,9 +70,66 @@ function MarketplaceHeader({ title, onBack, right }) {
   );
 }
 
-function ProductDetail({ product, onBack, onAddToCart }) {
+function ProductGallery({ images, alt }) {
+  const [index, setIndex] = useState(0);
+  const scrollRef = useRef(null);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el || el.clientWidth === 0) return;
+    setIndex(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
+  if (images.length === 0) {
+    return <div className="w-full aspect-square" style={{ background: colors.panelLight }} />;
+  }
+
+  return (
+    <div className="relative">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto"
+        style={{ scrollSnapType: "x mandatory", scrollbarWidth: "none" }}
+      >
+        {images.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt={alt}
+            className="w-full aspect-square object-cover shrink-0"
+            style={{ scrollSnapAlign: "center" }}
+          />
+        ))}
+      </div>
+      {images.length > 1 && (
+        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+          {images.map((_, i) => (
+            <div
+              key={i}
+              className="rounded-full"
+              style={{
+                width: i === index ? 16 : 6,
+                height: 6,
+                background: i === index ? colors.hairline : "rgba(255,255,255,0.6)",
+                transition: "width 200ms ease",
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProductDetail({ product: initialProduct, onBack, onAddToCart }) {
+  const [product, setProduct] = useState(initialProduct);
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
+
+  useEffect(() => {
+    apiFetch(`/products/${initialProduct.id}`).then(setProduct).catch(() => {});
+  }, [initialProduct.id]);
 
   useEffect(() => {
     apiFetch(`/products/${product.id}/reviews`)
@@ -81,10 +138,12 @@ function ProductDetail({ product, onBack, onAddToCart }) {
       .finally(() => setLoadingReviews(false));
   }, [product.id]);
 
+  const galleryImages = [product.image_url, ...((product.images || []).map((i) => i.image_url))].filter(Boolean);
+
   return (
     <div className="px-4 py-4">
       <div className="rounded-2xl overflow-hidden mb-4" style={{ background: colors.panelLight }}>
-        {product.image_url && <img src={product.image_url} alt={product.name} className="w-full aspect-square object-cover" />}
+        <ProductGallery images={galleryImages} alt={product.name} />
       </div>
       <h2 className="text-xl font-bold" style={{ color: colors.cream, fontFamily: FONT_DISPLAY }}>{product.name}</h2>
       <p className="text-lg font-bold mt-1" style={{ color: colors.hairline }}>{naira(product.price)}</p>

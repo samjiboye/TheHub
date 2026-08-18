@@ -81,7 +81,7 @@ router.get("/products", async (req, res) => {
   }
 });
 
-// GET /products/:id - public, product detail
+// GET /products/:id - public, product detail (includes gallery images beyond the cover photo)
 router.get("/products/:id", async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -97,6 +97,12 @@ router.get("/products/:id", async (req, res) => {
       [req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: "Product not found" });
+
+    const { rows: imageRows } = await db.query(
+      "SELECT id, image_url, position FROM product_images WHERE product_id = $1 ORDER BY position ASC, id ASC",
+      [req.params.id]
+    );
+    rows[0].images = imageRows;
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
@@ -218,6 +224,58 @@ router.patch("/products/:id", requireAuth, requireAdmin, upload.single("image"),
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't update product." });
+  }
+});
+
+// POST /products/:id/images - admin only, add extra gallery photos (up to 8 per request)
+router.post("/products/:id/images", requireAuth, requireAdmin, upload.array("images", 8), async (req, res) => {
+  try {
+    const { rows: productRows } = await db.query("SELECT id FROM products WHERE id = $1", [req.params.id]);
+    if (!productRows[0]) return res.status(404).json({ error: "Product not found" });
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: "No images provided" });
+
+    const { rows: posRows } = await db.query(
+      "SELECT COALESCE(MAX(position), -1) AS max_pos FROM product_images WHERE product_id = $1",
+      [req.params.id]
+    );
+    let nextPos = posRows[0].max_pos + 1;
+
+    const inserted = [];
+    for (const file of req.files) {
+      const result = await uploadToCloudinary(file.buffer);
+      const { rows } = await db.query(
+        `INSERT INTO product_images (product_id, image_url, image_public_id, position)
+         VALUES ($1, $2, $3, $4) RETURNING id, image_url, position`,
+        [req.params.id, result.secure_url, result.public_id, nextPos]
+      );
+      inserted.push(rows[0]);
+      nextPos++;
+    }
+    res.status(201).json(inserted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't upload photos." });
+  }
+});
+
+// DELETE /products/:id/images/:imageId - admin only, remove one gallery photo
+router.delete("/products/:id/images/:imageId", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT * FROM product_images WHERE id = $1 AND product_id = $2",
+      [req.params.imageId, req.params.id]
+    );
+    const image = rows[0];
+    if (!image) return res.status(404).json({ error: "Photo not found" });
+
+    if (image.image_public_id) {
+      await cloudinary.uploader.destroy(image.image_public_id).catch(() => {});
+    }
+    await db.query("DELETE FROM product_images WHERE id = $1", [req.params.imageId]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't delete photo." });
   }
 });
 
