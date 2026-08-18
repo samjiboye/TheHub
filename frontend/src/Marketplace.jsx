@@ -19,8 +19,8 @@ async function apiFetch(path, options = {}) {
 }
 
 const naira = (n) => `₦${Number(n).toLocaleString()}`;
-const PREORDER_DAYS = 42; // matches backend default (~6 weeks for overseas-sourced pre-orders)
-const PREORDER_LABEL = "4–6 weeks"; // shown to customers — a range reads more honest than a precise day count
+const PREORDER_DAYS = 28; // matches backend default (~4 weeks for overseas-sourced pre-orders)
+const PREORDER_LABEL = "2–4 weeks"; // shown to customers — a range reads more honest than a precise day count
 
 function estimatedDeliveryDate(order) {
   const created = new Date(order.created_at);

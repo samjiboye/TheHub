@@ -7,7 +7,7 @@ const { requireAuth, requireAdmin } = require("../middleware/auth");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const DELIVERY_FEE = Number(process.env.MARKETPLACE_DELIVERY_FEE || 1500);
-const PREORDER_DAYS = Number(process.env.MARKETPLACE_PREORDER_DAYS || 42);
+const PREORDER_DAYS = Number(process.env.MARKETPLACE_PREORDER_DAYS || 28);
 
 // GET /marketplace/config - public, so the frontend never has to hardcode/guess these values
 router.get("/marketplace/config", (req, res) => {
