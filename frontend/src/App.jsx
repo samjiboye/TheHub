@@ -165,9 +165,9 @@ const SALONS = [
 
 const TIME_SLOTS = ["9:00 AM", "10:30 AM", "12:00 PM", "1:30 PM", "3:00 PM", "4:30 PM", "6:00 PM"];
 
-function formatBookingDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr + "T00:00:00");
+function formatBookingDate(dateInput) {
+  if (!dateInput) return null;
+  const d = dateInput instanceof Date ? dateInput : new Date(String(dateInput).slice(0, 10) + "T00:00:00");
   if (isNaN(d.getTime())) return null;
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
