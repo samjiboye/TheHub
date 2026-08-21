@@ -1849,6 +1849,91 @@ function CompletedAppointmentsView({ token, onBack }) {
   );
 }
 
+function OwnerCustomerProfileView({ token, salonId, customerId, onBack }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiFetch(`/salons/${salonId}/customers/${customerId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((data) => { if (!cancelled) setProfile(data); })
+      .catch((e) => { if (!cancelled) setError(e.message || "Couldn't load this customer's profile."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [salonId, customerId, token]);
+
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" })
+    : null;
+
+  return (
+    <div className="pb-8" style={{ background: OWNER_THEME_GRADIENT, minHeight: "100vh" }}>
+      <Header title="Customer" onBack={onBack} />
+      <div className="px-4 max-w-xl mx-auto w-full">
+        {loading && (
+          <div className="flex justify-center pt-8">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && <p className="text-sm text-center mt-4" style={{ color: colors.creamDim }}>{error}</p>}
+        {profile && (
+          <div className="flex flex-col items-center gap-3 pt-6">
+            {profile.profile_photo_url ? (
+              <img
+                src={profile.profile_photo_url}
+                alt={profile.name}
+                className="w-24 h-24 rounded-full object-cover"
+                style={{ border: `3px solid ${colors.hairline}` }}
+              />
+            ) : (
+              <div
+                className="w-24 h-24 rounded-full flex items-center justify-center"
+                style={{ background: colors.panelLight, border: `3px solid ${colors.hairline}` }}
+              >
+                <Users size={36} color={colors.hairline} />
+              </div>
+            )}
+            <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.4rem", fontWeight: 700 }}>
+              {profile.name}
+            </h2>
+            {memberSince && (
+              <p className="text-xs" style={{ color: colors.creamDim }}>On TheHub since {memberSince}</p>
+            )}
+
+            <div className="w-full grid grid-cols-2 gap-3 mt-4">
+              <div className="rounded-xl p-4 text-center" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+                <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.6rem", fontWeight: 700 }}>
+                  {profile.completedBookingsHere}
+                </p>
+                <p className="text-xs" style={{ color: colors.creamDim }}>Completed with you</p>
+              </div>
+              <div className="rounded-xl p-4 text-center" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+                <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.6rem", fontWeight: 700 }}>
+                  {profile.totalBookingsHere}
+                </p>
+                <p className="text-xs" style={{ color: colors.creamDim }}>Total bookings with you</p>
+              </div>
+            </div>
+
+            {profile.review && (
+              <div className="w-full rounded-xl p-4 mt-2" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+                <p className="text-xs font-semibold mb-1" style={{ color: colors.gold }}>
+                  Their review of your salon — {"★".repeat(profile.review.rating)}{"☆".repeat(5 - profile.review.rating)}
+                </p>
+                {profile.review.comment && (
+                  <p className="text-sm" style={{ color: colors.cream }}>"{profile.review.comment}"</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OwnerDashboard({ token }) {
   const [salon, setSalon] = useState(null);
   const [data, setData] = useState(null);
@@ -1869,6 +1954,7 @@ function OwnerDashboard({ token }) {
   const [otpInputs, setOtpInputs] = useState({}); // bookingId -> code string
   const [confirmSubmittingId, setConfirmSubmittingId] = useState(null);
   const [confirmErrors, setConfirmErrors] = useState({});
+  const [viewingCustomer, setViewingCustomer] = useState(null); // { id, name } | null
 
   async function submitCancel(bookingId) {
     if (!cancelReason) {
@@ -2069,6 +2155,16 @@ function OwnerDashboard({ token }) {
   if (needsSetup) {
     return <CreateSalonView token={token} onDone={() => setRefreshKey((k) => k + 1)} />;
   }
+  if (viewingCustomer && salon) {
+    return (
+      <OwnerCustomerProfileView
+        token={token}
+        salonId={salon.id}
+        customerId={viewingCustomer.id}
+        onBack={() => setViewingCustomer(null)}
+      />
+    );
+  }
   if (error) {
     return (
       <div className="pb-10 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
@@ -2224,7 +2320,10 @@ function OwnerDashboard({ token }) {
           {data.upcoming.map((a) => (
             <div key={a.id} className="flex flex-col gap-2 px-4 py-3 rounded-xl" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setViewingCustomer({ id: a.customer_id, name: a.customer_name })}
+                  className="flex items-center gap-3 text-left tap-glass"
+                >
                   {a.customer_photo_url ? (
                     <img
                       src={a.customer_photo_url}
@@ -2239,12 +2338,12 @@ function OwnerDashboard({ token }) {
                   )}
                   <div>
                     <p className="text-sm" style={{ color: colors.cream }}>{a.service_name}</p>
-                    <p className="text-xs" style={{ color: colors.creamDim }}>{a.customer_name}</p>
+                    <p className="text-xs underline" style={{ color: colors.creamDim }}>{a.customer_name}</p>
                     {a.location_type === "home" && (
                       <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 {a.customer_address}</p>
                     )}
                   </div>
-                </div>
+                </button>
                 <span className="text-xs text-right shrink-0" style={{ color: colors.creamDim }}>
                   {formatBookingDate(a.booking_date) && <>{formatBookingDate(a.booking_date)}<br /></>}
                   {a.time_slot}

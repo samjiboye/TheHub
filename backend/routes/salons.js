@@ -358,6 +358,54 @@ router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res)
   }
 });
 
+// GET /salons/:id/customers/:customerId - owner-only view of a customer who has booked with them.
+// Deliberately scoped: only what's needed to build trust (name, photo, how long they've been on
+// TheHub, how many times they've booked at THIS salon). No phone/email/other-salon activity, since
+// that would give owners a way to solicit off-platform payment and bypass the commission.
+router.get("/:id/customers/:customerId", requireAuth, requireRole("owner"), async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows: customerRows } = await db.query(
+      `SELECT u.id, u.name, u.profile_photo_url, u.created_at
+       FROM users u
+       JOIN bookings b ON b.customer_id = u.id
+       WHERE u.id = $1 AND b.salon_id = $2
+       LIMIT 1`,
+      [req.params.customerId, req.params.id]
+    );
+    const customer = customerRows[0];
+    if (!customer) return res.status(404).json({ error: "This person hasn't booked with your salon." });
+
+    const { rows: statsRows } = await db.query(
+      `SELECT COUNT(*) FILTER (WHERE status = 'completed') AS completed_count,
+              COUNT(*) AS total_count
+       FROM bookings WHERE customer_id = $1 AND salon_id = $2`,
+      [req.params.customerId, req.params.id]
+    );
+
+    const { rows: reviewRows } = await db.query(
+      `SELECT rating, comment, created_at FROM reviews
+       WHERE customer_id = $1 AND salon_id = $2
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.params.customerId, req.params.id]
+    );
+
+    res.json({
+      ...customer,
+      completedBookingsHere: Number(statsRows[0].completed_count),
+      totalBookingsHere: Number(statsRows[0].total_count),
+      review: reviewRows[0] || null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load customer profile." });
+  }
+});
+
 // GET /salons/:id/completed-bookings (owner's completed appointment history)
 router.get("/:id/completed-bookings", requireAuth, requireRole("owner"), async (req, res) => {
   try {
