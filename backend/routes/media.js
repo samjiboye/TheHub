@@ -17,7 +17,16 @@ function uploadToCloudinary(buffer, resourceType) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { resource_type: resourceType, folder: "thehub" },
-      (err, result) => (err ? reject(err) : resolve(result))
+      (err, result) => {
+        if (err) return reject(err);
+        // Serve a compressed, auto-format version instead of the original upload —
+        // meaningfully smaller downloads on the mobile data most customers are on.
+        // Videos use a different delivery pipeline, so this only applies to images.
+        if (resourceType !== "video") {
+          result.secure_url = result.secure_url.replace("/upload/", "/upload/f_auto,q_auto/");
+        }
+        resolve(result);
+      }
     );
     stream.end(buffer);
   });
