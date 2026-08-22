@@ -75,7 +75,7 @@ const SALONS = [
 // environment variable is needed. Safe to leave in place — it's idempotent and
 // does nothing once the demo owner already has salons.
 router.get("/seed", async (req, res) => {
-  if (!process.env.JWT_SECRET || req.query.key !== process.env.JWT_SECRET) {
+  if (!process.env.ADMIN_KEY || req.query.key !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Missing or incorrect key" });
   }
 
@@ -126,7 +126,7 @@ router.get("/seed", async (req, res) => {
 // catalog and orders) on hosts that don't offer shell access. Reuses JWT_SECRET
 // as a shared key, same convention as /admin/seed above.
 router.get("/promote", async (req, res) => {
-  if (!process.env.JWT_SECRET || req.query.key !== process.env.JWT_SECRET) {
+  if (!process.env.ADMIN_KEY || req.query.key !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Missing or incorrect key" });
   }
   const { email } = req.query;
