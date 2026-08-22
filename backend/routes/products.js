@@ -3,6 +3,7 @@ const multer = require("multer");
 const db = require("../db");
 const cloudinary = require("../lib/cloudinary");
 const { requireAuth, requireAdmin } = require("../middleware/auth");
+const { uploadLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -165,7 +166,7 @@ router.post("/products/:id/reviews", requireAuth, async (req, res) => {
 });
 
 // POST /products - admin only, create a product with an optional image
-router.post("/products", requireAuth, requireAdmin, upload.single("image"), async (req, res) => {
+router.post("/products", requireAuth, uploadLimiter, requireAdmin, upload.single("image"), async (req, res) => {
   const { name, description, price, stock_quantity, category_id } = req.body;
   if (!name || !price) return res.status(400).json({ error: "name and price are required" });
 
@@ -234,7 +235,7 @@ router.patch("/products/:id", requireAuth, requireAdmin, upload.single("image"),
 });
 
 // POST /products/:id/images - admin only, add extra gallery photos (up to 8 per request)
-router.post("/products/:id/images", requireAuth, requireAdmin, upload.array("images", 8), async (req, res) => {
+router.post("/products/:id/images", requireAuth, uploadLimiter, requireAdmin, upload.array("images", 8), async (req, res) => {
   try {
     const { rows: productRows } = await db.query("SELECT id FROM products WHERE id = $1", [req.params.id]);
     if (!productRows[0]) return res.status(404).json({ error: "Product not found" });

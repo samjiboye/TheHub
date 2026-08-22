@@ -3,6 +3,7 @@ const multer = require("multer");
 const db = require("../db");
 const cloudinary = require("../lib/cloudinary");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { uploadLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 const upload = multer({
@@ -33,7 +34,7 @@ function uploadToCloudinary(buffer, resourceType) {
 }
 
 // POST /salons/:id/media - owner uploads a photo or video
-router.post("/:id/media", requireAuth, requireRole("owner"), upload.single("file"), async (req, res) => {
+router.post("/:id/media", requireAuth, uploadLimiter, requireRole("owner"), upload.single("file"), async (req, res) => {
   const salonId = req.params.id;
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
@@ -96,7 +97,7 @@ router.delete("/:id/media/:mediaId", requireAuth, requireRole("owner"), async (r
 });
 
 // POST /salons/:id/profile-picture - owner uploads/replaces the salon's profile picture
-router.post("/:id/profile-picture", requireAuth, requireRole("owner"), upload.single("file"), async (req, res) => {
+router.post("/:id/profile-picture", requireAuth, uploadLimiter, requireRole("owner"), upload.single("file"), async (req, res) => {
   const salonId = req.params.id;
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 

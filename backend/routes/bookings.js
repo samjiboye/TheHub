@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { uploadLimiter } = require("../middleware/rateLimiters");
 const { notifyUser } = require("../lib/notify");
 const { sendNotificationEmail } = require("../lib/email");
 const paystack = require("../lib/paystack");
@@ -298,7 +299,7 @@ router.post("/:id/decline", requireAuth, async (req, res) => {
 // Optionally attaches a photo, generates a 4-digit code, and sends it to the
 // customer. The booking only becomes 'completed' once the owner enters that
 // code back via /confirm-completion, or 24 hours pass with no dispute filed.
-router.post("/:id/request-completion", requireAuth, upload.single("photo"), async (req, res) => {
+router.post("/:id/request-completion", requireAuth, uploadLimiter, upload.single("photo"), async (req, res) => {
   try {
     const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);
     const booking = bookingRows[0];

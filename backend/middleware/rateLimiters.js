@@ -22,4 +22,13 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { loginLimiter, authLimiter };
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: { error: "Too many uploads. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user ? `user:${req.user.id}` : req.ip),
+});
+
+module.exports = { loginLimiter, authLimiter, uploadLimiter };

@@ -3,6 +3,7 @@ const multer = require("multer");
 const db = require("../db");
 const cloudinary = require("../lib/cloudinary");
 const { requireAuth } = require("../middleware/auth");
+const { uploadLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 const upload = multer({
@@ -68,7 +69,7 @@ router.put("/me", requireAuth, async (req, res) => {
 });
 
 // POST /users/me/photo - upload or replace profile photo
-router.post("/me/photo", requireAuth, upload.single("file"), async (req, res) => {
+router.post("/me/photo", requireAuth, uploadLimiter, upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   try {
     const result = await uploadToCloudinary(req.file.buffer);
