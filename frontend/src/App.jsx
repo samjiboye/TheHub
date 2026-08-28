@@ -4960,7 +4960,7 @@ export default function App() {
       apiFetch(`/salons/${salonId}`)
         .then((data) => {
           setSelectedSalon(data);
-          setView("profile");
+          setView("salonDetail");
         })
         .catch(() => {});
     } else if (params.get("token")) {
@@ -5398,11 +5398,11 @@ export default function App() {
                 searchState={searchState} setSearchState={setSearchState}
                 searchCity={searchCity} setSearchCity={setSearchCity}
                 locationStatus={locationStatus} onRequestLocation={requestLocation}
-                onSelectSalon={(s) => { setSelectedSalon(s); setView("profile"); }}
+                onSelectSalon={(s) => { setSelectedSalon(s); setView("salonDetail"); }}
                 topOffset={iconBarHeight}
               />
             )}
-            {view === "profile" && selectedSalon && (
+            {view === "salonDetail" && selectedSalon && (
               <ProfileView
                 salon={selectedSalon}
                 onBack={() => setView("home")}
@@ -5411,7 +5411,7 @@ export default function App() {
             )}
             {view === "auth" && (
               <>
-                <Header title="Sign in to book" onBack={() => setView("profile")} />
+                <Header title="Sign in to book" onBack={() => setView("salonDetail")} />
                 <AuthGate
                   role="customer"
                   allowGuest
@@ -5428,7 +5428,7 @@ export default function App() {
                 salon={selectedSalon}
                 service={selectedService}
                 token={customerAuth.token}
-                onBack={() => setView("profile")}
+                onBack={() => setView("salonDetail")}
                 onPaidWithWallet={() => setCheckoutResult("success")}
               />
             )}
@@ -5482,7 +5482,7 @@ export default function App() {
         <Concierge
           open={chatOpen}
           onClose={() => setChatOpen(false)}
-          onSelectSalon={(s) => { setSelectedSalon(s); setRole("customer"); setView("profile"); }}
+          onSelectSalon={(s) => { setSelectedSalon(s); setRole("customer"); setView("salonDetail"); }}
         />
         {customerAuth && unratedQueue.length > 0 && !ratingPopupDismissed && (
           <RatingPopup
