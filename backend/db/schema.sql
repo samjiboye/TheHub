@@ -338,3 +338,31 @@ CREATE TABLE IF NOT EXISTS owner_referral_boosts (
   UNIQUE (referred_owner_id)
 );
 CREATE INDEX IF NOT EXISTS idx_owner_referral_boosts_referring ON owner_referral_boosts(referring_owner_id);
+
+
+-- Chat between a customer and a salon owner. One persistent thread per
+-- customer+salon pair (not tied to any single booking), so the same
+-- conversation carries across repeat visits. Messages are fetched via
+-- polling (checked every 10-15s while the chat screen is open) rather
+-- than a live/real-time connection, to keep hosting simple and cheap.
+CREATE TABLE IF NOT EXISTS conversations (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  salon_id INTEGER NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (customer_id, salon_id)
+);
+CREATE INDEX IF NOT EXISTS idx_conversations_customer ON conversations(customer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_salon ON conversations(salon_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id SERIAL PRIMARY KEY,
+  conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sender_role TEXT NOT NULL CHECK (sender_role IN ('customer', 'owner')),
+  body TEXT NOT NULL,
+  read_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, created_at);
