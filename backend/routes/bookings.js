@@ -50,6 +50,18 @@ router.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "An address is required for home service bookings." });
   }
   try {
+    const { rows: pendingRows } = await db.query(
+      `SELECT b.id, s.name AS salon_name FROM bookings b JOIN salons s ON s.id = b.salon_id
+       WHERE b.customer_id = $1 AND b.status = 'confirmed' AND b.owner_response = 'pending'
+       LIMIT 1`,
+      [req.user.id]
+    );
+    if (pendingRows[0]) {
+      return res.status(400).json({
+        error: `You already have a booking waiting on a response from ${pendingRows[0].salon_name}. Wait for them to accept, or cancel it first, before booking somewhere else.`,
+      });
+    }
+
     const { rows: serviceRows } = await db.query(
       "SELECT * FROM services WHERE id = $1 AND salon_id = $2",
       [service_id, salon_id]
@@ -421,7 +433,7 @@ router.post("/:id/dispute", requireAuth, async (req, res) => {
     if (!booking) return res.status(404).json({ error: "Booking not found" });
     if (booking.customer_id !== req.user.id) return res.status(403).json({ error: "Not your booking" });
 
-    if (!booking.completion_requested_at || booking.status !== "confirmed") {
+    if (!booking.checked_in_at) {
       return res.status(400).json({ error: "There's nothing to dispute on this booking yet." });
     }
     if (booking.disputed_at) {
@@ -462,31 +474,28 @@ router.post("/:id/dispute", requireAuth, async (req, res) => {
   }
 });
 
-// GET /bookings/salon/:salonId/daily-code — owner views (or generates) this hour's
-// check-in code for their salon. Rotates every hour (not once a day) so a customer
-// can't share the same code with someone else, or a second account, later that day.
-router.get("/salon/:salonId/daily-code", requireAuth, async (req, res) => {
+// GET /bookings/:id/checkin-code — owner views (or generates) the code for THIS
+// SPECIFIC booking. Each booking gets its own permanent code, never shared with
+// any other booking or client, so there's no window where a code could be reused
+// to fake a different visit.
+router.get("/:id/checkin-code", requireAuth, async (req, res) => {
   try {
-    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.salonId]);
-    const salon = salonRows[0];
-    if (!salon) return res.status(404).json({ error: "Salon not found" });
-    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
-
-    const { rows: existing } = await db.query(
-      "SELECT code FROM salon_daily_codes WHERE salon_id = $1 AND code_date = CURRENT_DATE AND code_hour = EXTRACT(HOUR FROM NOW())",
-      [salon.id]
+    const { rows: bookingRows } = await db.query(
+      `SELECT b.*, s.owner_id AS salon_owner_id FROM bookings b JOIN salons s ON s.id = b.salon_id WHERE b.id = $1`,
+      [req.params.id]
     );
-    if (existing[0]) return res.json({ code: existing[0].code });
+    const booking = bookingRows[0];
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+    if (booking.salon_owner_id !== req.user.id) return res.status(403).json({ error: "Not your booking" });
+
+    if (booking.checkin_code) return res.json({ code: booking.checkin_code });
 
     const code = String(Math.floor(1000 + Math.random() * 9000));
-    await db.query(
-      "INSERT INTO salon_daily_codes (salon_id, code, code_date, code_hour) VALUES ($1, $2, CURRENT_DATE, EXTRACT(HOUR FROM NOW()))",
-      [salon.id, code]
-    );
+    await db.query("UPDATE bookings SET checkin_code = $1 WHERE id = $2", [code, booking.id]);
     res.json({ code });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Couldn't get today's code." });
+    res.status(500).json({ error: "Couldn't get this booking's code." });
   }
 });
 
@@ -506,13 +515,8 @@ router.post("/:id/check-in", requireAuth, async (req, res) => {
     if (booking.status !== "confirmed") return res.status(400).json({ error: "This booking isn't confirmed yet." });
     if (booking.checked_in_at) return res.status(400).json({ error: "This booking is already checked in." });
 
-    const { rows: codeRows } = await db.query(
-      "SELECT code FROM salon_daily_codes WHERE salon_id = $1 AND code_date = CURRENT_DATE AND code_hour = EXTRACT(HOUR FROM NOW())",
-      [booking.salon_id]
-    );
-    const currentCode = codeRows[0]?.code;
-    if (!currentCode || !code || String(code).trim() !== currentCode) {
-      return res.status(400).json({ error: "That code doesn't match — codes change every hour, double check with the salon." });
+    if (!booking.checkin_code || !code || String(code).trim() !== booking.checkin_code) {
+      return res.status(400).json({ error: "That code doesn't match. Ask the salon for the code for this specific booking." });
     }
 
     let isRewardVisit = false;
@@ -536,6 +540,9 @@ router.post("/:id/check-in", requireAuth, async (req, res) => {
         [booking.customer_id, booking.salon_id]
       );
     }
+
+    const { rows: salonForCompletionRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
+    await completeBooking(booking, salonForCompletionRows[0]);
 
     res.json({ ok: true, visitCount: isRewardVisit ? 0 : visitCount, isRewardVisit });
   } catch (err) {

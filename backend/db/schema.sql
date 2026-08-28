@@ -366,3 +366,5 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, created_at);
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS checkin_code TEXT;

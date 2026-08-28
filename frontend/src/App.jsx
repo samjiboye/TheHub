@@ -1907,28 +1907,24 @@ function OwnerDashboard({ token }) {
   const [confirmSubmittingId, setConfirmSubmittingId] = useState(null);
   const [confirmErrors, setConfirmErrors] = useState({});
   const [viewingCustomer, setViewingCustomer] = useState(null); // { id, name } | null
-  const [dailyCode, setDailyCode] = useState(null);
-  const [dailyCodeLoading, setDailyCodeLoading] = useState(false);
-  const [dailyCodeError, setDailyCodeError] = useState(null);
+  const [revealedCodes, setRevealedCodes] = useState({}); // bookingId -> code
+  const [revealingCodeId, setRevealingCodeId] = useState(null);
+  const [revealCodeErrors, setRevealCodeErrors] = useState({});
 
-  async function fetchDailyCode(salonId) {
-    setDailyCodeLoading(true);
-    setDailyCodeError(null);
+  async function revealCode(bookingId) {
+    setRevealingCodeId(bookingId);
+    setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: null }));
     try {
-      const res = await apiFetch(`/bookings/salon/${salonId}/daily-code`, {
+      const res = await apiFetch(`/bookings/${bookingId}/checkin-code`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setDailyCode(res.code);
+      setRevealedCodes((prev) => ({ ...prev, [bookingId]: res.code }));
     } catch (e) {
-      setDailyCodeError("Couldn't load today's code.");
+      setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: "Couldn't load this booking's code." }));
     } finally {
-      setDailyCodeLoading(false);
+      setRevealingCodeId(null);
     }
   }
-
-  useEffect(() => {
-    if (salon?.id) fetchDailyCode(salon.id);
-  }, [salon?.id]);
 
   async function submitCancel(bookingId) {
     if (!cancelReason) {
@@ -2211,23 +2207,6 @@ function OwnerDashboard({ token }) {
             </button>
           </div>
         )}
-        <div className="rounded-2xl px-4 py-4 mb-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
-          <p className="text-sm" style={{ color: colors.cream, fontWeight: 700 }}>Today's check-in code</p>
-          <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
-            Show this to a client once they arrive for their service. Changes every hour, so give it fresh each time.
-          </p>
-          <div className="mt-3 px-4 py-3 rounded-xl text-center" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
-            {dailyCodeLoading ? (
-              <Loader2 size={20} className="animate-spin mx-auto" color={colors.creamDim} />
-            ) : dailyCodeError ? (
-              <p className="text-xs" style={{ color: "#E07A5F" }}>{dailyCodeError}</p>
-            ) : (
-              <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "2rem", fontWeight: 800, letterSpacing: "0.15em" }}>
-                {dailyCode || "····"}
-              </p>
-            )}
-          </div>
-        </div>
         <p className="text-xs" style={{ color: colors.creamDim }}>{salon.name} · all time</p>
         <div className="grid grid-cols-1 gap-3 mt-3">
           <div className="rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
@@ -2361,7 +2340,7 @@ function OwnerDashboard({ token }) {
                       <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}>
                         ⚠️ Disputed
                       </span>
-                    ) : a.completion_requested_at ? null : (
+                    ) : (
                       cancellingId !== a.id && (
                         <button
                           onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
@@ -2372,73 +2351,28 @@ function OwnerDashboard({ token }) {
                         </button>
                       )
                     )}
-                    {!a.disputed_at && !a.completion_requested_at && completingId !== a.id && (
-                      <button
-                        onClick={() => { setCompletingId(a.id); setCompletionPhoto(null); setCompletionError(null); }}
-                        className="text-xs font-semibold px-3 py-1 rounded-full tap-glass"
-                        style={{ background: colors.hairline, color: "#FFFFFF" }}
-                      >
-                        Mark as done
-                      </button>
-                    )}
                   </div>
                   <LocationShareBlock bookingId={a.id} token={token} otherLabel="client" />
-                  {completingId === a.id && (
-                    <div className="flex flex-col gap-2 w-full">
-                      <p className="text-xs" style={{ color: colors.creamDim }}>
-                        Add a photo of the finished result — optional, but helps protect you if there's ever a dispute.
-                      </p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setCompletionPhoto(e.target.files[0] || null)}
-                        className="text-xs"
-                        style={{ color: colors.creamDim }}
-                      />
-                      {completionError && <p className="text-xs" style={{ color: "#E07A5F" }}>{completionError}</p>}
-                      <div className="flex gap-2 flex-wrap">
+                  {!a.checked_in_at && !a.disputed_at && (
+                    <div className="mt-2">
+                      {revealedCodes[a.id] ? (
+                        <div className="px-3 py-2 rounded-xl text-center inline-block" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+                          <p className="text-xs" style={{ color: colors.creamDim }}>This client's code</p>
+                          <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 800, letterSpacing: "0.15em" }}>
+                            {revealedCodes[a.id]}
+                          </p>
+                        </div>
+                      ) : (
                         <button
-                          onClick={() => submitRequestCompletion(a.id)}
-                          disabled={completionSubmitting}
-                          className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                          onClick={() => revealCode(a.id)}
+                          disabled={revealingCodeId === a.id}
+                          className="text-xs font-semibold px-3 py-1 rounded-full tap-glass"
                           style={{ background: colors.hairline, color: "#FFFFFF" }}
                         >
-                          {completionSubmitting ? "Sending…" : "Request completion"}
+                          {revealingCodeId === a.id ? "Loading…" : "Show check-in code"}
                         </button>
-                        <button
-                          onClick={() => setCompletingId(null)}
-                          className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                          style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {a.completion_requested_at && !a.disputed_at && (
-                    <div className="flex flex-col gap-2 w-full">
-                      <p className="text-xs" style={{ color: colors.creamDim }}>
-                        Code sent to client — enter it below once they give it to you. Auto-confirms in 24 hours if they don't respond.
-                      </p>
-                      <div className="flex gap-2 flex-wrap">
-                        <input
-                          value={otpInputs[a.id] || ""}
-                          onChange={(e) => setOtpInputs((prev) => ({ ...prev, [a.id]: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
-                          placeholder="4-digit code"
-                          inputMode="numeric"
-                          className="px-3 py-2 rounded-xl text-sm outline-none w-28"
-                          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-                        />
-                        <button
-                          onClick={() => submitConfirmCompletion(a.id)}
-                          disabled={confirmSubmittingId === a.id}
-                          className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                          style={{ background: colors.hairline, color: "#FFFFFF" }}
-                        >
-                          {confirmSubmittingId === a.id ? "Confirming…" : "Confirm"}
-                        </button>
-                      </div>
-                      {confirmErrors[a.id] && <p className="text-xs" style={{ color: "#E07A5F" }}>{confirmErrors[a.id]}</p>}
+                      )}
+                      {revealCodeErrors[a.id] && <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{revealCodeErrors[a.id]}</p>}
                     </div>
                   )}
                   {cancellingId === a.id && (
@@ -4207,15 +4141,8 @@ function MyBookingsView({ token, onBack, onOpenSalon }) {
                     )}
                   </div>
                 )}
-                {b.status === "confirmed" && b.completion_requested_at && !b.disputed_at && (
+                {b.checked_in_at && !b.disputed_at && (
                   <div className="mt-2 flex flex-col gap-2">
-                    <div className="px-3 py-2 rounded-xl text-center" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
-                      <p className="text-xs" style={{ color: colors.creamDim }}>Your confirmation code</p>
-                      <p className="text-2xl" style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 800, letterSpacing: "0.1em" }}>
-                        {b.completion_otp || "····"}
-                      </p>
-                      <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>Give this to {b.salon_name} once you're happy with the service.</p>
-                    </div>
                     {disputingId !== b.id ? (
                       <button
                         onClick={() => { setDisputingId(b.id); setDisputeReason(""); setDisputeError(null); }}
