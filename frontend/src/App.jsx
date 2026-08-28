@@ -4009,7 +4009,7 @@ function ChatInboxView({ token, onBack, onOpenConversation }) {
   );
 }
 
-function MyBookingsView({ token, onBack }) {
+function MyBookingsView({ token, onBack, onOpenSalon }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -4132,7 +4132,11 @@ function MyBookingsView({ token, onBack }) {
               className="flex flex-col px-4 py-3 rounded-xl"
               style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
             >
-              <div className="flex items-center justify-between">
+              <div
+                className="flex items-center justify-between tap-glass"
+                onClick={() => onOpenSalon && onOpenSalon(b.salon_id)}
+                style={{ cursor: onOpenSalon ? "pointer" : "default" }}
+              >
                 <div>
                   <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
                   <p className="text-xs" style={{ color: colors.creamDim }}>{b.salon_name}</p>
@@ -4858,6 +4862,18 @@ export default function App() {
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeMenu = () => setMenuOpen(false);
+    window.addEventListener("scroll", closeMenu, true);
+    window.addEventListener("touchmove", closeMenu, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", closeMenu, true);
+      window.removeEventListener("touchmove", closeMenu);
+    };
+  }, [menuOpen]);
+
   const iconBarRef = useRef(null);
   const [iconBarHeight, setIconBarHeight] = useState(64);
 
@@ -5266,6 +5282,9 @@ export default function App() {
               <Menu size={20} />
             </button>
             {menuOpen && (
+              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+            )}
+            {menuOpen && (
               <div
                 className="absolute right-0 mt-2 w-60 rounded-2xl shadow-lg z-50 overflow-hidden"
                 style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
@@ -5531,6 +5550,15 @@ export default function App() {
               <MyBookingsView
                 token={customerAuth.token}
                 onBack={() => setView("home")}
+                onOpenSalon={async (salonId) => {
+                  try {
+                    const salon = await apiFetch(`/salons/${salonId}`);
+                    setSelectedSalon(salon);
+                    setView("salonDetail");
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
               />
             )}
             {view === "settings" && (
