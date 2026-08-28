@@ -397,11 +397,20 @@ router.get("/:id/customers/:customerId", requireAuth, requireRole("owner"), asyn
       [req.params.customerId, req.params.id]
     );
 
+    const { rows: activeBookingRows } = await db.query(
+      `SELECT b.id, b.time_slot, b.booking_date, b.location_type, b.customer_address, sv.name AS service_name
+       FROM bookings b JOIN services sv ON sv.id = b.service_id
+       WHERE b.customer_id = $1 AND b.salon_id = $2 AND b.status = 'confirmed' AND b.checked_in_at IS NULL
+       ORDER BY b.booking_date ASC NULLS LAST, b.created_at ASC`,
+      [req.params.customerId, req.params.id]
+    );
+
     res.json({
       ...customer,
       completedBookingsHere: Number(statsRows[0].completed_count),
       totalBookingsHere: Number(statsRows[0].total_count),
       review: reviewRows[0] || null,
+      activeBookings: activeBookingRows,
     });
   } catch (err) {
     console.error(err);

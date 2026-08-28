@@ -1805,6 +1805,24 @@ function OwnerCustomerProfileView({ token, salonId, customerId, onBack }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [revealedCodes, setRevealedCodes] = useState({}); // bookingId -> code
+  const [revealingCodeId, setRevealingCodeId] = useState(null);
+  const [revealCodeErrors, setRevealCodeErrors] = useState({});
+
+  async function revealCode(bookingId) {
+    setRevealingCodeId(bookingId);
+    setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      const res = await apiFetch(`/bookings/${bookingId}/checkin-code`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRevealedCodes((prev) => ({ ...prev, [bookingId]: res.code }));
+    } catch (e) {
+      setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: "Couldn't load this booking's code." }));
+    } finally {
+      setRevealingCodeId(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -1877,6 +1895,48 @@ function OwnerCustomerProfileView({ token, salonId, customerId, onBack }) {
                 {profile.review.comment && (
                   <p className="text-sm" style={{ color: colors.cream }}>"{profile.review.comment}"</p>
                 )}
+              </div>
+            )}
+
+            {profile.activeBookings && profile.activeBookings.length > 0 && (
+              <div className="w-full mt-4">
+                <h3 className="text-sm font-bold mb-2" style={{ color: colors.cream }}>Upcoming with you</h3>
+                <div className="flex flex-col gap-2">
+                  {profile.activeBookings.map((b) => (
+                    <div key={b.id} className="rounded-xl p-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm" style={{ color: colors.cream, fontWeight: 700 }}>{b.service_name}</p>
+                        <span className="text-xs" style={{ color: colors.creamDim }}>
+                          {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)} · </>}
+                          {b.time_slot}
+                        </span>
+                      </div>
+                      {b.location_type === "home" && b.customer_address && (
+                        <p className="text-xs mt-1" style={{ color: colors.gold }}>🏠 {b.customer_address}</p>
+                      )}
+                      <div className="mt-2">
+                        {revealedCodes[b.id] ? (
+                          <div className="px-3 py-2 rounded-xl text-center inline-block" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+                            <p className="text-xs" style={{ color: colors.creamDim }}>Their code</p>
+                            <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.3rem", fontWeight: 800, letterSpacing: "0.15em" }}>
+                              {revealedCodes[b.id]}
+                            </p>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => revealCode(b.id)}
+                            disabled={revealingCodeId === b.id}
+                            className="text-xs font-semibold px-3 py-1 rounded-full tap-glass"
+                            style={{ background: colors.hairline, color: "#FFFFFF" }}
+                          >
+                            {revealingCodeId === b.id ? "Loading…" : "Show check-in code"}
+                          </button>
+                        )}
+                        {revealCodeErrors[b.id] && <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{revealCodeErrors[b.id]}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
