@@ -321,3 +321,20 @@ ALTER TABLE salon_daily_codes ADD COLUMN IF NOT EXISTS code_hour INTEGER NOT NUL
 ALTER TABLE salon_daily_codes DROP CONSTRAINT IF EXISTS salon_daily_codes_salon_id_code_date_key;
 ALTER TABLE salon_daily_codes DROP CONSTRAINT IF EXISTS salon_daily_codes_salon_id_code_date_code_hour_key;
 ALTER TABLE salon_daily_codes ADD CONSTRAINT salon_daily_codes_salon_id_code_date_code_hour_key UNIQUE (salon_id, code_date, code_hour);
+
+
+-- Owner-referral growth reward: when an owner you referred gets their salon's
+-- first-ever completed booking, you get free featured placement in search —
+-- costs the app nothing, unlike a cash/points reward. Capped in code so
+-- referring 20 owners doesn't bank up 20x the reward.
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS featured_until TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS owner_referral_boosts (
+  id SERIAL PRIMARY KEY,
+  referring_owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  referred_owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  weeks_granted INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (referred_owner_id)
+);
+CREATE INDEX IF NOT EXISTS idx_owner_referral_boosts_referring ON owner_referral_boosts(referring_owner_id);

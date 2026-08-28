@@ -21,7 +21,7 @@ async function checkPendingCompletions() {
         await notifyUser(salon.owner_id, {
           type: "booking_completed",
           title: "Booking auto-confirmed",
-          body: `Booking #${booking.id} was auto-confirmed after 24 hours with no client response. Your payout has been processed if applicable.`,
+          body: `Booking #${booking.id} was auto-confirmed after 24 hours with no client response.`,
           bookingId: booking.id,
         });
       }

@@ -30,6 +30,9 @@ router.get("/", async (req, res) => {
   const { category, lat, lng, q, state, city } = req.query;
   try {
     let sql = "SELECT * FROM salons WHERE 1=1";
+    // Featured (via owner referral boost) salons surface first in the default
+    // listing; distance-based sort (when lat/lng given) overrides this in JS below.
+    const FEATURED_ORDER_SUFFIX = " ORDER BY (featured_until IS NOT NULL AND featured_until > NOW()) DESC, created_at DESC";
     const params = [];
     if (category) {
       params.push(category);
@@ -47,7 +50,7 @@ router.get("/", async (req, res) => {
       params.push(`%${q}%`);
       sql += ` AND (name ILIKE $${params.length} OR address ILIKE $${params.length})`;
     }
-    const { rows: salons } = await db.query(sql, params);
+    const { rows: salons } = await db.query(sql + FEATURED_ORDER_SUFFIX, params);
 
     const withExtras = await Promise.all(
       salons.map(async (s) => {
