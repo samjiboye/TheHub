@@ -4154,7 +4154,7 @@ function MyBookingsView({ token, onBack }) {
               )}
                 {b.status === "confirmed" && b.owner_response === "pending" && (
                   <p className="text-xs mt-2" style={{ color: colors.gold }}>
-                    Payment received — waiting for {b.salon_name} to accept.
+                    Booking sent — waiting for {b.salon_name} to accept.
                   </p>
                 )}
                 {b.status === "confirmed" && b.disputed_at && (
@@ -5057,7 +5057,7 @@ export default function App() {
             <CheckCircle2 size={64} color={colors.hairline} strokeWidth={2} />
           </div>
           <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "2rem", fontWeight: 700 }} className="mt-6">
-            {checkoutResult === "success" ? "Payment received!" : "No charge made"}
+            {checkoutResult === "success" ? "Appointment booked!" : "No charge made"}
           </h2>
           <p className="text-lg mt-2" style={{ color: colors.creamDim }}>
             {checkoutResult === "success"
@@ -5327,19 +5327,6 @@ export default function App() {
                     <MessageCircle size={16} /> Messages
                   </button>
                 )}
-                {((role === "customer" && customerAuth) || (role === "owner" && ownerAuth)) && (
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      if (role === "owner") setOwnerPage("marketplace");
-                      else setView("marketplace");
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                    style={{ color: colors.cream }}
-                  >
-                    <ShoppingBag size={16} /> Marketplace
-                  </button>
-                )}
                 {(role === "customer" ? customerAuth : ownerAuth) && (
                   <button
                     onClick={() => { setMenuOpen(false); setView("settings"); }}
@@ -5435,8 +5422,6 @@ export default function App() {
                 myRole="owner"
                 onBack={() => setOwnerPage("chatInbox")}
               />
-            ) : ownerPage === "marketplace" ? (
-              <MarketplaceView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : (
               <OwnerDashboard token={ownerAuth.token} />
             )
@@ -5544,12 +5529,6 @@ export default function App() {
             )}
             {view === "myBookings" && customerAuth && (
               <MyBookingsView
-                token={customerAuth.token}
-                onBack={() => setView("home")}
-              />
-            )}
-            {view === "marketplace" && customerAuth && (
-              <MarketplaceView
                 token={customerAuth.token}
                 onBack={() => setView("home")}
               />
