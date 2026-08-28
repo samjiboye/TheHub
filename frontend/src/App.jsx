@@ -593,44 +593,18 @@ function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
   const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [payMethod, setPayMethod] = useState("card");
-
-  useEffect(() => {
-    if (!token) return;
-    apiFetch("/wallet/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then((data) => setWalletBalance(data.balance || 0))
-      .catch(() => {});
-  }, [token]);
 
   const price = location === "home" ? service.home_service_price : service.price;
   const total = (price + BOOKING_FEE).toFixed(2);
   const todayStr = new Date().toISOString().slice(0, 10);
   const canSubmit = time && date && (location !== "home" || address.trim().length > 0);
-  const walletCanCover = walletBalance >= parseFloat(total);
 
   const handleBook = async () => {
     if (!canSubmit || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
-      if (payMethod === "wallet") {
-        await apiFetch("/payments/checkout-wallet", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            salon_id: salon.id,
-            service_id: service.id,
-            time_slot: time,
-            booking_date: date,
-            location_type: location,
-            customer_address: location === "home" ? address.trim() : undefined,
-          }),
-        });
-        onPaidWithWallet();
-        return;
-      }
-      const { url } = await apiFetch("/payments/checkout", {
+      await apiFetch("/bookings", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -642,9 +616,9 @@ function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
           customer_address: location === "home" ? address.trim() : undefined,
         }),
       });
-      window.location.href = url; // hand off to Stripe's hosted checkout page
+      onPaidWithWallet();
     } catch (e) {
-      setError(e.message || "Couldn't start checkout — try again.");
+      setError(e.message || "Couldn't send that booking — try again.");
       setSubmitting(false);
     }
   };
@@ -836,38 +810,6 @@ function BookingView({ salon, service, onBack, token, onPaidWithWallet }) {
         {error && (
           <p className="text-base text-center mt-4" style={{ color: heroTheme ? "rgba(255,255,255,0.85)" : colors.creamDim }}>{error}</p>
         )}
-
-        <h3 className="mt-6 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
-          How do you want to pay?
-        </h3>
-        <div className="grid grid-cols-2 gap-3 mb-2">
-          <button
-            onClick={() => setPayMethod("card")}
-            className="py-4 px-3 rounded-2xl text-base tap-glass"
-            style={{
-              background: payMethod === "card" ? colors.hairline : colors.panelLight,
-              color: payMethod === "card" ? "#FFFFFF" : colors.cream,
-              border: `3px solid ${colors.hairline}`,
-              fontWeight: 700,
-            }}
-          >
-            Pay by card
-          </button>
-          <button
-            onClick={() => walletCanCover && setPayMethod("wallet")}
-            disabled={!walletCanCover}
-            className="py-4 px-3 rounded-2xl text-base tap-glass"
-            style={{
-              background: payMethod === "wallet" ? colors.hairline : colors.panelLight,
-              color: payMethod === "wallet" ? "#FFFFFF" : colors.cream,
-              border: `3px solid ${colors.hairline}`,
-              fontWeight: 700,
-              opacity: walletCanCover ? 1 : 0.5,
-            }}
-          >
-            Pay from wallet<br /><span className="text-sm font-normal">₦{Number(walletBalance).toLocaleString()} available</span>
-          </button>
-        </div>
 
 <SwipeToPay onConfirm={handleBook} disabled={!canSubmit} submitting={submitting} />
       </div>
@@ -1753,7 +1695,7 @@ function SwipeToPay({ onConfirm, disabled, submitting }) {
         className="absolute inset-0 flex items-center justify-center text-lg font-bold pointer-events-none"
         style={{ color: colors.cream }}
       >
-        {submitting ? "Processing..." : "Tap or slide to pay & book"}
+        {submitting ? "Booking..." : "Tap or slide to book"}
       </div>
       <div
         onPointerDown={handlePointerDown}

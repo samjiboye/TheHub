@@ -36,10 +36,10 @@ function uploadToCloudinary(buffer) {
   });
 }
 
-// POST /bookings — creates a booking with NO payment attached (status stays 'pending',
-// payment_status stays 'unpaid'). Useful for testing or manual/free bookings, but the
-// real customer flow is POST /payments/checkout, which creates the booking AND a
-// Paystack transaction together, then a webhook confirms it once paid.
+// POST /bookings — creates the booking directly, no payment involved. Customers
+// pay the salon in person; this just sends the request to the owner to accept
+// or decline, the same way the old Paystack webhook used to once a payment
+// cleared. Confirms immediately since there's no payment step to wait on.
 router.post("/", requireAuth, async (req, res) => {
   const { salon_id, service_id, time_slot, booking_date, location_type, customer_address } = req.body;
   if (!salon_id || !service_id || !time_slot) {
@@ -70,11 +70,31 @@ router.post("/", requireAuth, async (req, res) => {
 
     const { rows } = await db.query(
       `INSERT INTO bookings
-        (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, service_price, booking_fee, commission_rate, commission_amount, payout_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        (customer_id, salon_id, service_id, time_slot, booking_date, location_type, customer_address, service_price, booking_fee, commission_rate, commission_amount, payout_amount, status, owner_response)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'confirmed', 'pending') RETURNING *`,
       [req.user.id, salon_id, service_id, time_slot, booking_date || null, loc, loc === "home" ? customer_address : null, price, BOOKING_FEE, commissionRate, commission_amount, payout_amount]
     );
-    res.status(201).json(rows[0]);
+    const booking = rows[0];
+
+    const { rows: salonRows } = await db.query("SELECT name, owner_id FROM salons WHERE id = $1", [salon_id]);
+    const salonInfo = salonRows[0];
+
+    await notifyUser(booking.customer_id, {
+      type: "booking_confirmed",
+      title: "Booking sent",
+      body: `Your booking${salonInfo ? ` at ${salonInfo.name}` : ""} for ${service.name} at ${booking.time_slot} is in — waiting for the salon to accept.`,
+      bookingId: booking.id,
+    });
+    if (salonInfo) {
+      await notifyUser(salonInfo.owner_id, {
+        type: "new_booking",
+        title: "New booking received",
+        body: `You have a new booking for ${service.name} at ${booking.time_slot}. Accept or decline it from your dashboard.`,
+        bookingId: booking.id,
+      });
+    }
+
+    res.status(201).json(booking);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Couldn't create that booking." });
