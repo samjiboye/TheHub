@@ -442,9 +442,9 @@ router.post("/:id/dispute", requireAuth, async (req, res) => {
   }
 });
 
-// GET /bookings/salon/:salonId/daily-code — owner views (or generates) today's
-// check-in code for their salon. Same code all day, changes at midnight, so the
-// owner can never "run out" of chances to give it to a customer who's present.
+// GET /bookings/salon/:salonId/daily-code — owner views (or generates) this hour's
+// check-in code for their salon. Rotates every hour (not once a day) so a customer
+// can't share the same code with someone else, or a second account, later that day.
 router.get("/salon/:salonId/daily-code", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.salonId]);
@@ -453,14 +453,14 @@ router.get("/salon/:salonId/daily-code", requireAuth, async (req, res) => {
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
     const { rows: existing } = await db.query(
-      "SELECT code FROM salon_daily_codes WHERE salon_id = $1 AND code_date = CURRENT_DATE",
+      "SELECT code FROM salon_daily_codes WHERE salon_id = $1 AND code_date = CURRENT_DATE AND code_hour = EXTRACT(HOUR FROM NOW())",
       [salon.id]
     );
     if (existing[0]) return res.json({ code: existing[0].code });
 
     const code = String(Math.floor(1000 + Math.random() * 9000));
     await db.query(
-      "INSERT INTO salon_daily_codes (salon_id, code, code_date) VALUES ($1, $2, CURRENT_DATE)",
+      "INSERT INTO salon_daily_codes (salon_id, code, code_date, code_hour) VALUES ($1, $2, CURRENT_DATE, EXTRACT(HOUR FROM NOW()))",
       [salon.id, code]
     );
     res.json({ code });
@@ -471,10 +471,11 @@ router.get("/salon/:salonId/daily-code", requireAuth, async (req, res) => {
 });
 
 // POST /bookings/:id/check-in — customer enters the code the owner showed them in
-// person. Verifies it matches today's code for that salon, marks this booking
-// checked in, and moves the customer's per-salon loyalty count (5th visit = 50% off,
-// funded by the owner, then resets to 0). Loyalty count is ONLY ever touched here —
-// never by referrals or anything else — so it always matches real verified visits.
+// person. Verifies it matches the CURRENT HOUR's code for that salon (codes rotate
+// hourly), marks this booking checked in, and moves the customer's per-salon loyalty
+// count (5th visit = 50% off, funded by the owner, then resets to 0). Loyalty count
+// is ONLY ever touched here — never by referrals or anything else — so it always
+// matches real verified visits.
 router.post("/:id/check-in", requireAuth, async (req, res) => {
   const { code } = req.body;
   try {
@@ -486,12 +487,12 @@ router.post("/:id/check-in", requireAuth, async (req, res) => {
     if (booking.checked_in_at) return res.status(400).json({ error: "This booking is already checked in." });
 
     const { rows: codeRows } = await db.query(
-      "SELECT code FROM salon_daily_codes WHERE salon_id = $1 AND code_date = CURRENT_DATE",
+      "SELECT code FROM salon_daily_codes WHERE salon_id = $1 AND code_date = CURRENT_DATE AND code_hour = EXTRACT(HOUR FROM NOW())",
       [booking.salon_id]
     );
-    const todaysCode = codeRows[0]?.code;
-    if (!todaysCode || !code || String(code).trim() !== todaysCode) {
-      return res.status(400).json({ error: "That code doesn't match today's code. Double check with the salon." });
+    const currentCode = codeRows[0]?.code;
+    if (!currentCode || !code || String(code).trim() !== currentCode) {
+      return res.status(400).json({ error: "That code doesn't match — codes change every hour, double check with the salon." });
     }
 
     let isRewardVisit = false;

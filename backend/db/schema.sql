@@ -312,3 +312,12 @@ CREATE INDEX IF NOT EXISTS idx_salon_loyalty_customer_salon ON salon_loyalty(cus
 
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMP;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_loyalty_reward BOOLEAN NOT NULL DEFAULT false;
+
+
+-- Salon check-in code now rotates every hour instead of once a day — closes
+-- a gap where a customer could share/reuse the same code with someone else
+-- (or a second account) later in the same day to fake an extra visit.
+ALTER TABLE salon_daily_codes ADD COLUMN IF NOT EXISTS code_hour INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE salon_daily_codes DROP CONSTRAINT IF EXISTS salon_daily_codes_salon_id_code_date_key;
+ALTER TABLE salon_daily_codes DROP CONSTRAINT IF EXISTS salon_daily_codes_salon_id_code_date_code_hour_key;
+ALTER TABLE salon_daily_codes ADD CONSTRAINT salon_daily_codes_salon_id_code_date_code_hour_key UNIQUE (salon_id, code_date, code_hour);
