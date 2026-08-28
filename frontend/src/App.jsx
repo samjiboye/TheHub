@@ -1955,6 +1955,28 @@ function OwnerDashboard({ token }) {
   const [confirmSubmittingId, setConfirmSubmittingId] = useState(null);
   const [confirmErrors, setConfirmErrors] = useState({});
   const [viewingCustomer, setViewingCustomer] = useState(null); // { id, name } | null
+  const [dailyCode, setDailyCode] = useState(null);
+  const [dailyCodeLoading, setDailyCodeLoading] = useState(false);
+  const [dailyCodeError, setDailyCodeError] = useState(null);
+
+  async function fetchDailyCode(salonId) {
+    setDailyCodeLoading(true);
+    setDailyCodeError(null);
+    try {
+      const res = await apiFetch(`/bookings/salon/${salonId}/daily-code`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDailyCode(res.code);
+    } catch (e) {
+      setDailyCodeError("Couldn't load today's code.");
+    } finally {
+      setDailyCodeLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (salon?.id) fetchDailyCode(salon.id);
+  }, [salon?.id]);
 
   async function submitCancel(bookingId) {
     if (!cancelReason) {
@@ -2237,6 +2259,23 @@ function OwnerDashboard({ token }) {
             </button>
           </div>
         )}
+        <div className="rounded-2xl px-4 py-4 mb-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
+          <p className="text-sm" style={{ color: colors.cream, fontWeight: 700 }}>Today's check-in code</p>
+          <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
+            Show this to a client once they arrive for their service. Same code all day, changes tomorrow.
+          </p>
+          <div className="mt-3 px-4 py-3 rounded-xl text-center" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+            {dailyCodeLoading ? (
+              <Loader2 size={20} className="animate-spin mx-auto" color={colors.creamDim} />
+            ) : dailyCodeError ? (
+              <p className="text-xs" style={{ color: "#E07A5F" }}>{dailyCodeError}</p>
+            ) : (
+              <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "2rem", fontWeight: 800, letterSpacing: "0.15em" }}>
+                {dailyCode || "····"}
+              </p>
+            )}
+          </div>
+        </div>
         <p className="text-xs" style={{ color: colors.creamDim }}>{salon.name} · all time</p>
         <div className="grid grid-cols-1 gap-3 mt-3">
           <div className="rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
@@ -3912,6 +3951,10 @@ function MyBookingsView({ token, onBack }) {
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
   const [disputeError, setDisputeError] = useState(null);
+  const [checkInInputs, setCheckInInputs] = useState({}); // bookingId -> code string
+  const [checkInSubmittingId, setCheckInSubmittingId] = useState(null);
+  const [checkInErrors, setCheckInErrors] = useState({});
+  const [checkInSuccess, setCheckInSuccess] = useState({}); // bookingId -> { visitCount, isRewardVisit }
 
   useEffect(() => {
     if (!token) return;
@@ -3972,6 +4015,29 @@ function MyBookingsView({ token, onBack }) {
     }
   }
 
+  async function submitCheckIn(bookingId) {
+    const code = (checkInInputs[bookingId] || "").trim();
+    if (!code) {
+      setCheckInErrors((prev) => ({ ...prev, [bookingId]: "Enter the code the salon gave you." }));
+      return;
+    }
+    setCheckInSubmittingId(bookingId);
+    setCheckInErrors((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      const res = await apiFetch(`/bookings/${bookingId}/check-in`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code }),
+      });
+      setCheckInSuccess((prev) => ({ ...prev, [bookingId]: res }));
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setCheckInErrors((prev) => ({ ...prev, [bookingId]: e.message || "That code didn't work — try again." }));
+    } finally {
+      setCheckInSubmittingId(null);
+    }
+  }
+
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title="My bookings" onBack={onBack} />
@@ -4028,6 +4094,44 @@ function MyBookingsView({ token, onBack }) {
                 )}
                 {b.status === "confirmed" && (
                   <LocationShareBlock bookingId={b.id} token={token} otherLabel="salon" />
+                )}
+                {b.status === "confirmed" && !b.disputed_at && !b.checked_in_at && !checkInSuccess[b.id] && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <p className="text-xs" style={{ color: colors.creamDim }}>
+                      When you arrive, ask {b.salon_name} for today's code and enter it here.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        value={checkInInputs[b.id] || ""}
+                        onChange={(e) => setCheckInInputs((prev) => ({ ...prev, [b.id]: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                        placeholder="Enter code"
+                        className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
+                        style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+                      />
+                      <button
+                        onClick={() => submitCheckIn(b.id)}
+                        disabled={checkInSubmittingId === b.id}
+                        className="px-4 py-2 rounded-xl text-xs font-semibold tap-glass"
+                        style={{ background: colors.hairline, color: "#FFFFFF" }}
+                      >
+                        {checkInSubmittingId === b.id ? "Checking…" : "Check in"}
+                      </button>
+                    </div>
+                    {checkInErrors[b.id] && <p className="text-xs" style={{ color: "#E07A5F" }}>{checkInErrors[b.id]}</p>}
+                  </div>
+                )}
+                {checkInSuccess[b.id] && (
+                  <div className="mt-2 px-3 py-2 rounded-xl text-center" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+                    {checkInSuccess[b.id].isRewardVisit ? (
+                      <p className="text-sm" style={{ color: colors.gold, fontWeight: 700 }}>
+                        🎉 Checked in! This is your 5th visit — 50% off this time.
+                      </p>
+                    ) : (
+                      <p className="text-sm" style={{ color: colors.cream }}>
+                        Checked in! {checkInSuccess[b.id].visitCount}/5 visits at {b.salon_name}.
+                      </p>
+                    )}
+                  </div>
                 )}
                 {b.status === "confirmed" && b.completion_requested_at && !b.disputed_at && (
                   <div className="mt-2 flex flex-col gap-2">
