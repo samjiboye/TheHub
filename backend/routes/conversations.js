@@ -58,6 +58,14 @@ router.post("/start", requireAuth, async (req, res) => {
     const { rows: salonRows } = await db.query("SELECT id FROM salons WHERE id = $1", [salon_id]);
     if (!salonRows[0]) return res.status(404).json({ error: "Salon not found" });
 
+    const { rows: hasBookedRows } = await db.query(
+      "SELECT 1 FROM bookings WHERE customer_id = $1 AND salon_id = $2 LIMIT 1",
+      [req.user.id, salon_id]
+    );
+    if (!hasBookedRows[0]) {
+      return res.status(403).json({ error: "You can message a salon once you've booked with them." });
+    }
+
     const { rows } = await db.query(
       `INSERT INTO conversations (customer_id, salon_id) VALUES ($1, $2)
        ON CONFLICT (customer_id, salon_id) DO UPDATE SET customer_id = EXCLUDED.customer_id

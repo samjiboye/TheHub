@@ -508,7 +508,7 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
     </div>
   );
 }
-function ProfileView({ salon, onBack, onBook, onMessage }) {
+function ProfileView({ salon, onBack, onBook }) {
   const cat = CATEGORIES.find((c) => c.name === salon.category) || { icon: Sparkles };
   const heroTheme = CATEGORY_THEMES[salon.category] || null;
   const textColor = heroTheme ? "#FFFFFF" : colors.cream;
@@ -547,15 +547,6 @@ function ProfileView({ salon, onBack, onBook, onMessage }) {
           </div>
         )}
 
-        {onMessage && (
-          <button
-            onClick={onMessage}
-            className="flex items-center gap-2 mt-4 px-4 py-2.5 rounded-full text-sm font-semibold tap-glass"
-            style={{ background: colors.panelLight, color: textColor, border: `2px solid ${heroTheme ? "rgba(255,255,255,0.4)" : colors.hairline}` }}
-          >
-            <MessageCircle size={16} /> Message this salon
-          </button>
-        )}
 
         <MediaGallery salonId={salon.id} textColor={textColor} />
 
@@ -4003,7 +3994,7 @@ function ChatInboxView({ token, onBack, onOpenConversation }) {
   );
 }
 
-function MyBookingsView({ token, onBack, onOpenSalon }) {
+function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -4079,6 +4070,20 @@ function MyBookingsView({ token, onBack, onOpenSalon }) {
     }
   }
 
+  async function openChatFor(booking) {
+    try {
+      const convo = await apiFetch("/conversations/start", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ salon_id: booking.salon_id }),
+      });
+      onOpenChatProp && onOpenChatProp(convo.id);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  const onOpenChat = onOpenChatProp ? openChatFor : null;
+
   async function submitCheckIn(bookingId) {
     const code = (checkInInputs[bookingId] || "").trim();
     if (!code) {
@@ -4126,22 +4131,34 @@ function MyBookingsView({ token, onBack, onOpenSalon }) {
               className="flex flex-col px-4 py-3 rounded-xl"
               style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
             >
-              <div
-                className="flex items-center justify-between tap-glass"
-                onClick={() => onOpenSalon && onOpenSalon(b.salon_id)}
-                style={{ cursor: onOpenSalon ? "pointer" : "default" }}
-              >
-                <div>
-                  <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
-                  <p className="text-xs" style={{ color: colors.creamDim }}>{b.salon_name}</p>
-                  {b.location_type === "home" && (
-                    <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 At your address</p>
-                  )}
+              <div className="flex items-start justify-between gap-2">
+                <div
+                  className="flex items-center justify-between tap-glass flex-1"
+                  onClick={() => onOpenSalon && onOpenSalon(b.salon_id)}
+                  style={{ cursor: onOpenSalon ? "pointer" : "default" }}
+                >
+                  <div>
+                    <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
+                    <p className="text-xs" style={{ color: colors.creamDim }}>{b.salon_name}</p>
+                    {b.location_type === "home" && (
+                      <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 At your address</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                    {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)}<br /></>}
+                    {b.time_slot}
+                  </span>
                 </div>
-                <span className="text-xs text-right" style={{ color: colors.creamDim }}>
-                  {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)}<br /></>}
-                  {b.time_slot}
-                </span>
+                {onOpenChat && (
+                  <button
+                    onClick={() => onOpenChat(b)}
+                    className="shrink-0 p-2 rounded-full tap-glass"
+                    style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+                    aria-label="Message this salon"
+                  >
+                    <MessageCircle size={16} color={colors.cream} />
+                  </button>
+                )}
               </div>
 
               {b.status === "cancelled" && (
@@ -5465,28 +5482,6 @@ export default function App() {
                 salon={selectedSalon}
                 onBack={() => setView("home")}
                 onBook={(svc) => { setSelectedService(svc); setView(customerAuth ? "booking" : "auth"); }}
-                onMessage={
-                  customerAuth
-                    ? async () => {
-                        if (startingChat) return;
-                        setStartingChat(true);
-                        try {
-                          const convo = await apiFetch("/conversations/start", {
-                            method: "POST",
-                            headers: { Authorization: `Bearer ${customerAuth.token}` },
-                            body: JSON.stringify({ salon_id: selectedSalon.id }),
-                          });
-                          setActiveConversationId(convo.id);
-                          setChatBackView("salonDetail");
-                          setView("chat");
-                        } catch (e) {
-                          console.error(e);
-                        } finally {
-                          setStartingChat(false);
-                        }
-                      }
-                    : () => setView("auth")
-                }
               />
             )}
             {view === "auth" && (
@@ -5545,6 +5540,11 @@ export default function App() {
                   } catch (e) {
                     console.error(e);
                   }
+                }}
+                onOpenChat={(convoId) => {
+                  setActiveConversationId(convoId);
+                  setChatBackView("myBookings");
+                  setView("chat");
                 }}
               />
             )}
