@@ -2262,7 +2262,7 @@ function OwnerDashboard({ token }) {
         <div className="rounded-2xl px-4 py-4 mb-4" style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}>
           <p className="text-sm" style={{ color: colors.cream, fontWeight: 700 }}>Today's check-in code</p>
           <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
-            Show this to a client once they arrive for their service. Same code all day, changes tomorrow.
+            Show this to a client once they arrive for their service. Changes every hour, so give it fresh each time.
           </p>
           <div className="mt-3 px-4 py-3 rounded-xl text-center" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
             {dailyCodeLoading ? (
