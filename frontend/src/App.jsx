@@ -2877,24 +2877,6 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
             </div>
 
             <div className="mt-8 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg">Wallet</h3>
-                  <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
-                    Balance, loyalty points, and your referral code
-                  </p>
-                </div>
-                <button
-                  onClick={onOpenWallet}
-                  className="shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold tap-glass"
-                  style={{ background: colors.hairline, color: "#FFFFFF" }}
-                >
-                  Open
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-8 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
               <div className="flex items-center justify-between mb-3">
                 <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg">Business details</h3>
                 {!editingDetails && (
@@ -4802,17 +4784,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [role, customerAuth?.token, ownerAuth?.token]);
   useEffect(() => {
-    if (role !== "customer" || !customerAuth?.token) { setHeaderWalletBalance(null); return; }
-    const fetchBalance = () => {
-      apiFetch("/wallet/me", { headers: { Authorization: `Bearer ${customerAuth.token}` } })
-        .then((data) => setHeaderWalletBalance(data.balance || 0))
-        .catch(() => {});
-    };
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 15000);
-    return () => clearInterval(interval);
-  }, [role, customerAuth?.token, view]);
-  useEffect(() => {
     if (role !== "customer" || !customerAuth?.token) { setCustomerPhotoUrl(null); return; }
     apiFetch("/users/me", { headers: { Authorization: `Bearer ${customerAuth.token}` } })
       .then((data) => setCustomerPhotoUrl(data.profile_photo_url || null))
@@ -4863,7 +4834,6 @@ export default function App() {
       setRole("customer");
     } else if (params.get("wallet_success")) {
       setRole("customer");
-      setView("wallet");
     } else if (params.get("stripe_return") || params.get("stripe_refresh")) {
       setRole("owner");
     } else if (params.get("salon")) {
@@ -5033,15 +5003,6 @@ export default function App() {
                 TheHub
               </span>
             )}
-            {role === "customer" && customerAuth && headerWalletBalance !== null && (
-              <button
-                onClick={() => setView("wallet")}
-                className="flex items-center gap-1 mt-0.5 tap-glass"
-                style={{ color: colors.creamDim, fontSize: "0.8rem", fontWeight: 700 }}
-              >
-                <Wallet size={12} /> ₦{Number(headerWalletBalance).toLocaleString()}
-              </button>
-            )}
           </div>
           <div className="flex items-center gap-2">
             {(role === "customer" ? customerAuth : ownerAuth) && (
@@ -5187,15 +5148,6 @@ export default function App() {
                     <ShoppingBag size={16} /> Marketplace
                   </button>
                 )}
-                {role === "customer" && customerAuth && (
-                  <button
-                    onClick={() => { setMenuOpen(false); setView("wallet"); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                    style={{ color: colors.cream }}
-                  >
-                    <Wallet size={16} /> Wallet
-                  </button>
-                )}
                 {(role === "customer" ? customerAuth : ownerAuth) && (
                   <button
                     onClick={() => { setMenuOpen(false); setView("settings"); }}
@@ -5280,8 +5232,6 @@ export default function App() {
             />
             ) : ownerPage === "marketplace" ? (
               <MarketplaceView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
-            ) : ownerPage === "wallet" ? (
-              <WalletView token={ownerAuth.token} onBack={() => setOwnerPage("profile")} />
             ) : (
               <OwnerDashboard token={ownerAuth.token} />
             )
@@ -5352,12 +5302,6 @@ export default function App() {
             )}
             {view === "myBookings" && customerAuth && (
               <MyBookingsView
-                token={customerAuth.token}
-                onBack={() => setView("home")}
-              />
-            )}
-            {view === "wallet" && customerAuth && (
-              <WalletView
                 token={customerAuth.token}
                 onBack={() => setView("home")}
               />
