@@ -282,3 +282,33 @@ CREATE TABLE IF NOT EXISTS location_shares (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_location_shares_booking ON location_shares(booking_id);
+
+
+-- Daily salon check-in codes: one active code per salon per calendar day.
+-- Owner shows this to the customer in person; customer types it in to
+-- confirm they actually received the service that day.
+CREATE TABLE IF NOT EXISTS salon_daily_codes (
+  id SERIAL PRIMARY KEY,
+  salon_id INTEGER NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  code_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (salon_id, code_date)
+);
+CREATE INDEX IF NOT EXISTS idx_salon_daily_codes_salon_date ON salon_daily_codes(salon_id, code_date);
+
+-- Per-salon loyalty: counts real, code-verified visits at THIS salon only.
+-- Resets to 0 after every 5th visit, which is 50% off (owner-funded, not the app).
+CREATE TABLE IF NOT EXISTS salon_loyalty (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  salon_id INTEGER NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+  visit_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (customer_id, salon_id)
+);
+CREATE INDEX IF NOT EXISTS idx_salon_loyalty_customer_salon ON salon_loyalty(customer_id, salon_id);
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMP;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_loyalty_reward BOOLEAN NOT NULL DEFAULT false;
