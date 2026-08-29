@@ -3870,7 +3870,7 @@ function LocationShareBlock({ bookingId, token, otherLabel }) {
 // Shared by both customer and owner — a single conversation thread. Polls for
 // new messages every 12s instead of using a live connection, which keeps this
 // simple and cheap to run; the small delay isn't noticeable for casual chat.
-function ChatThreadView({ conversationId, token, myRole, onBack }) {
+function ChatThreadView({ conversationId, token, myRole, myUserId, onBack }) {
   const [messages, setMessages] = useState([]);
   const [conversation, setConversation] = useState(null);
   const [input, setInput] = useState("");
@@ -3933,7 +3933,7 @@ function ChatThreadView({ conversationId, token, myRole, onBack }) {
           </p>
         ) : (
           messages.map((m) => {
-            const mine = m.sender_role === myRole;
+            const mine = m.sender_id === myUserId;
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
@@ -5497,6 +5497,7 @@ export default function App() {
                 conversationId={activeConversationId}
                 token={ownerAuth.token}
                 myRole="owner"
+                myUserId={ownerAuth.user?.id}
                 onBack={() => setOwnerPage("chatInbox")}
               />
             ) : (
@@ -5572,6 +5573,7 @@ export default function App() {
                 conversationId={activeConversationId}
                 token={customerAuth.token}
                 myRole="customer"
+                myUserId={customerAuth.user?.id}
                 onBack={() => setView(chatBackView)}
               />
             )}
