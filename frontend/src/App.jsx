@@ -4979,6 +4979,7 @@ export default function App() {
   }, [customerAuth?.token]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const unreadMessageCount = notifications.filter((n) => n.type === "new_message" && !n.read).length;
   const [notifOpen, setNotifOpen] = useState(false);
   const [headerWalletBalance, setHeaderWalletBalance] = useState(null);
   const [customerPhotoUrl, setCustomerPhotoUrl] = useState(null);
@@ -5322,6 +5323,15 @@ export default function App() {
                                   setChatBackView("chatInbox");
                                   setView("chat");
                                 }
+                              } else if (n.type === "new_message") {
+                                // Older notification from before messages linked to a
+                                // specific conversation — open the inbox instead of doing nothing.
+                                setNotifOpen(false);
+                                if (role === "owner") {
+                                  setOwnerPage("chatInbox");
+                                } else {
+                                  setView("chatInbox");
+                                }
                               } else if (ownerTypes.includes(n.type)) {
                                 setNotifOpen(false);
                                 setRole("owner");
@@ -5428,6 +5438,14 @@ export default function App() {
                     style={{ color: colors.cream }}
                   >
                     <MessageCircle size={16} /> Messages
+                    {unreadMessageCount > 0 && (
+                      <span
+                        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{ background: colors.gold, color: colors.bg }}
+                      >
+                        {unreadMessageCount}
+                      </span>
+                    )}
                   </button>
                 )}
                 {(role === "customer" ? customerAuth : ownerAuth) && (
