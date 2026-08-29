@@ -4070,7 +4070,12 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
     }
   }
 
+  const [openingChatId, setOpeningChatId] = useState(null);
+  const [openChatErrors, setOpenChatErrors] = useState({});
+
   async function openChatFor(booking) {
+    setOpeningChatId(booking.id);
+    setOpenChatErrors((prev) => ({ ...prev, [booking.id]: null }));
     try {
       const convo = await apiFetch("/conversations/start", {
         method: "POST",
@@ -4079,7 +4084,9 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
       });
       onOpenChatProp && onOpenChatProp(convo.id);
     } catch (e) {
-      console.error(e);
+      setOpenChatErrors((prev) => ({ ...prev, [booking.id]: e.message || "Couldn't open this chat." }));
+    } finally {
+      setOpeningChatId(null);
     }
   }
   const onOpenChat = onOpenChatProp ? openChatFor : null;
@@ -4152,14 +4159,22 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
                 {onOpenChat && (
                   <button
                     onClick={() => onOpenChat(b)}
+                    disabled={openingChatId === b.id}
                     className="shrink-0 p-2 rounded-full tap-glass"
                     style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
                     aria-label="Message this salon"
                   >
-                    <MessageCircle size={16} color={colors.cream} />
+                    {openingChatId === b.id ? (
+                      <Loader2 size={16} className="animate-spin" color={colors.cream} />
+                    ) : (
+                      <MessageCircle size={16} color={colors.cream} />
+                    )}
                   </button>
                 )}
               </div>
+              {openChatErrors[b.id] && (
+                <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{openChatErrors[b.id]}</p>
+              )}
 
               {b.status === "cancelled" && (
                 <p className="text-xs mt-2" style={{ color: "#E07A5F" }}>
