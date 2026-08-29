@@ -4153,6 +4153,15 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
     }
   }
 
+  // Grouped so pending (awaiting acceptance or awaiting check-in) and
+  // completed bookings are easy to browse separately, instead of one long
+  // mixed list.
+  const bookingSections = [
+    { label: "Pending", items: bookings.filter((b) => b.status === "confirmed") },
+    { label: "Completed", items: bookings.filter((b) => b.status === "completed") },
+    { label: "Cancelled", items: bookings.filter((b) => b.status === "cancelled") },
+  ].filter((section) => section.items.length > 0);
+
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title="My bookings" onBack={onBack} />
@@ -4170,8 +4179,13 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
             No bookings yet — go find a salon and book something.
           </p>
         )}
-        <div className="flex flex-col gap-2 mt-2">
-          {bookings.map((b) => (
+        {bookingSections.map((section) => (
+          <div key={section.label} className="mt-4">
+            <h3 className="text-sm font-bold mb-2" style={{ color: colors.creamDim }}>
+              {section.label} ({section.items.length})
+            </h3>
+            <div className="flex flex-col gap-2">
+              {section.items.map((b) => (
             <div
               key={b.id}
               className="flex flex-col px-4 py-3 rounded-xl"
@@ -4368,8 +4382,10 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
                 </div>
               )}
             </div>
-          ))}
-        </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
