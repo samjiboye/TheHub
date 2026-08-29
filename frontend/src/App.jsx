@@ -3935,6 +3935,12 @@ function ChatThreadView({ conversationId, token, myRole, myUserId, onBack }) {
                   }}
                 >
                   {m.body}
+                  <p
+                    className="text-[10px] mt-1"
+                    style={{ color: mine ? "rgba(255,255,255,0.7)" : colors.creamDim, textAlign: "right" }}
+                  >
+                    {new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  </p>
                 </div>
               </div>
             );
