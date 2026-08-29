@@ -5382,6 +5382,15 @@ export default function App() {
                   <Store size={16} /> I run a salon
                 </button>
                 <div style={{ borderTop: `2px solid ${colors.hairline}` }} />
+                {role === "customer" && !customerAuth && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setView("auth"); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
+                    style={{ color: colors.cream, fontWeight: 700 }}
+                  >
+                    <LogIn size={16} /> Log in / Sign up
+                  </button>
+                )}
                 {role === "customer" && customerAuth && (
                   <button
                     onClick={() => { setMenuOpen(false); setView("profile"); }}
