@@ -4979,7 +4979,23 @@ export default function App() {
   }, [customerAuth?.token]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const unreadMessageCount = notifications.filter((n) => n.type === "new_message" && !n.read).length;
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [pendingCheckInCount, setPendingCheckInCount] = useState(0);
+
+  useEffect(() => {
+    if (!auth?.token) { setUnreadMessageCount(0); setPendingCheckInCount(0); return; }
+    const fetchCounts = () => {
+      apiFetch("/conversations/mine", { headers: { Authorization: `Bearer ${auth.token}` } })
+        .then((rows) => setUnreadMessageCount(rows.reduce((sum, r) => sum + Number(r.unread_count || 0), 0)))
+        .catch(() => {});
+      apiFetch("/bookings/me", { headers: { Authorization: `Bearer ${auth.token}` } })
+        .then((rows) => setPendingCheckInCount(rows.filter((b) => b.status === "confirmed" && !b.checked_in_at).length))
+        .catch(() => {});
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [auth?.token]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [headerWalletBalance, setHeaderWalletBalance] = useState(null);
   const [customerPhotoUrl, setCustomerPhotoUrl] = useState(null);
@@ -5425,6 +5441,14 @@ export default function App() {
                     style={{ color: colors.cream }}
                   >
                     <CalendarCheck size={16} /> My bookings
+                    {pendingCheckInCount > 0 && (
+                      <span
+                        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{ background: colors.gold, color: colors.bg }}
+                      >
+                        {pendingCheckInCount}
+                      </span>
+                    )}
                   </button>
                 )}
                 {((role === "customer" && customerAuth) || (role === "owner" && ownerAuth)) && (
