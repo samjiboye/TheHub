@@ -20,7 +20,7 @@ router.get("/banks", async (req, res) => {
   }
 });
 
-router.get("/resolve-account", requireAuth, requireRole("owner"), async (req, res) => {
+router.get("/resolve-account", requireAuth, async (req, res) => {
   const { account_number, bank_code } = req.query;
   if (!account_number || !bank_code) {
     return res.status(400).json({ error: "account_number and bank_code are required" });
@@ -180,7 +180,7 @@ router.post("/checkout-wallet", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
+router.post("/connect", requireAuth, async (req, res) => {
   const { salon_id, business_name, bank_code, account_number } = req.body;
   if (!salon_id || !business_name || !bank_code || !account_number) {
     return res.status(400).json({ error: "salon_id, business_name, bank_code, and account_number are required" });
@@ -210,7 +210,7 @@ router.post("/connect", requireAuth, requireRole("owner"), async (req, res) => {
   }
 });
 
-router.get("/connect/status", requireAuth, requireRole("owner"), async (req, res) => {
+router.get("/connect/status", requireAuth, async (req, res) => {
   const { salon_id } = req.query;
   try {
     const { rows } = await db.query("SELECT * FROM salons WHERE id = $1", [salon_id]);

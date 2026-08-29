@@ -34,7 +34,7 @@ function uploadToCloudinary(buffer, resourceType) {
 }
 
 // POST /salons/:id/media - owner uploads a photo or video
-router.post("/:id/media", requireAuth, uploadLimiter, requireRole("owner"), upload.single("file"), async (req, res) => {
+router.post("/:id/media", requireAuth, uploadLimiter, upload.single("file"), async (req, res) => {
   const salonId = req.params.id;
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
@@ -74,7 +74,7 @@ router.get("/:id/media", async (req, res) => {
 });
 
 // DELETE /salons/:id/media/:mediaId - owner deletes one item
-router.delete("/:id/media/:mediaId", requireAuth, requireRole("owner"), async (req, res) => {
+router.delete("/:id/media/:mediaId", requireAuth, async (req, res) => {
   const { id: salonId, mediaId } = req.params;
   try {
     const { rows } = await db.query("SELECT * FROM salons WHERE id = $1", [salonId]);
@@ -97,7 +97,7 @@ router.delete("/:id/media/:mediaId", requireAuth, requireRole("owner"), async (r
 });
 
 // POST /salons/:id/profile-picture - owner uploads/replaces the salon's profile picture
-router.post("/:id/profile-picture", requireAuth, uploadLimiter, requireRole("owner"), upload.single("file"), async (req, res) => {
+router.post("/:id/profile-picture", requireAuth, uploadLimiter, upload.single("file"), async (req, res) => {
   const salonId = req.params.id;
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
@@ -126,7 +126,7 @@ router.post("/:id/profile-picture", requireAuth, uploadLimiter, requireRole("own
 });
 
 // DELETE /salons/:id/profile-picture - owner removes the salon's profile picture
-router.delete("/:id/profile-picture", requireAuth, requireRole("owner"), async (req, res) => {
+router.delete("/:id/profile-picture", requireAuth, async (req, res) => {
   const salonId = req.params.id;
   try {
     const { rows } = await db.query("SELECT * FROM salons WHERE id = $1", [salonId]);

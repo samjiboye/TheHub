@@ -87,7 +87,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET /salons/mine (owner's own listings) — must be defined before /:id
-router.get("/mine", requireAuth, requireRole("owner"), async (req, res) => {
+router.get("/mine", requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query("SELECT * FROM salons WHERE owner_id = $1", [req.user.id]);
     const withServices = await Promise.all(
@@ -136,7 +136,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /salons (owner creates a salon listing)
-router.post("/", requireAuth, requireRole("owner"), async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   const { name, category, bio, address, lat, lng, hours, service_type, state, city } = req.body;
   if (!name || !category) return res.status(400).json({ error: "name and category are required" });
   try {
@@ -161,7 +161,7 @@ router.post("/", requireAuth, requireRole("owner"), async (req, res) => {
 });
 
 // POST /salons/:id/services (owner adds a bookable service)
-router.post("/:id/services", requireAuth, requireRole("owner"), async (req, res) => {
+router.post("/:id/services", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -189,7 +189,7 @@ router.post("/:id/services", requireAuth, requireRole("owner"), async (req, res)
 });
 
 // PATCH /salons/:id (owner edits salon details: name, category, address, location, service type)
-router.patch("/:id", requireAuth, requireRole("owner"), async (req, res) => {
+router.patch("/:id", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -224,7 +224,7 @@ router.patch("/:id", requireAuth, requireRole("owner"), async (req, res) => {
 });
 
 // PATCH /salons/:id/services/:serviceId (owner edits a service's name/duration/price/home-visit settings)
-router.patch("/:id/services/:serviceId", requireAuth, requireRole("owner"), async (req, res) => {
+router.patch("/:id/services/:serviceId", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -265,7 +265,7 @@ router.patch("/:id/services/:serviceId", requireAuth, requireRole("owner"), asyn
 });
 
 // DELETE /salons/:id/services/:serviceId (owner removes a service)
-router.delete("/:id/services/:serviceId", requireAuth, requireRole("owner"), async (req, res) => {
+router.delete("/:id/services/:serviceId", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -285,7 +285,7 @@ router.delete("/:id/services/:serviceId", requireAuth, requireRole("owner"), asy
 });
 
 // DELETE /salons/:id (owner permanently deletes their salon listing — blocked if any bookings exist)
-router.delete("/:id", requireAuth, requireRole("owner"), async (req, res) => {
+router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -311,7 +311,7 @@ router.delete("/:id", requireAuth, requireRole("owner"), async (req, res) => {
 });
 
 // GET /salons/:id/dashboard (owner earnings summary)
-router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res) => {
+router.get("/:id/dashboard", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -365,7 +365,7 @@ router.get("/:id/dashboard", requireAuth, requireRole("owner"), async (req, res)
 // Deliberately scoped: only what's needed to build trust (name, photo, how long they've been on
 // TheHub, how many times they've booked at THIS salon). No phone/email/other-salon activity, since
 // that would give owners a way to solicit off-platform payment and bypass the commission.
-router.get("/:id/customers/:customerId", requireAuth, requireRole("owner"), async (req, res) => {
+router.get("/:id/customers/:customerId", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -419,7 +419,7 @@ router.get("/:id/customers/:customerId", requireAuth, requireRole("owner"), asyn
 });
 
 // GET /salons/:id/completed-bookings (owner's completed appointment history)
-router.get("/:id/completed-bookings", requireAuth, requireRole("owner"), async (req, res) => {
+router.get("/:id/completed-bookings", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
@@ -443,7 +443,7 @@ router.get("/:id/completed-bookings", requireAuth, requireRole("owner"), async (
 });
 
 // GET /salons/:id/reviews (owner-only: full review list + ratings breakdown)
-router.get("/:id/reviews", requireAuth, requireRole("owner"), async (req, res) => {
+router.get("/:id/reviews", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
     const salon = salonRows[0];
