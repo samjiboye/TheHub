@@ -3770,7 +3770,7 @@ function LocationShareBlock({ bookingId, token, otherLabel }) {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("customerAuth") || localStorage.getItem("ownerAuth") || "null");
+      const saved = JSON.parse(localStorage.getItem("auth") || localStorage.getItem("customerAuth") || localStorage.getItem("ownerAuth") || "null");
       setMyUserId(saved?.user?.id || null);
     } catch (e) {}
   }, []);
@@ -4376,10 +4376,9 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
 }
 
 function SettingsView({ onBack, onWatchIntro }) {
-  const savedCustomer = JSON.parse(localStorage.getItem("customerAuth") || "null");
-  const savedOwner = JSON.parse(localStorage.getItem("ownerAuth") || "null");
-  const user = savedCustomer?.user || savedOwner?.user || {};
-  const ownerToken = savedOwner?.token;
+  const saved = JSON.parse(localStorage.getItem("auth") || localStorage.getItem("customerAuth") || localStorage.getItem("ownerAuth") || "null");
+  const user = saved?.user || {};
+  const ownerToken = saved?.token;
 
   const [ownerSalon, setOwnerSalon] = useState(null);
   const [confirmDeleteSalon, setConfirmDeleteSalon] = useState(false);
@@ -4943,14 +4942,32 @@ export default function App() {
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   });
-  const [customerAuth, setCustomerAuth] = useState(() => {
+  // One unified account works as BOTH customer and owner — no more
+  // separate logins. "role" below is purely a UI-mode toggle for which
+  // screens show; it no longer determines which account is logged in.
+  // Old separate "customerAuth"/"ownerAuth" localStorage keys are read
+  // as a fallback so existing logged-in sessions aren't signed out by
+  // this change.
+  const [auth, setAuth] = useState(() => {
     try {
-      const saved = localStorage.getItem("customerAuth");
+      const saved = localStorage.getItem("auth") || localStorage.getItem("customerAuth") || localStorage.getItem("ownerAuth");
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
       return null;
     }
   }); // { token, user }
+  function persistAuth(value) {
+    setAuth(value);
+    try {
+      if (value) localStorage.setItem("auth", JSON.stringify(value));
+      else localStorage.removeItem("auth");
+    } catch (e) {}
+  }
+  const customerAuth = auth;
+  const ownerAuth = auth;
+  const setCustomerAuth = persistAuth;
+  const setOwnerAuth = persistAuth;
+
   const [unratedQueue, setUnratedQueue] = useState([]);
   const [ratingPopupDismissed, setRatingPopupDismissed] = useState(false);
 
@@ -4960,15 +4977,6 @@ export default function App() {
       .then((data) => setUnratedQueue(data.unrated || []))
       .catch(() => {});
   }, [customerAuth?.token]);
-
-  const [ownerAuth, setOwnerAuth] = useState(() => {
-    try {
-      const saved = localStorage.getItem("ownerAuth");
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  }); // { token, user }
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -5461,6 +5469,7 @@ export default function App() {
                       setMenuOpen(false);
                       if (role === "customer") {
                         localStorage.removeItem("customerAuth");
+                        localStorage.removeItem("auth");
                         setCustomerAuth(null);
                         reset();
                       } else {
@@ -5500,6 +5509,7 @@ export default function App() {
               onBack={() => setOwnerPage("dashboard")}
               onDeleted={() => {
                 localStorage.removeItem("ownerAuth");
+                localStorage.removeItem("auth");
                 setOwnerAuth(null);
               }}
               onOpenWallet={() => setOwnerPage("wallet")}
