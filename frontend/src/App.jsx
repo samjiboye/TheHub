@@ -203,6 +203,35 @@ function TicketNotch({ top }) {
   );
 }
 
+const STATE_ABBREVIATIONS = {
+  "Abia": "AB", "Adamawa": "AD", "Akwa Ibom": "AKW", "Anambra": "AN",
+  "Bauchi": "BA", "Bayelsa": "BAY", "Benue": "BEN", "Borno": "BOR",
+  "Cross River": "CRS", "Delta": "DEL", "Ebonyi": "EBO", "Edo": "EDO",
+  "Ekiti": "EKI", "Enugu": "ENU", "Gombe": "GOM", "Imo": "IMO",
+  "Jigawa": "JIG", "Kaduna": "KAD", "Kano": "KAN", "Katsina": "KTS",
+  "Kebbi": "KEB", "Kogi": "KOG", "Kwara": "KWA", "Lagos": "LAG",
+  "Nasarawa": "NAS", "Niger": "NIG", "Ogun": "OGU", "Ondo": "OND",
+  "Osun": "OSU", "Oyo": "OY", "Plateau": "PLA", "Rivers": "RIV",
+  "Sokoto": "SOK", "Taraba": "TAR", "Yobe": "YOB", "Zamfara": "ZAM",
+  "FCT (Abuja)": "ABJ",
+};
+const CITY_ABBREVIATIONS = {
+  "Ibadan": "IB", "Lagos Island": "LAG", "Ikeja": "IKJ", "Lekki": "LEK",
+  "Surulere": "SUR", "Ajah": "AJH", "Yaba": "YBA", "Abuja": "ABJ",
+  "Port Harcourt": "PH", "Kano": "KAN", "Kaduna": "KAD", "Enugu": "ENU",
+  "Benin City": "BEN", "Owerri": "OWR", "Calabar": "CAL", "Warri": "WAR",
+};
+function locationTag(salon) {
+  if (salon.city && salon.neighborhood) {
+    const cityCode = CITY_ABBREVIATIONS[salon.city] || salon.city.slice(0, 3).toUpperCase();
+    return `${cityCode}/${salon.neighborhood}`;
+  }
+  if (!salon.state && !salon.city) return null;
+  const stateCode = STATE_ABBREVIATIONS[salon.state] || (salon.state ? salon.state.slice(0, 3).toUpperCase() : "");
+  if (stateCode && salon.city) return `${stateCode}/${salon.city}`;
+  return stateCode || salon.city || null;
+}
+
 function SalonCard({ salon, onClick }) {
   const cat = CATEGORIES.find((c) => c.name === salon.category) || { icon: Sparkles };
   return (
@@ -222,6 +251,11 @@ function SalonCard({ salon, onClick }) {
             <TierStars fiveStarCount={salon.fiveStarCount} size={16} />
           </div>
         </div>
+        {locationTag(salon) && (
+          <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>
+            {locationTag(salon)}
+          </p>
+        )}
         {salon.services && salon.services.length > 0 && (
           <p className="text-sm mt-1" style={{ color: colors.creamDim }}>
             {salon.services.slice(0, 3).map((s) => s.name).join(" · ")}
@@ -1185,6 +1219,7 @@ function CreateSalonView({ token, onDone }) {
   const [address, setAddress] = useState("");
   const [salonState, setSalonState] = useState("");
   const [salonCity, setSalonCity] = useState("");
+  const [salonNeighborhood, setSalonNeighborhood] = useState("");
   const [services, setServices] = useState([]);
   const [svcName, setSvcName] = useState("");
   const [svcDuration, setSvcDuration] = useState("");
@@ -1202,7 +1237,7 @@ function CreateSalonView({ token, onDone }) {
       const { id } = await apiFetch("/salons", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, category, address, service_type: serviceType, state: salonState, city: salonCity }),
+        body: JSON.stringify({ name, category, address, service_type: serviceType, state: salonState, city: salonCity, neighborhood: salonNeighborhood }),
       });
       setSalonId(id);
       setStep("services");
@@ -1291,6 +1326,8 @@ function CreateSalonView({ token, onDone }) {
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+          <input value={salonNeighborhood} onChange={(e) => setSalonNeighborhood(e.target.value)} placeholder="Neighborhood / area (e.g. Akobo)"
+            className="pb-2 text-base outline-none" style={inputStyle} />
           {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
           <button type="submit" disabled={loading}
             className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 tap-glass"
@@ -2725,6 +2762,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
     setDetailsForm({
       name: salon.name, category: salon.category, service_type: salon.service_type || "unisex",
       address: salon.address || "", state: salon.state || "", city: salon.city || "",
+      neighborhood: salon.neighborhood || "",
     });
     setDetailsError(null);
     setEditingDetails(true);
@@ -2951,6 +2989,8 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+                  <input value={detailsForm.neighborhood || ""} onChange={(e) => setDetailsForm({ ...detailsForm, neighborhood: e.target.value })}
+                    placeholder="Neighborhood / area (e.g. Akobo)" className="pb-2 text-base outline-none" style={inputStyle} />
                   {detailsError && <p className="text-sm" style={{ color: "#E07A5F" }}>{detailsError}</p>}
                   <div className="flex gap-2">
                     <button onClick={saveDetails} disabled={savingDetails}

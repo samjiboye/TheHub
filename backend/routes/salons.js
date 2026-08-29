@@ -137,21 +137,21 @@ router.get("/:id", async (req, res) => {
 
 // POST /salons (owner creates a salon listing)
 router.post("/", requireAuth, async (req, res) => {
-  const { name, category, bio, address, lat, lng, hours, service_type, state, city } = req.body;
+  const { name, category, bio, address, lat, lng, hours, service_type, state, city, neighborhood } = req.body;
   if (!name || !category) return res.status(400).json({ error: "name and category are required" });
   try {
     let finalLat = lat || null;
     let finalLng = lng || null;
-    const fullAddress = [address, city, state].filter(Boolean).join(", ");
+    const fullAddress = [address, neighborhood, city, state].filter(Boolean).join(", ");
     if ((!finalLat || !finalLng) && fullAddress) {
       const geocoded = await geocodeAddress(fullAddress);
       finalLat = geocoded.lat;
       finalLng = geocoded.lng;
     }
     const { rows } = await db.query(
-      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours, service_type, state, city)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
-      [req.user.id, name, category, bio || null, address || null, finalLat, finalLng, hours || null, service_type || 'unisex', state || null, city || null]
+      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours, service_type, state, city, neighborhood)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+      [req.user.id, name, category, bio || null, address || null, finalLat, finalLng, hours || null, service_type || 'unisex', state || null, city || null, neighborhood || null]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
@@ -196,13 +196,13 @@ router.patch("/:id", requireAuth, async (req, res) => {
     if (!salon) return res.status(404).json({ error: "Salon not found" });
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
-    const { name, category, address, service_type, state, city, bio, hours } = req.body;
+    const { name, category, address, service_type, state, city, neighborhood, bio, hours } = req.body;
     if (!name || !category) return res.status(400).json({ error: "name and category are required" });
 
     let finalLat = salon.lat;
     let finalLng = salon.lng;
-    const addressChanged = address !== salon.address || state !== salon.state || city !== salon.city;
-    const fullAddress = [address, city, state].filter(Boolean).join(", ");
+    const addressChanged = address !== salon.address || state !== salon.state || city !== salon.city || neighborhood !== salon.neighborhood;
+    const fullAddress = [address, neighborhood, city, state].filter(Boolean).join(", ");
     if (addressChanged && fullAddress) {
       const geocoded = await geocodeAddress(fullAddress);
       finalLat = geocoded.lat;
@@ -211,10 +211,10 @@ router.patch("/:id", requireAuth, async (req, res) => {
 
     const { rows } = await db.query(
       `UPDATE salons SET name = $1, category = $2, address = $3, service_type = $4, state = $5, city = $6,
-        bio = $7, hours = $8, lat = $9, lng = $10
-       WHERE id = $11 RETURNING *`,
+        neighborhood = $7, bio = $8, hours = $9, lat = $10, lng = $11
+       WHERE id = $12 RETURNING *`,
       [name, category, address || null, service_type || salon.service_type, state || null, city || null,
-        bio ?? salon.bio, hours ?? salon.hours, finalLat, finalLng, salon.id]
+        neighborhood || null, bio ?? salon.bio, hours ?? salon.hours, finalLat, finalLng, salon.id]
     );
     res.json(rows[0]);
   } catch (err) {
