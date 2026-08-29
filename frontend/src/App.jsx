@@ -252,7 +252,7 @@ function SalonCard({ salon, onClick }) {
           </div>
         </div>
         {locationTag(salon) && (
-          <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>
+          <p className="text-xs mt-0.5 text-right" style={{ color: colors.creamDim }}>
             {locationTag(salon)}
           </p>
         )}
