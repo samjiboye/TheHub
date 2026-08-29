@@ -4045,6 +4045,7 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
   const [disputeError, setDisputeError] = useState(null);
+  const [activeBookingTab, setActiveBookingTab] = useState("Pending");
   const [checkInInputs, setCheckInInputs] = useState({}); // bookingId -> code string
   const [checkInSubmittingId, setCheckInSubmittingId] = useState(null);
   const [checkInErrors, setCheckInErrors] = useState({});
@@ -4154,13 +4155,14 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
   }
 
   // Grouped so pending (awaiting acceptance or awaiting check-in) and
-  // completed bookings are easy to browse separately, instead of one long
-  // mixed list.
+  // completed bookings are easy to browse separately, as switchable tabs
+  // instead of one long mixed list or a long stacked scroll.
   const bookingSections = [
     { label: "Pending", items: bookings.filter((b) => b.status === "confirmed") },
     { label: "Completed", items: bookings.filter((b) => b.status === "completed") },
     { label: "Cancelled", items: bookings.filter((b) => b.status === "cancelled") },
-  ].filter((section) => section.items.length > 0);
+  ];
+  const activeSection = bookingSections.find((s) => s.label === activeBookingTab) || bookingSections[0];
 
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT }}>
@@ -4179,13 +4181,31 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
             No bookings yet — go find a salon and book something.
           </p>
         )}
-        {bookingSections.map((section) => (
-          <div key={section.label} className="mt-4">
-            <h3 className="text-sm font-bold mb-2" style={{ color: colors.creamDim }}>
-              {section.label} ({section.items.length})
-            </h3>
-            <div className="flex flex-col gap-2">
-              {section.items.map((b) => (
+        {bookings.length > 0 && (
+          <div className="flex gap-2 mt-4">
+            {bookingSections.map((section) => (
+              <button
+                key={section.label}
+                onClick={() => setActiveBookingTab(section.label)}
+                className="flex-1 py-2.5 rounded-full text-sm font-semibold tap-glass"
+                style={{
+                  background: activeBookingTab === section.label ? colors.hairline : colors.panelLight,
+                  color: activeBookingTab === section.label ? "#FFFFFF" : colors.creamDim,
+                  border: `2px solid ${colors.hairline}`,
+                }}
+              >
+                {section.label} ({section.items.length})
+              </button>
+            ))}
+          </div>
+        )}
+        {bookings.length > 0 && activeSection.items.length === 0 && (
+          <p className="text-sm py-6 text-center" style={{ color: colors.creamDim }}>
+            Nothing in {activeSection.label.toLowerCase()} yet.
+          </p>
+        )}
+        <div className="flex flex-col gap-2 mt-3">
+          {activeSection.items.map((b) => (
             <div
               key={b.id}
               className="flex flex-col px-4 py-3 rounded-xl"
@@ -4382,10 +4402,8 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
                 </div>
               )}
             </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
