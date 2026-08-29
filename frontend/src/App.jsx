@@ -1937,7 +1937,7 @@ function OwnerCustomerProfileView({ token, salonId, customerId, onBack }) {
   );
 }
 
-function OwnerDashboard({ token }) {
+function OwnerDashboard({ token, onOpenChat: onOpenChatProp }) {
   const [salon, setSalon] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -1958,6 +1958,25 @@ function OwnerDashboard({ token }) {
   const [confirmSubmittingId, setConfirmSubmittingId] = useState(null);
   const [confirmErrors, setConfirmErrors] = useState({});
   const [viewingCustomer, setViewingCustomer] = useState(null); // { id, name } | null
+  const [openingChatId, setOpeningChatId] = useState(null);
+  const [openChatErrors, setOpenChatErrors] = useState({});
+
+  async function openChatWithCustomer(booking) {
+    setOpeningChatId(booking.id);
+    setOpenChatErrors((prev) => ({ ...prev, [booking.id]: null }));
+    try {
+      const convo = await apiFetch("/conversations/start", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ salon_id: booking.salon_id, customer_id: booking.customer_id }),
+      });
+      onOpenChatProp && onOpenChatProp(convo.id);
+    } catch (e) {
+      setOpenChatErrors((prev) => ({ ...prev, [booking.id]: e.message || "Couldn't open this chat." }));
+    } finally {
+      setOpeningChatId(null);
+    }
+  }
   const [revealedCodes, setRevealedCodes] = useState({}); // bookingId -> code
   const [revealingCodeId, setRevealingCodeId] = useState(null);
   const [revealCodeErrors, setRevealCodeErrors] = useState({});
@@ -2335,11 +2354,31 @@ function OwnerDashboard({ token }) {
                     )}
                   </div>
                 </button>
-                <span className="text-xs text-right shrink-0" style={{ color: colors.creamDim }}>
-                  {formatBookingDate(a.booking_date) && <>{formatBookingDate(a.booking_date)}<br /></>}
-                  {a.time_slot}
-                </span>
+                <div className="flex items-start gap-2 shrink-0">
+                  <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                    {formatBookingDate(a.booking_date) && <>{formatBookingDate(a.booking_date)}<br /></>}
+                    {a.time_slot}
+                  </span>
+                  {onOpenChatProp && (
+                    <button
+                      onClick={() => openChatWithCustomer(a)}
+                      disabled={openingChatId === a.id}
+                      className="p-2 rounded-full tap-glass"
+                      style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+                      aria-label="Message this client"
+                    >
+                      {openingChatId === a.id ? (
+                        <Loader2 size={16} className="animate-spin" color={colors.cream} />
+                      ) : (
+                        <MessageCircle size={16} color={colors.cream} />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
+              {openChatErrors[a.id] && (
+                <p className="text-xs" style={{ color: "#E07A5F" }}>{openChatErrors[a.id]}</p>
+              )}
 
               {a.owner_response === "pending" ? (
                 <div className="flex flex-col gap-2">
@@ -5461,7 +5500,13 @@ export default function App() {
                 onBack={() => setOwnerPage("chatInbox")}
               />
             ) : (
-              <OwnerDashboard token={ownerAuth.token} />
+              <OwnerDashboard
+                token={ownerAuth.token}
+                onOpenChat={(convoId) => {
+                  setActiveConversationId(convoId);
+                  setOwnerPage("chatThread");
+                }}
+              />
             )
           ) : (
             <AuthGate

@@ -48,29 +48,40 @@ router.get("/mine", requireAuth, async (req, res) => {
   }
 });
 
-// POST /conversations/start — customer only. Finds the existing thread with
-// this salon, or creates one if this is their first message ever to it.
+// POST /conversations/start — either a customer or a salon owner can start
+// the thread, as long as a real booking connects them. Customers just pass
+// salon_id (their own id is used automatically); owners pass both salon_id
+// (their salon) and customer_id (whoever they're messaging).
 router.post("/start", requireAuth, async (req, res) => {
-  if (req.user.role !== "customer") return res.status(403).json({ error: "Only customers can start a conversation." });
-  const { salon_id } = req.body;
+  let { salon_id, customer_id } = req.body;
   if (!salon_id) return res.status(400).json({ error: "salon_id is required" });
   try {
-    const { rows: salonRows } = await db.query("SELECT id FROM salons WHERE id = $1", [salon_id]);
-    if (!salonRows[0]) return res.status(404).json({ error: "Salon not found" });
+    const { rows: salonRows } = await db.query("SELECT id, owner_id FROM salons WHERE id = $1", [salon_id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+
+    if (req.user.role === "customer") {
+      customer_id = req.user.id;
+    } else if (req.user.role === "owner") {
+      if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon." });
+      if (!customer_id) return res.status(400).json({ error: "customer_id is required" });
+    } else {
+      return res.status(403).json({ error: "You can't start a conversation." });
+    }
 
     const { rows: hasBookedRows } = await db.query(
       "SELECT 1 FROM bookings WHERE customer_id = $1 AND salon_id = $2 LIMIT 1",
-      [req.user.id, salon_id]
+      [customer_id, salon_id]
     );
     if (!hasBookedRows[0]) {
-      return res.status(403).json({ error: "You can message a salon once you've booked with them." });
+      return res.status(403).json({ error: "This person hasn't booked this salon yet." });
     }
 
     const { rows } = await db.query(
       `INSERT INTO conversations (customer_id, salon_id) VALUES ($1, $2)
        ON CONFLICT (customer_id, salon_id) DO UPDATE SET customer_id = EXCLUDED.customer_id
        RETURNING *`,
-      [req.user.id, salon_id]
+      [customer_id, salon_id]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
