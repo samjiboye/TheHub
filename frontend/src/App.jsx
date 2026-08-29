@@ -5,7 +5,7 @@ import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2, Gem, PenTool,
   ChevronLeft, ChevronDown, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
   Users, ArrowRight, ShieldCheck, Loader2, WifiOff, User, LogIn, UserPlus, Store, Plus, Eye, EyeOff, Image, Video, Play, Trash2, Upload, Menu, Settings, LogOut, CalendarCheck,
-  UserCircle, Bell, Wallet, ShoppingBag,
+  UserCircle, Bell, Wallet, ShoppingBag, Crown, Layers, Droplet, Flame, Smile, Heart,
 } from "lucide-react";
 
 // Set VITE_API_BASE in your deploy environment (e.g. Vercel project settings) to your
@@ -71,10 +71,16 @@ const CATEGORIES = [
   { name: "Barbing", icon: Scissors, photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
   { name: "Hairdressing", icon: Wand2, photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
   { name: "Lashes & Nails", icon: Palette, photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
-  { name: "Makeup", icon: Sparkles, photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
+  { name: "Bridal & Event Makeup", icon: Sparkles, photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
   { name: "Spa", icon: Flower2, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
   { name: "Piercing", icon: Gem, photo: "https://images.pexels.com/photos/10005259/pexels-photo-10005259.jpeg" },
   { name: "Tattoos", icon: PenTool, photo: "https://images.pexels.com/photos/35714996/pexels-photo-35714996.jpeg" },
+  { name: "Wig Making & Installation", icon: Crown, photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
+  { name: "Gele & Head-tie Styling", icon: Layers, photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
+  { name: "Skincare & Facials", icon: Droplet, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
+  { name: "Waxing & Hair Removal", icon: Flame, photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
+  { name: "Teeth Whitening", icon: Smile, photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
+  { name: "Massage Therapy", icon: Heart, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
 ];
 
 // Category-specific hero background treatments — used behind the search screen
@@ -87,8 +93,14 @@ const CATEGORY_THEMES = {
   "Lashes & Nails": { gradient: "linear-gradient(160deg, #241214 0%, #6B333B 50%, #E7A9A0 100%)" },
   Piercing: { gradient: "linear-gradient(160deg, #1A1A1D 0%, #4A4E69 50%, #C9CBFF 100%)" },
   Tattoos: { gradient: "linear-gradient(160deg, #1A0F0F 0%, #4A1212 50%, #C97A7A 100%)" },
-  Makeup: { gradient: "linear-gradient(160deg, #180E20 0%, #451D54 50%, #C9A0DC 100%)" },
+  "Bridal & Event Makeup": { gradient: "linear-gradient(160deg, #180E20 0%, #451D54 50%, #C9A0DC 100%)" },
   Spa: { gradient: "linear-gradient(160deg, #0D1C19 0%, #274F49 50%, #8FC9BE 100%)" },
+  "Wig Making & Installation": { gradient: "linear-gradient(160deg, #201510 0%, #5C3A24 50%, #D9AE8C 100%)" },
+  "Gele & Head-tie Styling": { gradient: "linear-gradient(160deg, #241905 0%, #6B4E14 50%, #E7C25A 100%)" },
+  "Skincare & Facials": { gradient: "linear-gradient(160deg, #0D1A1C 0%, #1E4A4F 50%, #9AD6D9 100%)" },
+  "Waxing & Hair Removal": { gradient: "linear-gradient(160deg, #200D0D 0%, #6B241E 50%, #E79A8C 100%)" },
+  "Teeth Whitening": { gradient: "linear-gradient(160deg, #0F1A20 0%, #29505C 50%, #A9D8E0 100%)" },
+  "Massage Therapy": { gradient: "linear-gradient(160deg, #170D20 0%, #3E2154 50%, #B99CD9 100%)" },
 };
 const NEUTRAL_HERO_GRADIENT = "linear-gradient(160deg, #FBEEE3 0%, #F6DCC4 55%, #F2C79E 100%)";
 // A distinct, muted "business dashboard" gradient for the owner side of the app —
