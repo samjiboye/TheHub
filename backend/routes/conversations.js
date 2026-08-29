@@ -153,6 +153,7 @@ router.post("/:id/messages", requireAuth, async (req, res) => {
       type: "new_message",
       title: req.user.role === "customer" ? "New message from a client" : `New message from ${convo.salon_name}`,
       body: body.trim().length > 80 ? body.trim().slice(0, 80) + "…" : body.trim(),
+      conversationId: convo.id,
     });
 
     res.status(201).json(rows[0]);

@@ -5305,7 +5305,16 @@ export default function App() {
                                 "booking_cancelled", "completion_requested", "booking_completed",
                                 "booking_disputed", "reminder",
                               ];
-                              if (ownerTypes.includes(n.type)) {
+                              if (n.type === "new_message" && n.conversation_id) {
+                                setNotifOpen(false);
+                                setActiveConversationId(n.conversation_id);
+                                if (role === "owner") {
+                                  setOwnerPage("chatThread");
+                                } else {
+                                  setChatBackView("chatInbox");
+                                  setView("chat");
+                                }
+                              } else if (ownerTypes.includes(n.type)) {
                                 setNotifOpen(false);
                                 setRole("owner");
                                 setOwnerPage("dashboard");
