@@ -63,7 +63,13 @@ router.post("/start", requireAuth, async (req, res) => {
     if (req.user.role === "customer") {
       customer_id = req.user.id;
     } else if (req.user.role === "owner") {
-      if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon." });
+      if (salon.owner_id !== req.user.id) {
+        const { rows: dbUserRows } = await db.query("SELECT id, name, email, role FROM users WHERE id = $1", [req.user.id]);
+        const dbUser = dbUserRows[0];
+        return res.status(403).json({
+          error: `Not your salon. [DEBUG: token says id=${req.user.id} role=${req.user.role}; DB says name="${dbUser?.name}" email="${dbUser?.email}" role="${dbUser?.role}"; salon.owner_id=${salon.owner_id}]`,
+        });
+      }
       if (!customer_id) return res.status(400).json({ error: "customer_id is required" });
     } else {
       return res.status(403).json({ error: "You can't start a conversation." });
