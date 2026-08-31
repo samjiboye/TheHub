@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
-import MarketplaceView from "./Marketplace";
 import {
   Search, MapPin, Star, Clock, Scissors, Wand2, Palette, Sparkles, Flower2, Gem, PenTool,
   ChevronLeft, ChevronDown, X, Send, Calendar, TrendingUp, MessageCircle, CheckCircle2,
