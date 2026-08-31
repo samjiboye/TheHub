@@ -31,4 +31,12 @@ const uploadLimiter = rateLimit({
   keyGenerator: (req) => (req.user ? `user:${req.user.id}` : req.ip),
 });
 
-module.exports = { loginLimiter, authLimiter, uploadLimiter };
+const ariaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { error: "Aria is getting a lot of questions right now — please try again in a few minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { loginLimiter, authLimiter, uploadLimiter, ariaLimiter };
