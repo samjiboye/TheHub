@@ -69,13 +69,15 @@ const SALONS = [
   },
 ];
 
-// GET /admin/seed?key=<JWT_SECRET>
+// POST /admin/seed  { key: <ADMIN_KEY> }
 // A shell-free way to populate demo data on hosts (like Render's free tier) that
-// don't offer shell access. Reuses JWT_SECRET as a simple shared key so no new
-// environment variable is needed. Safe to leave in place — it's idempotent and
-// does nothing once the demo owner already has salons.
-router.get("/seed", async (req, res) => {
-  if (!process.env.ADMIN_KEY || req.query.key !== process.env.ADMIN_KEY) {
+// don't offer shell access. Gated by ADMIN_KEY, a separate secret set in Render's
+// environment variables — set it to a long random value there, it isn't in code.
+// POST (not GET) so the key never ends up in a URL, access log, or browser history.
+// Safe to leave in place — it's idempotent and does nothing once the demo owner
+// already has salons.
+router.post("/seed", async (req, res) => {
+  if (!process.env.ADMIN_KEY || req.body.key !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Missing or incorrect key" });
   }
 
@@ -113,7 +115,7 @@ router.get("/seed", async (req, res) => {
 
     res.json({
       ok: true,
-      message: `Seeded ${SALONS.length} salons. Demo owner login: ${DEMO_OWNER_EMAIL} / ${DEMO_OWNER_PASSWORD}`,
+      message: `Seeded ${SALONS.length} salons for demo owner ${DEMO_OWNER_EMAIL}.`,
     });
   } catch (err) {
     console.error(err);
@@ -121,15 +123,16 @@ router.get("/seed", async (req, res) => {
   }
 });
 
-// GET /admin/promote?key=<JWT_SECRET>&email=<email>
+// POST /admin/promote  { key: <ADMIN_KEY>, email: <email> }
 // A shell-free way to flag an account as admin (needed to manage the marketplace
-// catalog and orders) on hosts that don't offer shell access. Reuses JWT_SECRET
-// as a shared key, same convention as /admin/seed above.
-router.get("/promote", async (req, res) => {
-  if (!process.env.ADMIN_KEY || req.query.key !== process.env.ADMIN_KEY) {
+// catalog and orders) on hosts that don't offer shell access. Gated by ADMIN_KEY,
+// same convention as /admin/seed above. POST (not GET) so the key never ends up
+// in a URL, access log, or browser history.
+router.post("/promote", async (req, res) => {
+  if (!process.env.ADMIN_KEY || req.body.key !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Missing or incorrect key" });
   }
-  const { email } = req.query;
+  const { email } = req.body;
   if (!email) return res.status(400).json({ error: "email is required" });
 
   try {

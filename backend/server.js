@@ -30,6 +30,9 @@ const app = express();
 app.use(helmet());
 
 const corsOrigin = process.env.CORS_ORIGIN || "*";
+if (corsOrigin === "*") {
+  console.warn("CORS_ORIGIN is not set — accepting requests from any origin. Set it to your real frontend URL(s) in production.");
+}
 app.use(cors({ origin: corsOrigin }));
 
 app.use("/webhooks/paystack", express.raw({ type: "application/json" }), paystackWebhookRoutes);
