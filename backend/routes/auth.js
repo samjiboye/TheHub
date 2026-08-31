@@ -147,7 +147,7 @@ router.get("/google", (req, res) => {
 });
 
 // GET /auth/google/callback - handle Google's redirect back
-router.get("/google/callback", async (req, res) => {
+router.get("/google/callback", authLimiter, async (req, res) => {
   const { code } = req.query;
   if (!code) {
     return res.redirect(`${process.env.FRONTEND_URL}/?error=google_auth_failed`);
