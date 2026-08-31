@@ -1195,6 +1195,19 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             <><UserPlus size={18} /> Sign up</>
           )}
         </button>
+        {mode === "signup" && (
+          <p className="text-xs text-center mt-2" style={{ color: colors.creamDim }}>
+            By signing up, you agree to TheHub's{" "}
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: colors.hairline, textDecoration: "underline" }}>
+              Terms
+            </a>{" "}
+            and{" "}
+            <a href="/privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: colors.hairline, textDecoration: "underline" }}>
+              Privacy Policy
+            </a>
+            .
+          </p>
+        )}
       </form>
 
       <a
@@ -4470,6 +4483,24 @@ function SettingsView({ onBack, onWatchIntro }) {
             Watch intro again
           </button>
         )}
+        <a
+          href="/terms.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-3 rounded-xl text-sm font-semibold text-left tap-glass"
+          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+        >
+          Terms of Service
+        </a>
+        <a
+          href="/privacy.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-3 rounded-xl text-sm font-semibold text-left tap-glass"
+          style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+        >
+          Privacy Policy
+        </a>
         {ownerSalon && (
           <div className="mt-4 rounded-2xl px-4 py-4" style={{ border: `2px solid #E07A5F` }}>
             <h3 style={{ fontFamily: FONT_DISPLAY, color: "#E07A5F", fontWeight: 700 }} className="text-lg mb-2">Danger zone</h3>
