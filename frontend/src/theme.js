@@ -36,11 +36,11 @@ const CATEGORIES = [
   { name: "Spa & Massage Therapy", icon: Flower2, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
   { name: "Piercing", icon: Gem, photo: "https://images.pexels.com/photos/10005259/pexels-photo-10005259.jpeg" },
   { name: "Tattoos", icon: PenTool, photo: "https://images.pexels.com/photos/35714996/pexels-photo-35714996.jpeg" },
-  { name: "Wig Making & Installation", icon: Crown, photo: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&q=80" },
-  { name: "Gele & Head-tie Styling", icon: Layers, photo: "https://images.pexels.com/photos/32351040/pexels-photo-32351040.jpeg" },
-  { name: "Skincare & Facials", icon: Droplet, photo: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80" },
-  { name: "Waxing & Hair Removal", icon: Flame, photo: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&q=80" },
-  { name: "Teeth Whitening", icon: Smile, photo: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=400&q=80" },
+  { name: "Wig Making & Installation", icon: Crown, photo: "https://images.pexels.com/photos/6923351/pexels-photo-6923351.jpeg" },
+  { name: "Gele & Head-tie Styling", icon: Layers, photo: "https://images.pexels.com/photos/39266140/pexels-photo-39266140.jpeg" },
+  { name: "Skincare & Facials", icon: Droplet, photo: "https://images.pexels.com/photos/7446658/pexels-photo-7446658.jpeg" },
+  { name: "Waxing & Hair Removal", icon: Flame, photo: "https://images.pexels.com/photos/6763618/pexels-photo-6763618.jpeg" },
+  { name: "Teeth Whitening", icon: Smile, photo: "https://images.pexels.com/photos/5622257/pexels-photo-5622257.jpeg" },
 ];
 
 // Category-specific hero background treatments — used behind the search screen
