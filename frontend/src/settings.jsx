@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as Sentry from "@sentry/react";
 import {
   Loader2, Settings,
 } from "lucide-react";
@@ -74,7 +75,10 @@ function SettingsView({ onBack, onWatchIntro }) {
         )}
         {/* TEMPORARY -- Sentry crash-reporting test button. Remove this block once confirmed working. */}
         <button
-          onClick={() => { throw new Error("Sentry test crash -- safe to ignore, this is intentional."); }}
+          onClick={() => {
+            const eventId = Sentry.captureException(new Error("Sentry test crash -- safe to ignore, this is intentional."));
+            alert("Test error sent to Sentry.\nEvent ID: " + eventId + "\n\nCheck your Sentry dashboard now.");
+          }}
           className="px-4 py-3 rounded-xl text-sm font-semibold text-left tap-glass"
           style={{ background: colors.panelLight, border: `2px solid #E07A5F`, color: "#E07A5F" }}
         >
