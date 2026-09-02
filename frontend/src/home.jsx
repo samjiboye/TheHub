@@ -230,7 +230,9 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
       <div className="px-4 pt-5 pb-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.length === 0 && (
           <p className="text-lg text-center py-10 sm:col-span-2 lg:col-span-3" style={{ color: colors.creamDim }}>
-            No one here yet.
+            {category || priceFilter || searchQuery.trim() || searchState || searchCity
+              ? "No results — try a different filter."
+              : "No one here yet."}
           </p>
         )}
         {filtered.map((s) => (

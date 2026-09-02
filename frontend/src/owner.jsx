@@ -1582,6 +1582,9 @@ function OwnerCustomerProfileView({ token, salonId, customerId, onBack }) {
               </div>
             )}
 
+            {profile.activeBookings && profile.activeBookings.length === 0 && (
+              <p className="text-sm mt-4" style={{ color: colors.creamDim }}>No upcoming bookings with you right now.</p>
+            )}
             {profile.activeBookings && profile.activeBookings.length > 0 && (
               <div className="w-full mt-4">
                 <h3 className="text-sm font-bold mb-2" style={{ color: colors.cream }}>Upcoming with you</h3>
