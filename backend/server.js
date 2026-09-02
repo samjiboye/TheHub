@@ -21,6 +21,7 @@ const marketplaceOrderRoutes = require("./routes/marketplaceOrders");
 const adminAnalyticsRoutes = require("./routes/adminAnalytics");
 const userRoutes = require("./routes/users");
 const conversationRoutes = require("./routes/conversations");
+const feedbackRoutes = require("./routes/feedback");
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/orders", marketplaceOrderRoutes);
 app.use("/admin", adminAnalyticsRoutes);
 app.use("/users", userRoutes);
 app.use("/conversations", conversationRoutes);
+app.use("/feedback", feedbackRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

@@ -372,3 +372,14 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS checkin_code TEXT;
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL;
 
 ALTER TABLE salons ADD COLUMN IF NOT EXISTS neighborhood TEXT;
+
+-- User-submitted feedback and feature requests, reachable from Settings.
+-- Kept intentionally simple (just a message) rather than a category/priority
+-- system -- Sammy reads these directly rather than running a triage workflow.
+CREATE TABLE IF NOT EXISTS feedback (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);

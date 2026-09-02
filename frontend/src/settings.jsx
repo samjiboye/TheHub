@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import * as Sentry from "@sentry/react";
 import {
-  Loader2, Settings,
+  Loader2, Settings, MessageSquare,
 } from "lucide-react";
 import { apiFetch } from "./api";
 import { Header } from "./shared";
 import { FONT_DISPLAY, NEUTRAL_HERO_GRADIENT, colors } from "./theme";
 
-function SettingsView({ onBack, onWatchIntro }) {
+function SettingsView({ onBack, onWatchIntro, onSendFeedback }) {
   const saved = JSON.parse(localStorage.getItem("auth") || localStorage.getItem("customerAuth") || localStorage.getItem("ownerAuth") || "null");
   const user = saved?.user || {};
   const ownerToken = saved?.token;
@@ -73,6 +73,15 @@ function SettingsView({ onBack, onWatchIntro }) {
             Watch intro again
           </button>
         )}
+        {onSendFeedback && (
+          <button
+            onClick={onSendFeedback}
+            className="px-4 py-3 rounded-xl text-sm font-semibold text-left tap-glass flex items-center gap-2"
+            style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+          >
+            <MessageSquare size={16} /> Send feedback
+          </button>
+        )}
         <a
           href="/terms.html"
           target="_blank"
@@ -125,4 +134,75 @@ function SettingsView({ onBack, onWatchIntro }) {
   );
 }
 
-export { SettingsView };
+function FeedbackView({ token, onBack }) {
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!message.trim() || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiFetch("/feedback", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: message.trim() }),
+      });
+      setSent(true);
+      setMessage("");
+    } catch (err) {
+      setError(err.message || "Couldn't send that -- please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="pb-8 transition-[background] duration-500" style={{ background: NEUTRAL_HERO_GRADIENT, minHeight: "100vh" }}>
+      <Header title="Send feedback" onBack={onBack} />
+      <div className="px-4 mt-4 flex flex-col gap-3 max-w-xl mx-auto w-full">
+        {sent ? (
+          <div className="rounded-2xl px-4 py-8 flex flex-col items-center text-center gap-2" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+            <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700, fontSize: "1.1rem" }}>Thanks!</p>
+            <p className="text-sm" style={{ color: colors.creamDim }}>Your feedback has been sent.</p>
+            <button
+              onClick={() => setSent(false)}
+              className="mt-3 px-5 py-2.5 rounded-full text-sm font-semibold tap-glass"
+              style={{ background: colors.hairline, color: "#FFFFFF" }}
+            >
+              Send another
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm" style={{ color: colors.creamDim }}>
+              Found a bug, or wish TheHub had something it doesn't yet? Tell us here.
+            </p>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="What's on your mind?"
+              rows={6}
+              maxLength={2000}
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
+              style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+            />
+            {error && <p className="text-sm" style={{ color: "#E07A5F" }}>{error}</p>}
+            <button
+              onClick={handleSubmit}
+              disabled={!message.trim() || submitting}
+              className="py-3 rounded-full text-sm font-bold tap-glass flex items-center justify-center gap-2"
+              style={{ background: colors.hairline, color: "#FFFFFF", opacity: !message.trim() || submitting ? 0.6 : 1 }}
+            >
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : "Send"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export { SettingsView, FeedbackView };

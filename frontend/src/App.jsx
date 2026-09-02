@@ -10,7 +10,7 @@ import { CustomerProfileView } from "./customer";
 import { Concierge, HomeView, ProfileView } from "./home";
 import { CompletedAppointmentsView, OwnerDashboard, OwnerProfileView } from "./owner";
 import { RatingPopup, RatingsReviewsView } from "./ratings";
-import { SettingsView } from "./settings";
+import { SettingsView, FeedbackView } from "./settings";
 import { Header } from "./shared";
 import { FONT_BODY, FONT_DISPLAY, colors } from "./theme";
 
@@ -789,6 +789,13 @@ export default function App() {
               <SettingsView
                 onBack={() => setView("home")}
                 onWatchIntro={() => setShowOnboarding(true)}
+                onSendFeedback={() => setView("feedback")}
+              />
+            )}
+            {view === "feedback" && (
+              <FeedbackView
+                token={auth?.token}
+                onBack={() => setView("settings")}
               />
             )}
           </>

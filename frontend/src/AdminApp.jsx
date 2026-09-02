@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LogOut, Loader2, TrendingUp, Users, Store, Calendar, ShoppingBag, Package, DollarSign, ChevronLeft, Mail, Phone, MapPin } from "lucide-react";
+import { LogOut, Loader2, TrendingUp, Users, Store, Calendar, ShoppingBag, Package, DollarSign, ChevronLeft, Mail, Phone, MapPin, MessageSquare } from "lucide-react";
 import { ProductsTab, OrdersTab } from "./AdminMarketplace";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
@@ -387,6 +387,34 @@ function OverviewTab({ token }) {
   );
 }
 
+function FeedbackTab({ token }) {
+  const [feedback, setFeedback] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    apiFetch("/feedback", { headers: { Authorization: `Bearer ${token}` } })
+      .then(setFeedback)
+      .catch(() => setError("Couldn't load feedback."));
+  }, [token]);
+
+  if (error) return <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>{error}</p>;
+  if (!feedback) return <div className="pt-16 flex justify-center"><Loader2 size={28} className="animate-spin" color={colors.creamDim} /></div>;
+
+  return (
+    <div className="px-4 py-4 space-y-3">
+      {feedback.length === 0 && <p className="text-sm text-center py-10" style={{ color: colors.creamDim }}>No feedback yet.</p>}
+      {feedback.map((f) => (
+        <div key={f.id} className="rounded-2xl p-3.5" style={{ border: `2px solid ${colors.hairline}` }}>
+          <p className="text-sm mb-2" style={{ color: colors.cream }}>{f.message}</p>
+          <p className="text-xs" style={{ color: colors.creamDim }}>
+            {f.name} ({f.role}) · {f.email} · {new Date(f.created_at).toLocaleString()}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminApp() {
   const [auth, setAuth] = useState(() => {
     try {
@@ -430,6 +458,7 @@ export default function AdminApp() {
           { id: "bookings", label: "Bookings" },
           { id: "products", label: "Products" },
           { id: "orders", label: "Orders" },
+          { id: "feedback", label: "Feedback" },
         ].map((t) => (
           <button
             key={t.id}
@@ -447,6 +476,7 @@ export default function AdminApp() {
       {tab === "bookings" && <BookingsTab token={auth.token} />}
       {tab === "products" && <ProductsTab token={auth.token} />}
       {tab === "orders" && <OrdersTab token={auth.token} />}
+      {tab === "feedback" && <FeedbackTab token={auth.token} />}
     </div>
   );
 }
