@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
-const { uploadLimiter } = require("../middleware/rateLimiters");
+const { uploadLimiter, checkInLimiter } = require("../middleware/rateLimiters");
 const { notifyUser } = require("../lib/notify");
 const { sendNotificationEmail } = require("../lib/email");
 const paystack = require("../lib/paystack");
@@ -505,7 +505,7 @@ router.get("/:id/checkin-code", requireAuth, async (req, res) => {
 // count (5th visit = 50% off, funded by the owner, then resets to 0). Loyalty count
 // is ONLY ever touched here — never by referrals or anything else — so it always
 // matches real verified visits.
-router.post("/:id/check-in", requireAuth, async (req, res) => {
+router.post("/:id/check-in", requireAuth, checkInLimiter, async (req, res) => {
   const { code } = req.body;
   try {
     const { rows: bookingRows } = await db.query("SELECT * FROM bookings WHERE id = $1", [req.params.id]);

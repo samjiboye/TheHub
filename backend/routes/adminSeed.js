@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
+const { adminLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
@@ -76,7 +77,7 @@ const SALONS = [
 // POST (not GET) so the key never ends up in a URL, access log, or browser history.
 // Safe to leave in place — it's idempotent and does nothing once the demo owner
 // already has salons.
-router.post("/seed", async (req, res) => {
+router.post("/seed", adminLimiter, async (req, res) => {
   if (!process.env.ADMIN_KEY || req.body.key !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Missing or incorrect key" });
   }
@@ -128,7 +129,7 @@ router.post("/seed", async (req, res) => {
 // catalog and orders) on hosts that don't offer shell access. Gated by ADMIN_KEY,
 // same convention as /admin/seed above. POST (not GET) so the key never ends up
 // in a URL, access log, or browser history.
-router.post("/promote", async (req, res) => {
+router.post("/promote", adminLimiter, async (req, res) => {
   if (!process.env.ADMIN_KEY || req.body.key !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Missing or incorrect key" });
   }
