@@ -152,6 +152,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
         <div className="relative">
           <input
             required
+            minLength={mode === "signup" ? 8 : undefined}
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -168,6 +169,9 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
+        {mode === "signup" && (
+          <p className="text-xs -mt-1" style={{ color: colors.creamDim }}>At least 8 characters.</p>
+        )}
 
             {mode === "login" && !showResetForm && (
               <div className="flex items-center justify-between">

@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../db");
 const { JWT_SECRET } = require("../middleware/auth");
 const { loginLimiter, authLimiter } = require("../middleware/rateLimiters");
+const { isValidEmail, isValidPassword } = require("../lib/validate");
 const router = express.Router();
 
 // POST /auth/signup
@@ -11,6 +12,12 @@ router.post("/signup", authLimiter, async (req, res) => {
   const { name, email, phone, password, role, referralCode } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "name, email, and password are required" });
+  }
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: "Please enter a valid email address." });
+  }
+  if (!isValidPassword(password)) {
+    return res.status(400).json({ error: "Password must be at least 8 characters." });
   }
   try {
     const existing = await db.query("SELECT id FROM users WHERE email = $1", [email]);
@@ -108,6 +115,9 @@ router.post("/reset-password", authLimiter, async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) {
     return res.status(400).json({ error: "token and password are required" });
+  }
+  if (!isValidPassword(password)) {
+    return res.status(400).json({ error: "Password must be at least 8 characters." });
   }
 
   try {
