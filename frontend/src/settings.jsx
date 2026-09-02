@@ -72,6 +72,14 @@ function SettingsView({ onBack, onWatchIntro }) {
             Watch intro again
           </button>
         )}
+        {/* TEMPORARY -- Sentry crash-reporting test button. Remove this block once confirmed working. */}
+        <button
+          onClick={() => { throw new Error("Sentry test crash -- safe to ignore, this is intentional."); }}
+          className="px-4 py-3 rounded-xl text-sm font-semibold text-left tap-glass"
+          style={{ background: colors.panelLight, border: `2px solid #E07A5F`, color: "#E07A5F" }}
+        >
+          🧪 Test crash reporting
+        </button>
         <a
           href="/terms.html"
           target="_blank"
