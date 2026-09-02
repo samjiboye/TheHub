@@ -60,7 +60,7 @@ router.post("/", ariaLimiter, async (req, res) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: "claude-sonnet-5",
         max_tokens: 1000,
         system: `You are Aria, the warm and concise front-desk concierge for TheHub, a Nigerian beauty booking app. Prices are in naira (₦).
 
