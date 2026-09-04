@@ -75,6 +75,9 @@ If nothing genuinely matches, use an empty matchIds array and say so honestly in
       }),
     });
     const data = await response.json();
+    // TEMPORARY debug logging -- remove once Aria is confirmed working.
+    console.log("Aria debug -- response.status:", response.status);
+    console.log("Aria debug -- raw response body:", JSON.stringify(data).slice(0, 1500));
     const rawText = data?.content?.find((c) => c.type === "text")?.text || "";
 
     let reply = "Sorry, I couldn't quite get that — could you try asking again?";
