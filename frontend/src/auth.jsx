@@ -400,7 +400,7 @@ const ONBOARDING_SLIDES = [
   },
   {
     title: "Built for clients and businesses alike",
-    body: "Search by category and see real reviews before you book. Salon or freelance owners get paid instantly via Paystack — no waiting around.",
+    body: "Search by category and see real reviews before you book. Pay the salon or barber directly, however you normally would — and after your 5th completed visit with them, you get 50% off automatically.",
     photo: "https://images.pexels.com/photos/7389077/pexels-photo-7389077.jpeg",
   },
   {
