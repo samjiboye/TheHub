@@ -383,3 +383,14 @@ CREATE TABLE IF NOT EXISTS feedback (
   created_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
+-- Owners can now offer services across multiple categories (e.g. a salon
+-- that does both Hairdressing and Piercing) instead of being locked into
+-- one. "category" is kept as the primary/first category for anywhere that
+-- still expects a single value (card icons, etc.) -- "categories" is the
+-- full list customers actually search against.
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS categories TEXT[] NOT NULL DEFAULT '{}';
+UPDATE salons SET categories = ARRAY[category] WHERE categories = '{}' AND category IS NOT NULL;
+-- The old CHECK constraint only allowed 7 categories and was already out of
+-- date with the 12 the app actually supports -- validation now happens in
+-- the route code instead, which is easier to keep in sync with the frontend.
+ALTER TABLE salons DROP CONSTRAINT IF EXISTS salons_category_check;

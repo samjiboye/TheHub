@@ -5,6 +5,21 @@ const { requireAuth, requireRole } = require("../middleware/auth");
 const { getCommissionRate, getCompletedCount, TIERS } = require("../lib/commission");
 const router = express.Router();
 
+// Kept in sync with CATEGORIES in frontend/src/theme.js. Validated here
+// (rather than a database CHECK constraint) since that's easier to keep in
+// sync with the frontend list as new categories get added over time.
+const VALID_CATEGORIES = [
+  "Barbing", "Hairdressing", "Lashes & Nails", "Bridal & Event Makeup",
+  "Spa & Massage Therapy", "Piercing", "Tattoos", "Wig Making & Installation",
+  "Gele & Head-tie Styling", "Skincare & Facials", "Waxing & Hair Removal",
+  "Teeth Whitening",
+];
+function validCategories(categories) {
+  if (!Array.isArray(categories) || categories.length === 0) return null;
+  const cleaned = [...new Set(categories)].filter((c) => VALID_CATEGORIES.includes(c));
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 // Strip payout details before sending a salon to the public - these are
 // only ever needed internally when firing a payout, never by anyone
 // browsing salons or viewing a booking.
@@ -137,8 +152,11 @@ router.get("/:id", async (req, res) => {
 
 // POST /salons (owner creates a salon listing)
 router.post("/", requireAuth, async (req, res) => {
-  const { name, category, bio, address, lat, lng, hours, service_type, state, city, neighborhood } = req.body;
-  if (!name || !category) return res.status(400).json({ error: "name and category are required" });
+  const { name, categories, bio, address, lat, lng, hours, service_type, state, city, neighborhood } = req.body;
+  const cleanCategories = validCategories(categories);
+  if (!name || !cleanCategories) {
+    return res.status(400).json({ error: "name and at least one valid category are required" });
+  }
   try {
     let finalLat = lat || null;
     let finalLng = lng || null;
@@ -149,9 +167,9 @@ router.post("/", requireAuth, async (req, res) => {
       finalLng = geocoded.lng;
     }
     const { rows } = await db.query(
-      `INSERT INTO salons (owner_id, name, category, bio, address, lat, lng, hours, service_type, state, city, neighborhood)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
-      [req.user.id, name, category, bio || null, address || null, finalLat, finalLng, hours || null, service_type || 'unisex', state || null, city || null, neighborhood || null]
+      `INSERT INTO salons (owner_id, name, category, categories, bio, address, lat, lng, hours, service_type, state, city, neighborhood)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
+      [req.user.id, name, cleanCategories[0], cleanCategories, bio || null, address || null, finalLat, finalLng, hours || null, service_type || 'unisex', state || null, city || null, neighborhood || null]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
@@ -196,8 +214,11 @@ router.patch("/:id", requireAuth, async (req, res) => {
     if (!salon) return res.status(404).json({ error: "Salon not found" });
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
-    const { name, category, address, service_type, state, city, neighborhood, bio, hours } = req.body;
-    if (!name || !category) return res.status(400).json({ error: "name and category are required" });
+    const { name, categories, address, service_type, state, city, neighborhood, bio, hours } = req.body;
+    const cleanCategories = validCategories(categories);
+    if (!name || !cleanCategories) {
+      return res.status(400).json({ error: "name and at least one valid category are required" });
+    }
 
     let finalLat = salon.lat;
     let finalLng = salon.lng;
@@ -210,10 +231,10 @@ router.patch("/:id", requireAuth, async (req, res) => {
     }
 
     const { rows } = await db.query(
-      `UPDATE salons SET name = $1, category = $2, address = $3, service_type = $4, state = $5, city = $6,
-        neighborhood = $7, bio = $8, hours = $9, lat = $10, lng = $11
-       WHERE id = $12 RETURNING *`,
-      [name, category, address || null, service_type || salon.service_type, state || null, city || null,
+      `UPDATE salons SET name = $1, category = $2, categories = $3, address = $4, service_type = $5, state = $6, city = $7,
+        neighborhood = $8, bio = $9, hours = $10, lat = $11, lng = $12
+       WHERE id = $13 RETURNING *`,
+      [name, cleanCategories[0], cleanCategories, address || null, service_type || salon.service_type, state || null, city || null,
         neighborhood || null, bio ?? salon.bio, hours ?? salon.hours, finalLat, finalLng, salon.id]
     );
     res.json(rows[0]);

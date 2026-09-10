@@ -12,7 +12,8 @@ function CreateSalonView({ token, onDone }) {
   const [step, setStep] = useState("salon");
   const [salonId, setSalonId] = useState(null);
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0].name);
+  const [categories, setCategories] = useState([]);
+  const toggleCategory = (name) => setCategories((prev) => (prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]));
   const [serviceType, setServiceType] = useState("unisex");
   const [address, setAddress] = useState("");
   const [salonState, setSalonState] = useState("");
@@ -29,13 +30,17 @@ function CreateSalonView({ token, onDone }) {
 
   const createSalon = async (e) => {
     e.preventDefault();
+    if (categories.length === 0) {
+      setError("Pick at least one category for your salon.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const { id } = await apiFetch("/salons", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, category, address, service_type: serviceType, state: salonState, city: salonCity, neighborhood: salonNeighborhood }),
+        body: JSON.stringify({ name, categories, address, service_type: serviceType, state: salonState, city: salonCity, neighborhood: salonNeighborhood }),
       });
       setSalonId(id);
       setStep("services");
@@ -91,10 +96,26 @@ function CreateSalonView({ token, onDone }) {
         <form onSubmit={createSalon} className="flex flex-col gap-3">
           <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Salon name"
             className="pb-2 text-base outline-none" style={inputStyle} />
-          <select value={category} onChange={(e) => setCategory(e.target.value)}
-            className="pb-2 text-base outline-none" style={inputStyle}>
-            {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
-          </select>
+          <div>
+            <p className="text-sm mb-2" style={{ color: colors.creamDim }}>What do you offer? (pick all that apply)</p>
+            <div className="grid grid-cols-2 gap-2">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => toggleCategory(c.name)}
+                  className="px-3 py-2.5 rounded-xl text-sm text-left tap-glass"
+                  style={{
+                    background: categories.includes(c.name) ? colors.hairline : colors.panelLight,
+                    color: categories.includes(c.name) ? "#FFFFFF" : colors.cream,
+                    border: `2px solid ${categories.includes(c.name) ? colors.hairline : "transparent"}`,
+                  }}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
               <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}
                 className="pb-2 text-base outline-none" style={inputStyle}>
                 <option value="unisex">Unisex — all genders</option>
@@ -1127,7 +1148,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
 
   const startEditDetails = () => {
     setDetailsForm({
-      name: salon.name, category: salon.category, service_type: salon.service_type || "unisex",
+      name: salon.name, categories: salon.categories?.length ? salon.categories : [salon.category], service_type: salon.service_type || "unisex",
       address: salon.address || "", state: salon.state || "", city: salon.city || "",
       neighborhood: salon.neighborhood || "",
     });
@@ -1136,6 +1157,10 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
   };
 
   const saveDetails = async () => {
+    if (detailsForm.categories.length === 0) {
+      setDetailsError("Pick at least one category for your salon.");
+      return;
+    }
     setSavingDetails(true);
     setDetailsError(null);
     try {
@@ -1325,17 +1350,39 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
               {!editingDetails ? (
                 <div className="flex flex-col gap-1 text-sm" style={{ color: colors.creamDim }}>
                   <p><b style={{ color: colors.cream }}>{salon.name}</b></p>
-                  <p>{salon.category} · {salon.service_type === "unisex" ? "Unisex" : salon.service_type === "male" ? "Male only" : "Female only"}</p>
+                  <p>{(salon.categories?.length ? salon.categories : [salon.category]).join(", ")} · {salon.service_type === "unisex" ? "Unisex" : salon.service_type === "male" ? "Male only" : "Female only"}</p>
                   <p>{salon.address || "No address set"}{salon.city ? `, ${salon.city}` : ""}{salon.state ? `, ${salon.state}` : ""}</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   <input value={detailsForm.name} onChange={(e) => setDetailsForm({ ...detailsForm, name: e.target.value })}
                     placeholder="Salon name" className="pb-2 text-base outline-none" style={inputStyle} />
-                  <select value={detailsForm.category} onChange={(e) => setDetailsForm({ ...detailsForm, category: e.target.value })}
-                    className="pb-2 text-base outline-none" style={inputStyle}>
-                    {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
-                  </select>
+                  <div>
+                    <p className="text-sm mb-2" style={{ color: colors.creamDim }}>What do you offer? (pick all that apply)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {CATEGORIES.map((c) => {
+                        const selected = detailsForm.categories.includes(c.name);
+                        return (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => setDetailsForm((prev) => ({
+                              ...prev,
+                              categories: selected ? prev.categories.filter((n) => n !== c.name) : [...prev.categories, c.name],
+                            }))}
+                            className="px-3 py-2.5 rounded-xl text-sm text-left tap-glass"
+                            style={{
+                              background: selected ? colors.hairline : colors.panelLight,
+                              color: selected ? "#FFFFFF" : colors.cream,
+                              border: `2px solid ${selected ? colors.hairline : "transparent"}`,
+                            }}
+                          >
+                            {c.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <select value={detailsForm.service_type} onChange={(e) => setDetailsForm({ ...detailsForm, service_type: e.target.value })}
                     className="pb-2 text-base outline-none" style={inputStyle}>
                     <option value="unisex">Unisex — all genders</option>

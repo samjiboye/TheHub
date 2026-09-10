@@ -28,7 +28,7 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
   }, []);
 
   const filtered = salons
-    .filter((s) => (category ? s.category === category : true))
+    .filter((s) => (category ? (s.categories?.length ? s.categories : [s.category]).includes(category) : true))
     .filter((s) => {
       if (!priceFilter) return true;
       const bucket = PRICE_BUCKETS.find((b) => b.id === priceFilter);

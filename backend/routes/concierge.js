@@ -60,7 +60,10 @@ function filterRelevantSalons(allSalons, messages) {
     )
     .map(([category]) => category);
   if (matchedCategories.length === 0) return allSalons; // ambiguous -- don't risk hiding a match
-  const filtered = allSalons.filter((s) => matchedCategories.includes(s.category));
+  const filtered = allSalons.filter((s) => {
+    const salonCategories = s.categories?.length ? s.categories : [s.category];
+    return salonCategories.some((c) => matchedCategories.includes(c));
+  });
   return filtered.length > 0 ? filtered : allSalons;
 }
 
@@ -115,7 +118,7 @@ router.post("/", ariaLimiter, async (req, res) => {
   const salonListForPrompt = relevantSalons
     .map(
       (s) =>
-        `id=${s.id} | ${s.name} (${s.category}, ${s.city || ""} ${s.state || ""}) — services: ${
+        `id=${s.id} | ${s.name} (${(s.categories?.length ? s.categories : [s.category]).join(" / ")}, ${s.city || ""} ${s.state || ""}) — services: ${
           s.services.map((sv) => `${sv.name} ₦${sv.price}`).join(", ") || "none listed"
         }`
     )
