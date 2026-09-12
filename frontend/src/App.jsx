@@ -388,97 +388,6 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {role === "owner" && ownerAuth && (
-              <div className="relative">
-                <button
-                  onClick={() => setNotifOpen((o) => { if (!o) setMenuOpen(false); return !o; })}
-                  className="p-2.5 rounded-full tap-glass relative"
-                  style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
-                >
-                  <Bell size={20} />
-                  {unreadCount > 0 && (
-                    <span
-                      className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-xs"
-                      style={{ background: "#E07A5F", color: "#FFFFFF", minWidth: 18, height: 18, fontWeight: 700, padding: "0 4px" }}
-                    >
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
-                </button>
-                {notifOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-72 rounded-2xl shadow-lg z-50 overflow-hidden"
-                    style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
-                  >
-                    <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `2px solid ${colors.hairline}` }}>
-                      <span className="text-sm font-bold" style={{ color: colors.cream }}>Notifications</span>
-                      {unreadCount > 0 && (
-                        <button onClick={markAllNotificationsRead} className="text-xs font-semibold" style={{ color: colors.creamDim }}>
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-                    <div style={{ maxHeight: 320, overflowY: "auto" }}>
-                      {notifications.length === 0 ? (
-                        <p className="px-4 py-6 text-sm text-center" style={{ color: colors.creamDim }}>
-                          No notifications yet.
-                        </p>
-                      ) : (
-                        notifications.map((n) => (
-                          <button
-                            key={n.id}
-                            onClick={() => {
-                              if (!n.read) markNotificationRead(n.id);
-                              const ownerTypes = ["new_booking"];
-                              const customerBookingTypes = [
-                                "booking_confirmed", "booking_accepted", "booking_declined",
-                                "booking_cancelled", "completion_requested", "booking_completed",
-                                "booking_disputed", "reminder",
-                              ];
-                              if (n.type === "new_message" && n.conversation_id) {
-                                setNotifOpen(false);
-                                setActiveConversationId(n.conversation_id);
-                                if (role === "owner") {
-                                  setOwnerPage("chatThread");
-                                } else {
-                                  setChatBackView("chatInbox");
-                                  setView("chat");
-                                }
-                              } else if (n.type === "new_message") {
-                                // Older notification from before messages linked to a
-                                // specific conversation — open the inbox instead of doing nothing.
-                                setNotifOpen(false);
-                                if (role === "owner") {
-                                  setOwnerPage("chatInbox");
-                                } else {
-                                  setView("chatInbox");
-                                }
-                              } else if (ownerTypes.includes(n.type)) {
-                                setNotifOpen(false);
-                                setRole("owner");
-                                setOwnerPage("dashboard");
-                              } else if (customerBookingTypes.includes(n.type)) {
-                                setNotifOpen(false);
-                                setRole("customer");
-                                setView("myBookings");
-                              }
-                            }}
-                            className="w-full text-left px-4 py-3"
-                            style={{
-                              borderBottom: `1px solid ${colors.hairline}`,
-                              background: n.read ? "transparent" : "rgba(224,122,95,0.08)",
-                            }}
-                          >
-                            <p className="text-sm font-semibold" style={{ color: colors.cream }}>{n.title}</p>
-                            {n.body && <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>{n.body}</p>}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
             <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => { if (!o) setNotifOpen(false); return !o; })}
@@ -530,23 +439,6 @@ export default function App() {
                     <LogIn size={16} /> Log in / Sign up
                   </button>
                 )}
-                {role === "owner" && ownerAuth && (
-                  <button
-                    onClick={() => { setMenuOpen(false); setOwnerPage("chatInbox"); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                    style={{ color: colors.cream }}
-                  >
-                    <MessageCircle size={16} /> Messages
-                    {unreadMessageCount > 0 && (
-                      <span
-                        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-xs font-bold"
-                        style={{ background: colors.gold, color: colors.bg }}
-                      >
-                        {unreadMessageCount}
-                      </span>
-                    )}
-                  </button>
-                )}
                 {(role === "customer" ? customerAuth : ownerAuth) && (
                   <button
                     onClick={() => { setMenuOpen(false); setView("settings"); }}
@@ -558,26 +450,10 @@ export default function App() {
                 )}
                 {role === "owner" && ownerAuth && (
                   <button
-                    onClick={() => { setMenuOpen(false); setOwnerPage("completed"); }}
-                    className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
-                  >
-                    <CheckCircle2 size={16} /> Completed Appointments
-                  </button>
-                )}
-                {role === "owner" && ownerAuth && (
-                  <button
                     onClick={() => { setMenuOpen(false); setOwnerPage("ratings"); }}
                     className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
                   >
                     <Star size={16} /> Ratings &amp; Reviews
-                  </button>
-                )}
-                {role === "owner" && ownerAuth && (
-                  <button
-                    onClick={() => { setMenuOpen(false); setOwnerPage("profile"); }}
-                    className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50"
-                  >
-                    <UserCircle size={16} /> My Profile
                   </button>
                 )}
                 {(role === "customer" ? customerAuth : ownerAuth) && (
@@ -616,7 +492,8 @@ export default function App() {
         )}
         {role === "owner" ? (
           ownerAuth ? (
-            ownerPage === "completed" ? (
+            <div style={{ paddingBottom: ["dashboard", "completed", "profile", "chatInbox"].includes(ownerPage) ? "6rem" : 0 }}>
+            {ownerPage === "completed" ? (
               <CompletedAppointmentsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : ownerPage === "ratings" ? (
               <RatingsReviewsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
@@ -653,7 +530,8 @@ export default function App() {
                   setOwnerPage("chatThread");
                 }}
               />
-            )
+            )}
+            </div>
           ) : (
             <AuthGate
               role="owner"
@@ -769,6 +647,126 @@ export default function App() {
               />
             )}
           </div>
+        )}
+        {role === "owner" && ownerAuth && ["dashboard", "completed", "profile", "chatInbox"].includes(ownerPage) && (
+          <>
+            {notifOpen && (
+              <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+            )}
+            {notifOpen && (
+              <div
+                className="fixed left-3 right-3 z-40 rounded-2xl shadow-lg overflow-hidden"
+                style={{
+                  bottom: "calc(5.75rem + env(safe-area-inset-bottom))",
+                  maxWidth: "440px",
+                  margin: "0 auto",
+                  background: colors.panelLight,
+                  border: `2px solid ${colors.hairline}`,
+                }}
+              >
+                <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `2px solid ${colors.hairline}` }}>
+                  <span className="text-sm font-bold" style={{ color: colors.cream }}>Notifications</span>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllNotificationsRead} className="text-xs font-semibold" style={{ color: colors.creamDim }}>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  {notifications.length === 0 ? (
+                    <p className="px-4 py-6 text-sm text-center" style={{ color: colors.creamDim }}>
+                      No notifications yet.
+                    </p>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => {
+                          if (!n.read) markNotificationRead(n.id);
+                          if (n.type === "new_message" && n.conversation_id) {
+                            setNotifOpen(false);
+                            setActiveConversationId(n.conversation_id);
+                            setOwnerPage("chatThread");
+                          } else if (n.type === "new_message") {
+                            setNotifOpen(false);
+                            setOwnerPage("chatInbox");
+                          } else if (n.type === "new_booking") {
+                            setNotifOpen(false);
+                            setOwnerPage("dashboard");
+                          }
+                        }}
+                        className="w-full text-left px-4 py-3"
+                        style={{
+                          borderBottom: `1px solid ${colors.hairline}`,
+                          background: n.read ? "transparent" : "rgba(224,122,95,0.08)",
+                        }}
+                      >
+                        <p className="text-sm font-semibold" style={{ color: colors.cream }}>{n.title}</p>
+                        {n.body && <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>{n.body}</p>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+            <div
+              className="fixed bottom-0 left-0 right-0 z-30 flex justify-center"
+              style={{
+                paddingBottom: "calc(0.6rem + env(safe-area-inset-bottom))",
+                paddingLeft: "0.75rem",
+                paddingRight: "0.75rem",
+              }}
+            >
+              <div
+                className="flex items-stretch w-full"
+                style={{
+                  maxWidth: "440px",
+                  background: colors.panelLight,
+                  border: `2px solid ${colors.hairline}`,
+                  borderRadius: "1.75rem",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                  padding: "0.35rem",
+                  gap: "0.2rem",
+                }}
+              >
+                {[
+                  { key: "dashboard", label: "Dashboard", icon: Home, onClick: () => setOwnerPage("dashboard") },
+                  { key: "completed", label: "Completed", icon: CheckCircle2, onClick: () => setOwnerPage("completed") },
+                  { key: "chatInbox", label: "Messages", icon: MessageCircle, onClick: () => setOwnerPage("chatInbox"), badge: unreadMessageCount },
+                  { key: "alerts", label: "Alerts", icon: Bell, onClick: () => setNotifOpen((o) => !o), badge: unreadCount },
+                  { key: "profile", label: "Profile", icon: UserCircle, onClick: () => setOwnerPage("profile") },
+                ].map((tab) => {
+                  const active = tab.key === "alerts" ? notifOpen : (ownerPage === tab.key && !notifOpen);
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={tab.onClick}
+                      className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 tap-glass relative"
+                      style={{
+                        color: active ? colors.hairline : colors.creamDim,
+                        background: active ? colors.bg : "transparent",
+                        borderRadius: "1.35rem",
+                      }}
+                    >
+                      <div className="relative">
+                        <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                        {tab.badge > 0 && (
+                          <span
+                            className="absolute -top-1.5 -right-2 flex items-center justify-center rounded-full text-xs"
+                            style={{ background: "#E07A5F", color: "#FFFFFF", minWidth: 15, height: 15, fontWeight: 700, fontSize: "0.6rem" }}
+                          >
+                            {tab.badge > 9 ? "9+" : tab.badge}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontWeight: active ? 700 : 500, fontSize: "0.65rem" }}>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
         {role === "customer" && ["home", "myBookings", "chatInbox", "profile"].includes(view) && (
           <>
