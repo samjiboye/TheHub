@@ -388,7 +388,7 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {(role === "customer" ? customerAuth : ownerAuth) && (
+            {role === "owner" && ownerAuth && (
               <div className="relative">
                 <button
                   onClick={() => setNotifOpen((o) => { if (!o) setMenuOpen(false); return !o; })}
@@ -669,7 +669,7 @@ export default function App() {
             <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
           </div>
         ) : (
-          <div style={{ paddingBottom: ["home", "myBookings", "chatInbox", "profile"].includes(view) ? "5rem" : 0 }}>
+          <div style={{ paddingBottom: ["home", "myBookings", "chatInbox", "profile"].includes(view) ? "6rem" : 0 }}>
             {view === "home" && (
               <HomeView
                 salons={salons}
@@ -771,47 +771,130 @@ export default function App() {
           </div>
         )}
         {role === "customer" && ["home", "myBookings", "chatInbox", "profile"].includes(view) && (
-          <div
-            className="fixed bottom-0 left-0 right-0 z-30 flex items-stretch"
-            style={{
-              background: colors.bg,
-              borderTop: `2px solid ${colors.hairline}`,
-              paddingBottom: "env(safe-area-inset-bottom)",
-              maxWidth: "1600px",
-              margin: "0 auto",
-            }}
-          >
-            {[
-              { key: "home", label: "Home", icon: Home, onClick: () => setView("home") },
-              { key: "myBookings", label: "Bookings", icon: CalendarCheck, onClick: () => setView(customerAuth ? "myBookings" : "auth"), badge: pendingCheckInCount },
-              { key: "chatInbox", label: "Messages", icon: MessageCircle, onClick: () => setView(customerAuth ? "chatInbox" : "auth"), badge: unreadMessageCount },
-              { key: "profile", label: "Profile", icon: UserCircle, onClick: () => setView(customerAuth ? "profile" : "auth") },
-            ].map((tab) => {
-              const active = view === tab.key;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={tab.onClick}
-                  className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 tap-glass relative"
-                  style={{ color: active ? colors.hairline : colors.creamDim }}
-                >
-                  <div className="relative">
-                    <Icon size={22} strokeWidth={active ? 2.5 : 2} />
-                    {tab.badge > 0 && (
-                      <span
-                        className="absolute -top-1.5 -right-2 flex items-center justify-center rounded-full text-xs"
-                        style={{ background: "#E07A5F", color: "#FFFFFF", minWidth: 16, height: 16, fontWeight: 700, fontSize: "0.65rem" }}
+          <>
+            {notifOpen && (
+              <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+            )}
+            {notifOpen && (
+              <div
+                className="fixed left-3 right-3 z-40 rounded-2xl shadow-lg overflow-hidden"
+                style={{
+                  bottom: "calc(5.75rem + env(safe-area-inset-bottom))",
+                  maxWidth: "440px",
+                  margin: "0 auto",
+                  background: colors.panelLight,
+                  border: `2px solid ${colors.hairline}`,
+                }}
+              >
+                <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `2px solid ${colors.hairline}` }}>
+                  <span className="text-sm font-bold" style={{ color: colors.cream }}>Notifications</span>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllNotificationsRead} className="text-xs font-semibold" style={{ color: colors.creamDim }}>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  {notifications.length === 0 ? (
+                    <p className="px-4 py-6 text-sm text-center" style={{ color: colors.creamDim }}>
+                      No notifications yet.
+                    </p>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => {
+                          if (!n.read) markNotificationRead(n.id);
+                          const customerBookingTypes = [
+                            "booking_confirmed", "booking_accepted", "booking_declined",
+                            "booking_cancelled", "completion_requested", "booking_completed",
+                            "booking_disputed", "reminder",
+                          ];
+                          if (n.type === "new_message" && n.conversation_id) {
+                            setNotifOpen(false);
+                            setActiveConversationId(n.conversation_id);
+                            setChatBackView("chatInbox");
+                            setView("chat");
+                          } else if (n.type === "new_message") {
+                            setNotifOpen(false);
+                            setView("chatInbox");
+                          } else if (customerBookingTypes.includes(n.type)) {
+                            setNotifOpen(false);
+                            setView("myBookings");
+                          }
+                        }}
+                        className="w-full text-left px-4 py-3"
+                        style={{
+                          borderBottom: `1px solid ${colors.hairline}`,
+                          background: n.read ? "transparent" : "rgba(224,122,95,0.08)",
+                        }}
                       >
-                        {tab.badge > 9 ? "9+" : tab.badge}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs" style={{ fontWeight: active ? 700 : 500 }}>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+                        <p className="text-sm font-semibold" style={{ color: colors.cream }}>{n.title}</p>
+                        {n.body && <p className="text-xs mt-0.5" style={{ color: colors.creamDim }}>{n.body}</p>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+            <div
+              className="fixed bottom-0 left-0 right-0 z-30 flex justify-center"
+              style={{
+                paddingBottom: "calc(0.6rem + env(safe-area-inset-bottom))",
+                paddingLeft: "0.75rem",
+                paddingRight: "0.75rem",
+              }}
+            >
+              <div
+                className="flex items-stretch w-full"
+                style={{
+                  maxWidth: "440px",
+                  background: colors.panelLight,
+                  border: `2px solid ${colors.hairline}`,
+                  borderRadius: "1.75rem",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                  padding: "0.35rem",
+                  gap: "0.2rem",
+                }}
+              >
+                {[
+                  { key: "home", label: "Home", icon: Home, onClick: () => setView("home") },
+                  { key: "myBookings", label: "Bookings", icon: CalendarCheck, onClick: () => setView(customerAuth ? "myBookings" : "auth"), badge: pendingCheckInCount },
+                  { key: "chatInbox", label: "Messages", icon: MessageCircle, onClick: () => setView(customerAuth ? "chatInbox" : "auth"), badge: unreadMessageCount },
+                  { key: "alerts", label: "Alerts", icon: Bell, onClick: () => setNotifOpen((o) => !o), badge: unreadCount },
+                  { key: "profile", label: "Profile", icon: UserCircle, onClick: () => setView(customerAuth ? "profile" : "auth") },
+                ].map((tab) => {
+                  const active = tab.key === "alerts" ? notifOpen : (view === tab.key && !notifOpen);
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={tab.onClick}
+                      className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 tap-glass relative"
+                      style={{
+                        color: active ? colors.hairline : colors.creamDim,
+                        background: active ? colors.bg : "transparent",
+                        borderRadius: "1.35rem",
+                      }}
+                    >
+                      <div className="relative">
+                        <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                        {tab.badge > 0 && (
+                          <span
+                            className="absolute -top-1.5 -right-2 flex items-center justify-center rounded-full text-xs"
+                            style={{ background: "#E07A5F", color: "#FFFFFF", minWidth: 15, height: 15, fontWeight: 700, fontSize: "0.6rem" }}
+                          >
+                            {tab.badge > 9 ? "9+" : tab.badge}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontWeight: active ? 700 : 500, fontSize: "0.65rem" }}>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
         {role === "customer" && !chatOpen && (
           <button
@@ -822,7 +905,7 @@ export default function App() {
               color: "#FFFFFF",
               right: "max(1.5rem, calc(50% - 14rem))",
               bottom: ["home", "myBookings", "chatInbox", "profile"].includes(view)
-                ? "calc(4.5rem + env(safe-area-inset-bottom))"
+                ? "calc(5.5rem + env(safe-area-inset-bottom))"
                 : "1.5rem",
               fontWeight: 700,
               fontSize: "1.05rem",

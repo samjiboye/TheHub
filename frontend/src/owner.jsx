@@ -101,13 +101,13 @@ function CreateSalonView({ token, onDone }) {
             className="pb-2 text-base outline-none" style={inputStyle} />
           <div>
             <p className="text-sm mb-2" style={{ color: colors.creamDim }}>What do you offer? (pick all that apply)</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((c) => (
                 <button
                   key={c.name}
                   type="button"
                   onClick={() => toggleCategory(c.name)}
-                  className="px-3 py-2.5 rounded-xl text-sm text-left tap-glass"
+                  className="px-3.5 py-2 rounded-full text-sm tap-glass"
                   style={{
                     background: categories.includes(c.name) ? colors.hairline : colors.panelLight,
                     color: categories.includes(c.name) ? "#FFFFFF" : colors.cream,
@@ -1417,30 +1417,50 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                     placeholder="Salon name" className="pb-2 text-base outline-none" style={inputStyle} />
                   <div>
                     <p className="text-sm mb-2" style={{ color: colors.creamDim }}>What do you offer? (pick all that apply)</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {CATEGORIES.map((c) => {
                         const selected = detailsForm.categories.includes(c.name);
+                        const expanded = expandedDetailCategory === c.name;
                         return (
-                          <button
+                          <div
                             key={c.name}
-                            type="button"
-                            onClick={() => {
-                              if (selected) {
-                                setExpandedDetailCategory((prev) => (prev === c.name ? null : c.name));
-                              } else {
-                                setDetailsForm((prev) => ({ ...prev, categories: [...prev.categories, c.name] }));
-                                setExpandedDetailCategory(c.name);
-                              }
-                            }}
-                            className="px-3 py-2.5 rounded-xl text-sm text-left tap-glass"
+                            className="flex items-stretch overflow-hidden"
                             style={{
+                              borderRadius: "9999px",
                               background: selected ? colors.hairline : colors.panelLight,
-                              color: selected ? "#FFFFFF" : colors.cream,
-                              border: `2px solid ${expandedDetailCategory === c.name ? colors.gold : (selected ? colors.hairline : "transparent")}`,
+                              border: `2px solid ${expanded ? colors.gold : (selected ? colors.hairline : "transparent")}`,
                             }}
                           >
-                            {c.name}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (selected) {
+                                  setExpandedDetailCategory((prev) => (prev === c.name ? null : c.name));
+                                } else {
+                                  setDetailsForm((prev) => ({ ...prev, categories: [...prev.categories, c.name] }));
+                                  setExpandedDetailCategory(c.name);
+                                }
+                              }}
+                              className="px-3.5 py-2 text-sm tap-glass"
+                              style={{ color: selected ? "#FFFFFF" : colors.cream }}
+                            >
+                              {c.name}
+                            </button>
+                            {selected && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDetailsForm((prev) => ({ ...prev, categories: prev.categories.filter((n) => n !== c.name) }));
+                                  if (expandedDetailCategory === c.name) setExpandedDetailCategory(null);
+                                }}
+                                aria-label={`Remove ${c.name}`}
+                                className="pl-1 pr-3 flex items-center tap-glass"
+                                style={{ color: "#FFFFFF" }}
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
