@@ -5,11 +5,39 @@ const db = require("../db");
 const { JWT_SECRET } = require("../middleware/auth");
 const { loginLimiter, authLimiter } = require("../middleware/rateLimiters");
 const { isValidEmail, isValidPassword } = require("../lib/validate");
+const { sendSignupVerificationEmail } = require("../lib/email");
 const router = express.Router();
+
+// POST /auth/send-signup-code (owner or customer requests a code to prove
+// they own the email address before an account is created with it)
+router.post("/send-signup-code", authLimiter, async (req, res) => {
+  const { email } = req.body;
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ error: "Please enter a valid email address." });
+  }
+  try {
+    const existing = await db.query("SELECT id FROM users WHERE email = $1", [email]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: "An account with that email already exists" });
+    }
+    // Clear out any earlier codes for this email so only the newest is valid.
+    await db.query("DELETE FROM signup_verification_codes WHERE email = $1", [email]);
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    await db.query(
+      "INSERT INTO signup_verification_codes (email, code, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')",
+      [email, code]
+    );
+    await sendSignupVerificationEmail(email, code);
+    res.json({ sent: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't send a verification code. Please try again." });
+  }
+});
 
 // POST /auth/signup
 router.post("/signup", authLimiter, async (req, res) => {
-  const { name, email, phone, password, role, referralCode } = req.body;
+  const { name, email, phone, password, role, referralCode, code } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "name, email, and password are required" });
   }
@@ -19,11 +47,22 @@ router.post("/signup", authLimiter, async (req, res) => {
   if (!isValidPassword(password)) {
     return res.status(400).json({ error: "Password must be at least 8 characters." });
   }
+  if (!code) {
+    return res.status(400).json({ error: "Please enter the verification code we sent to your email." });
+  }
   try {
+    const { rows: codeRows } = await db.query(
+      "SELECT id FROM signup_verification_codes WHERE email = $1 AND code = $2 AND expires_at > NOW()",
+      [email, String(code).trim()]
+    );
+    if (codeRows.length === 0) {
+      return res.status(400).json({ error: "That code is incorrect or has expired. Please request a new one." });
+    }
     const existing = await db.query("SELECT id FROM users WHERE email = $1", [email]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: "An account with that email already exists" });
     }
+    await db.query("DELETE FROM signup_verification_codes WHERE email = $1", [email]);
     const password_hash = bcrypt.hashSync(password, 10);
     const result = await db.query(
       "INSERT INTO users (name, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id",

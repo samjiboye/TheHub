@@ -28,4 +28,17 @@ async function sendNotificationEmail(to, subject, message) {
   });
 }
 
-module.exports = { sendPasswordResetEmail, sendNotificationEmail };
+async function sendSignupVerificationEmail(to, code) {
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `${code} is your TheHub verification code`,
+    html: `
+      <p>Use this code to finish creating your TheHub account:</p>
+      <p style="font-size:28px;font-weight:700;letter-spacing:4px;">${code}</p>
+      <p>This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+    `,
+  });
+}
+
+module.exports = { sendPasswordResetEmail, sendNotificationEmail, sendSignupVerificationEmail };

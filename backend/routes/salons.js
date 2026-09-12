@@ -186,18 +186,28 @@ router.post("/:id/services", requireAuth, async (req, res) => {
     if (!salon) return res.status(404).json({ error: "Salon not found" });
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
-    const { name, duration_min, price, home_service_price, salon_service_available } = req.body;
-    if (!name || !duration_min || price == null) {
-      return res.status(400).json({ error: "name, duration_min, and price are required" });
+    const { name, duration_min, price, home_service_price, salon_service_available, category } = req.body;
+    if (!name || price == null) {
+      return res.status(400).json({ error: "name and price are required" });
+    }
+    // Owners no longer enter a duration in the app; we keep the column (some
+    // reports/exports may still reference it) but backfill a harmless default.
+    const finalDurationMin = duration_min || 30;
+    // Every service belongs to one of the salon's own categories -- this is
+    // what lets a multi-category salon (e.g. Hairdressing + Piercing) keep
+    // each category's services in its own section instead of one flat list.
+    const salonCategories = salon.categories?.length ? salon.categories : [salon.category];
+    if (!category || !salonCategories.includes(category)) {
+      return res.status(400).json({ error: "Please pick which of your categories this service belongs to." });
     }
     const salonAvailable = salon_service_available !== false;
     if (!salonAvailable && home_service_price == null) {
       return res.status(400).json({ error: "A home-visit price is required when a service isn't offered at the salon." });
     }
     const { rows } = await db.query(
-      `INSERT INTO services (salon_id, name, duration_min, price, home_service_price, salon_service_available)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [salon.id, name, duration_min, price, home_service_price ?? null, salonAvailable]
+      `INSERT INTO services (salon_id, name, duration_min, price, home_service_price, salon_service_available, category)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [salon.id, name, finalDurationMin, price, home_service_price ?? null, salonAvailable, category]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
@@ -259,22 +269,28 @@ router.patch("/:id/services/:serviceId", requireAuth, async (req, res) => {
     const existing = svcRows[0];
     if (!existing) return res.status(404).json({ error: "Service not found" });
 
-    const { name, duration_min, price, home_service_price, salon_service_available } = req.body;
+    const { name, duration_min, price, home_service_price, salon_service_available, category } = req.body;
     const salonAvailable = salon_service_available !== undefined ? salon_service_available !== false : existing.salon_service_available;
     const homePrice = home_service_price !== undefined ? home_service_price : existing.home_service_price;
     if (!salonAvailable && homePrice == null) {
       return res.status(400).json({ error: "A home-visit price is required when a service isn't offered at the salon." });
     }
+    const salonCategories = salon.categories?.length ? salon.categories : [salon.category];
+    const finalCategory = category !== undefined ? category : existing.category;
+    if (finalCategory && !salonCategories.includes(finalCategory)) {
+      return res.status(400).json({ error: "That category isn't one this salon offers." });
+    }
 
     const { rows } = await db.query(
-      `UPDATE services SET name = $1, duration_min = $2, price = $3, home_service_price = $4, salon_service_available = $5
-       WHERE id = $6 RETURNING *`,
+      `UPDATE services SET name = $1, duration_min = $2, price = $3, home_service_price = $4, salon_service_available = $5, category = $6
+       WHERE id = $7 RETURNING *`,
       [
         name || existing.name,
         duration_min || existing.duration_min,
         price != null ? price : existing.price,
         homePrice,
         salonAvailable,
+        finalCategory,
         existing.id,
       ]
     );

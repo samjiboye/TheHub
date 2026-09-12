@@ -394,3 +394,23 @@ UPDATE salons SET categories = ARRAY[category] WHERE categories = '{}' AND categ
 -- date with the 12 the app actually supports -- validation now happens in
 -- the route code instead, which is easier to keep in sync with the frontend.
 ALTER TABLE salons DROP CONSTRAINT IF EXISTS salons_category_check;
+-- The old CHECK constraint only allowed 7 categories and was already out of
+-- date with the 12 the app actually supports -- validation now happens in
+-- the route code instead, which is easier to keep in sync with the frontend.
+ALTER TABLE salons DROP CONSTRAINT IF EXISTS salons_category_check;
+
+-- Services now belong to one of the salon's chosen categories (e.g. a salon
+-- doing both Hairdressing and Piercing keeps those services in separate
+-- sections instead of one flat undifferentiated list).
+ALTER TABLE services ADD COLUMN IF NOT EXISTS category TEXT;
+
+-- One-time codes emailed to confirm someone actually owns the address they're
+-- signing up with, before an account is created.
+CREATE TABLE IF NOT EXISTS signup_verification_codes (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_signup_verification_codes_email ON signup_verification_codes(email);

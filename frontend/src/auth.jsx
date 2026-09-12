@@ -20,6 +20,8 @@ function AuthGate({ role, onAuthed, allowGuest }) {
   const [resetSent, setResetSent] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const [signupStep, setSignupStep] = useState("form");
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -33,10 +35,19 @@ function AuthGate({ role, onAuthed, allowGuest }) {
     setLoading(true);
     setError(null);
     try {
+      if (mode === "signup" && signupStep === "form") {
+        // Confirm they actually own this email before an account is made with it.
+        await apiFetch("/auth/send-signup-code", {
+          method: "POST",
+          body: JSON.stringify({ email }),
+        });
+        setSignupStep("code");
+        return;
+      }
       const body =
         mode === "login"
           ? { email, password }
-          : { name, email, password, role, referralCode: referralCode || undefined };
+          : { name, email, password, role, referralCode: referralCode || undefined, code };
       const { token, user } = await apiFetch(mode === "login" ? "/auth/login" : "/auth/signup", {
         method: "POST",
         body: JSON.stringify(body),
@@ -44,6 +55,22 @@ function AuthGate({ role, onAuthed, allowGuest }) {
       onAuthed(token, user);
     } catch (err) {
       setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await apiFetch("/auth/send-signup-code", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    } catch (err) {
+      setError(err.message || "Couldn't resend the code.");
     } finally {
       setLoading(false);
     }
@@ -95,7 +122,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
 
       <div className="flex gap-2 mt-6 mb-4">
         <button
-          onClick={() => setMode("login")}
+          onClick={() => { setMode("login"); setSignupStep("form"); }}
           className="flex-1 py-2.5 rounded-full text-sm"
           style={{
             background: mode === "login" ? colors.hairline : "transparent",
@@ -107,7 +134,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
           Log in
         </button>
         <button
-          onClick={() => setMode("signup")}
+          onClick={() => { setMode("signup"); setSignupStep("form"); }}
           className="flex-1 py-2.5 rounded-full text-sm"
           style={{
             background: mode === "signup" ? colors.hairline : "transparent",
@@ -121,56 +148,83 @@ function AuthGate({ role, onAuthed, allowGuest }) {
       </div>
 
       <form onSubmit={submit} className="flex flex-col gap-3">
-        {mode === "signup" && (
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            className="pb-2 text-base outline-none"
-            style={inputStyle}
-          />
-        )}
-        {mode === "signup" && (
-          <input
-            value={referralCode}
-            onChange={(e) => setReferralCode(e.target.value)}
-            placeholder="Referral code (optional)"
-            className="pb-2 text-base outline-none"
-            style={inputStyle}
-          />
-        )}
-        <input
-          required
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="pb-2 text-base outline-none"
-          style={inputStyle}
-        />
-        <div className="relative">
-          <input
-            required
-            minLength={mode === "signup" ? 8 : undefined}
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full pb-2 text-base outline-none"
-            style={inputStyle}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2"
-            style={{ color: colors.creamDim }}
-          >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        </div>
-        {mode === "signup" && (
-          <p className="text-xs -mt-1" style={{ color: colors.creamDim }}>At least 8 characters.</p>
+        {mode === "signup" && signupStep === "code" ? (
+          <>
+            <p className="text-sm text-center" style={{ color: colors.creamDim }}>
+              We sent a 6-digit code to <strong style={{ color: colors.cream }}>{email}</strong>. Enter it below to finish creating your account.
+            </p>
+            <input
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="6-digit code"
+              inputMode="numeric"
+              className="pb-2 text-base outline-none text-center tracking-[0.5em]"
+              style={inputStyle}
+            />
+            <div className="flex items-center justify-between">
+              <button type="button" onClick={() => setSignupStep("form")} className="text-sm" style={{ color: colors.creamDim }}>
+                Edit email
+              </button>
+              <button type="button" disabled={loading} onClick={resendCode} className="text-sm font-semibold" style={{ color: colors.hairline }}>
+                Resend code
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {mode === "signup" && (
+              <input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="pb-2 text-base outline-none"
+                style={inputStyle}
+              />
+            )}
+            {mode === "signup" && (
+              <input
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+                placeholder="Referral code (optional)"
+                className="pb-2 text-base outline-none"
+                style={inputStyle}
+              />
+            )}
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="pb-2 text-base outline-none"
+              style={inputStyle}
+            />
+            <div className="relative">
+              <input
+                required
+                minLength={mode === "signup" ? 8 : undefined}
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full pb-2 text-base outline-none"
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: colors.creamDim }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {mode === "signup" && (
+              <p className="text-xs -mt-1" style={{ color: colors.creamDim }}>At least 8 characters.</p>
+            )}
+          </>
         )}
 
             {mode === "login" && !showResetForm && (
@@ -249,6 +303,8 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             <Loader2 size={20} className="animate-spin" />
           ) : mode === "login" ? (
             <><LogIn size={18} /> Log in</>
+          ) : signupStep === "code" ? (
+            <><UserPlus size={18} /> Verify & create account</>
           ) : (
             <><UserPlus size={18} /> Sign up</>
           )}

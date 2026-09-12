@@ -298,7 +298,9 @@ function ProfileView({ salon, onBack, onBook }) {
             >
               <div className="text-left">
                 <p style={{ color: colors.cream, fontFamily: FONT_DISPLAY, fontWeight: 700 }} className="text-xl">{svc.name}</p>
-                <p className="text-base mt-1" style={{ color: colors.creamDim }}>{svc.duration_min ?? svc.duration} min</p>
+                {svc.category && (
+                  <p className="text-base mt-1" style={{ color: colors.creamDim }}>{svc.category}</p>
+                )}
                 {svc.home_service_price != null && (
                   <p className="text-sm mt-1" style={{ color: colors.gold, fontWeight: 600 }}>
                     🏠 {svc.salon_service_available === false ? "Home visits only" : "Home visits available"}

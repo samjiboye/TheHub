@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell,
+  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell, Home,
 } from "lucide-react";
 import { API_BASE, apiFetch } from "./api";
 import { AuthGate, OnboardingView, ResetPasswordView } from "./auth";
@@ -530,39 +530,9 @@ export default function App() {
                     <LogIn size={16} /> Log in / Sign up
                   </button>
                 )}
-                {role === "customer" && customerAuth && (
+                {role === "owner" && ownerAuth && (
                   <button
-                    onClick={() => { setMenuOpen(false); setView("profile"); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                    style={{ color: colors.cream }}
-                  >
-                    <UserCircle size={16} /> My Profile
-                  </button>
-                )}
-                {role === "customer" && customerAuth && (
-                  <button
-                    onClick={() => { setMenuOpen(false); setView("myBookings"); }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm"
-                    style={{ color: colors.cream }}
-                  >
-                    <CalendarCheck size={16} /> My bookings
-                    {pendingCheckInCount > 0 && (
-                      <span
-                        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-xs font-bold"
-                        style={{ background: colors.gold, color: colors.bg }}
-                      >
-                        {pendingCheckInCount}
-                      </span>
-                    )}
-                  </button>
-                )}
-                {((role === "customer" && customerAuth) || (role === "owner" && ownerAuth)) && (
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      if (role === "owner") setOwnerPage("chatInbox");
-                      else setView("chatInbox");
-                    }}
+                    onClick={() => { setMenuOpen(false); setOwnerPage("chatInbox"); }}
                     className="w-full flex items-center gap-2 px-4 py-3 text-sm"
                     style={{ color: colors.cream }}
                   >
@@ -699,7 +669,7 @@ export default function App() {
             <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
           </div>
         ) : (
-          <>
+          <div style={{ paddingBottom: ["home", "myBookings", "chatInbox", "profile"].includes(view) ? "5rem" : 0 }}>
             {view === "home" && (
               <HomeView
                 salons={salons}
@@ -798,16 +768,62 @@ export default function App() {
                 onBack={() => setView("settings")}
               />
             )}
-          </>
+          </div>
+        )}
+        {role === "customer" && ["home", "myBookings", "chatInbox", "profile"].includes(view) && (
+          <div
+            className="fixed bottom-0 left-0 right-0 z-30 flex items-stretch"
+            style={{
+              background: colors.bg,
+              borderTop: `2px solid ${colors.hairline}`,
+              paddingBottom: "env(safe-area-inset-bottom)",
+              maxWidth: "1600px",
+              margin: "0 auto",
+            }}
+          >
+            {[
+              { key: "home", label: "Home", icon: Home, onClick: () => setView("home") },
+              { key: "myBookings", label: "Bookings", icon: CalendarCheck, onClick: () => setView(customerAuth ? "myBookings" : "auth"), badge: pendingCheckInCount },
+              { key: "chatInbox", label: "Messages", icon: MessageCircle, onClick: () => setView(customerAuth ? "chatInbox" : "auth"), badge: unreadMessageCount },
+              { key: "profile", label: "Profile", icon: UserCircle, onClick: () => setView(customerAuth ? "profile" : "auth") },
+            ].map((tab) => {
+              const active = view === tab.key;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={tab.onClick}
+                  className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 tap-glass relative"
+                  style={{ color: active ? colors.hairline : colors.creamDim }}
+                >
+                  <div className="relative">
+                    <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+                    {tab.badge > 0 && (
+                      <span
+                        className="absolute -top-1.5 -right-2 flex items-center justify-center rounded-full text-xs"
+                        style={{ background: "#E07A5F", color: "#FFFFFF", minWidth: 16, height: 16, fontWeight: 700, fontSize: "0.65rem" }}
+                      >
+                        {tab.badge > 9 ? "9+" : tab.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs" style={{ fontWeight: active ? 700 : 500 }}>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         )}
         {role === "customer" && !chatOpen && (
           <button
             onClick={() => setChatOpen(true)}
-            className="fixed bottom-6 flex items-center gap-2 px-5 py-4 rounded-full shadow-lg"
+            className="fixed flex items-center gap-2 px-5 py-4 rounded-full shadow-lg"
             style={{
               background: colors.hairline,
               color: "#FFFFFF",
               right: "max(1.5rem, calc(50% - 14rem))",
+              bottom: ["home", "myBookings", "chatInbox", "profile"].includes(view)
+                ? "calc(4.5rem + env(safe-area-inset-bottom))"
+                : "1.5rem",
               fontWeight: 700,
               fontSize: "1.05rem",
             }}

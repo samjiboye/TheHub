@@ -20,11 +20,12 @@ function CreateSalonView({ token, onDone }) {
   const [salonCity, setSalonCity] = useState("");
   const [salonNeighborhood, setSalonNeighborhood] = useState("");
   const [services, setServices] = useState([]);
+  const [svcCategory, setSvcCategory] = useState(null);
   const [svcName, setSvcName] = useState("");
-  const [svcDuration, setSvcDuration] = useState("");
   const [svcPrice, setSvcPrice] = useState("");
   const [svcHomePrice, setSvcHomePrice] = useState("");
   const [svcHomeOnly, setSvcHomeOnly] = useState(false);
+  const [svcMode, setSvcMode] = useState("shop"); // "shop" | "home" | "both"
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -43,6 +44,7 @@ function CreateSalonView({ token, onDone }) {
         body: JSON.stringify({ name, categories, address, service_type: serviceType, state: salonState, city: salonCity, neighborhood: salonNeighborhood }),
       });
       setSalonId(id);
+      setSvcCategory(categories[0]);
       setStep("services");
     } catch (err) {
       setError(err.message || "Couldn't create that salon.");
@@ -53,33 +55,34 @@ function CreateSalonView({ token, onDone }) {
 
   const addService = async (e) => {
     e.preventDefault();
-    if (!svcName || !svcDuration || !svcPrice) return;
-    if (svcHomeOnly && !svcHomePrice) {
-      setError("Add a home-visit price — this service is marked as home-visit only.");
+    if (!svcName || !svcPrice) return;
+    if (svcMode !== "shop" && !svcHomePrice) {
+      setError("Add a home-visit price for this service.");
       return;
     }
     setLoading(true);
     setError(null);
     try {
+      const homeOnly = svcMode === "home";
       await apiFetch(`/salons/${salonId}/services`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name: svcName,
-          duration_min: Number(svcDuration),
           price: Number(svcPrice),
-          home_service_price: svcHomePrice ? Number(svcHomePrice) : null,
-          salon_service_available: !svcHomeOnly,
+          home_service_price: svcMode !== "shop" ? Number(svcHomePrice) : null,
+          salon_service_available: !homeOnly,
+          category: svcCategory,
         }),
       });
       setServices((prev) => [...prev, {
         name: svcName,
-        duration_min: svcDuration,
         price: svcPrice,
-        home_service_price: svcHomePrice || null,
-        salon_service_available: !svcHomeOnly,
+        home_service_price: svcMode !== "shop" ? svcHomePrice : null,
+        salon_service_available: !homeOnly,
+        category: svcCategory,
       }]);
-      setSvcName(""); setSvcDuration(""); setSvcPrice(""); setSvcHomePrice(""); setSvcHomeOnly(false);
+      setSvcName(""); setSvcPrice(""); setSvcHomePrice(""); setSvcHomeOnly(false); setSvcMode("shop");
     } catch (err) {
       setError(err.message || "Couldn't add that service.");
     } finally {
@@ -163,56 +166,106 @@ function CreateSalonView({ token, onDone }) {
       <h2 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 700 }} className="text-center mb-2">
         Add your services
       </h2>
-      <p className="text-sm text-center mb-5" style={{ color: colors.creamDim }}>Add at least one so customers can book.</p>
+      <p className="text-sm text-center mb-5" style={{ color: colors.creamDim }}>Add at least one per category so customers can book.</p>
 
-      {services.length > 0 && (
-        <div className="flex flex-col gap-2 mb-5">
-          {services.map((s, i) => (
-            <div key={i} className="flex flex-col px-4 py-3 rounded-xl" style={{ border: `2px solid ${colors.hairline}` }}>
-              <div className="flex items-center justify-between">
-                <span style={{ color: colors.cream, fontWeight: 600 }}>{s.name}</span>
-                <span style={{ color: colors.creamDim }}>
-                  {s.duration_min} min{s.salon_service_available !== false ? ` · ₦${s.price}` : ""}
-                </span>
-              </div>
-              {s.home_service_price && (
-                <span className="text-sm mt-1" style={{ color: colors.gold }}>
-                  🏠 Home visit — ₦{s.home_service_price}
-                  {s.salon_service_available === false ? " (home visits only)" : ""}
-                </span>
-              )}
-            </div>
+      {categories.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {categories.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSvcCategory(c)}
+              className="px-3 py-2 rounded-full text-sm tap-glass"
+              style={{
+                background: svcCategory === c ? colors.hairline : colors.panelLight,
+                color: svcCategory === c ? "#FFFFFF" : colors.cream,
+                fontWeight: svcCategory === c ? 700 : 500,
+              }}
+            >
+              {c}{services.some((s) => s.category === c) ? ` (${services.filter((s) => s.category === c).length})` : ""}
+            </button>
           ))}
         </div>
+      )}
+
+      {services.length > 0 && (
+        <div className="flex flex-col gap-4 mb-5">
+          {categories.map((cat) => {
+            const catServices = services.filter((s) => s.category === cat);
+            if (catServices.length === 0) return null;
+            return (
+              <div key={cat}>
+                {categories.length > 1 && (
+                  <h4 className="text-sm font-bold mb-2" style={{ color: colors.creamDim }}>{cat}</h4>
+                )}
+                <div className="flex flex-col gap-2">
+                  {catServices.map((s, i) => (
+                    <div key={i} className="flex flex-col px-4 py-3 rounded-xl" style={{ border: `2px solid ${colors.hairline}` }}>
+                      <div className="flex items-center justify-between">
+                        <span style={{ color: colors.cream, fontWeight: 600 }}>{s.name}</span>
+                        {s.salon_service_available !== false && (
+                          <span style={{ color: colors.creamDim }}>₦{s.price}</span>
+                        )}
+                      </div>
+                      {s.home_service_price != null && (
+                        <span className="text-sm mt-1" style={{ color: colors.gold }}>
+                          🏠 Home visit — ₦{s.home_service_price}
+                          {s.salon_service_available === false ? " (home visits only)" : ""}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {categories.length > 1 && (
+        <p className="text-sm mb-3" style={{ color: colors.gold }}>
+          Adding a service under: <strong>{svcCategory}</strong>
+        </p>
       )}
 
       <form onSubmit={addService} className="flex flex-col gap-3">
         <input value={svcName} onChange={(e) => setSvcName(e.target.value)} placeholder="Service name (e.g. Skin Fade)"
           className="pb-2 text-base outline-none" style={inputStyle} />
-        <div className="flex gap-3">
-          <input value={svcDuration} onChange={(e) => setSvcDuration(e.target.value)} type="number" placeholder="Minutes"
-            className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
-          <input value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} type="number" placeholder="Price ₦ (at salon)"
-            className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+        <input value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} type="number" placeholder="Price ₦ (at salon)"
+          className="pb-2 text-base outline-none" style={inputStyle} />
+
+        <p className="text-sm -mb-1" style={{ color: colors.creamDim }}>Where do you offer this?</p>
+        <div className="flex gap-2">
+          {[
+            { key: "shop", label: "At my shop" },
+            { key: "home", label: "Home visit only" },
+            { key: "both", label: "Both" },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => { setSvcMode(opt.key); if (opt.key === "shop") setSvcHomePrice(""); }}
+              className="flex-1 py-2 rounded-xl text-sm tap-glass"
+              style={{
+                background: svcMode === opt.key ? colors.hairline : colors.panelLight,
+                color: svcMode === opt.key ? "#FFFFFF" : colors.cream,
+                fontWeight: svcMode === opt.key ? 700 : 500,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
-        <label className="flex items-center gap-2 text-sm mt-1" style={{ color: colors.creamDim }}>
-          <input type="checkbox" checked={svcHomeOnly} onChange={(e) => setSvcHomeOnly(e.target.checked)} />
-          I don't have a shop — this is a home-visit-only service
-        </label>
-
-        <input
-          value={svcHomePrice}
-          onChange={(e) => setSvcHomePrice(e.target.value)}
-          type="number"
-          placeholder={svcHomeOnly ? "Home visit price ₦ (required)" : "Home visit price ₦ (optional)"}
-          className="pb-2 text-base outline-none"
-          style={inputStyle}
-        />
-        {svcHomePrice && !svcHomeOnly && (
-          <p className="text-xs" style={{ color: colors.creamDim }}>
-            Clients will be able to choose "at the salon" or "at their home" for this service.
-          </p>
+        {svcMode !== "shop" && (
+          <input
+            value={svcHomePrice}
+            onChange={(e) => setSvcHomePrice(e.target.value)}
+            type="number"
+            placeholder="Home visit price ₦"
+            className="pb-2 text-base outline-none"
+            style={inputStyle}
+          />
         )}
 
         {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
@@ -1006,6 +1059,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
 
   const [editingDetails, setEditingDetails] = useState(false);
   const [detailsForm, setDetailsForm] = useState(null);
+  const [expandedDetailCategory, setExpandedDetailCategory] = useState(null);
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState(null);
 
@@ -1016,7 +1070,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
   const [confirmDeleteServiceId, setConfirmDeleteServiceId] = useState(null);
 
   const [addingService, setAddingService] = useState(false);
-  const [newSvc, setNewSvc] = useState({ name: "", duration_min: "", price: "", home_service_price: "", home_only: false });
+  const [newSvc, setNewSvc] = useState({ name: "", price: "", home_service_price: "", mode: "shop", category: "" });
   const [savingNewSvc, setSavingNewSvc] = useState(false);
 
   const [confirmDeleteSalon, setConfirmDeleteSalon] = useState(false);
@@ -1180,8 +1234,10 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
 
   const startEditService = (svc) => {
     setServiceForm({
-      name: svc.name, duration_min: svc.duration_min, price: svc.price,
-      home_service_price: svc.home_service_price ?? "", salon_service_available: svc.salon_service_available !== false,
+      name: svc.name, price: svc.price,
+      home_service_price: svc.home_service_price ?? "",
+      mode: svc.salon_service_available === false ? "home" : (svc.home_service_price != null ? "both" : "shop"),
+      category: svc.category,
     });
     setServiceError(null);
     setEditingServiceId(svc.id);
@@ -1195,10 +1251,11 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          ...serviceForm,
-          duration_min: Number(serviceForm.duration_min),
+          name: serviceForm.name,
           price: Number(serviceForm.price),
-          home_service_price: serviceForm.home_service_price ? Number(serviceForm.home_service_price) : null,
+          home_service_price: serviceForm.mode !== "shop" ? Number(serviceForm.home_service_price) : null,
+          salon_service_available: serviceForm.mode !== "home",
+          category: serviceForm.category,
         }),
       });
       setSalon((prev) => ({ ...prev, services: prev.services.map((s) => (s.id === updated.id ? updated : s)) }));
@@ -1224,9 +1281,9 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
   };
 
   const addService = async () => {
-    if (!newSvc.name || !newSvc.duration_min || !newSvc.price) return;
-    if (newSvc.home_only && !newSvc.home_service_price) {
-      setServiceError("Add a home-visit price — this service is marked as home-visit only.");
+    if (!newSvc.name || !newSvc.price) return;
+    if (newSvc.mode !== "shop" && !newSvc.home_service_price) {
+      setServiceError("Add a home-visit price for this service.");
       return;
     }
     setSavingNewSvc(true);
@@ -1237,21 +1294,22 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name: newSvc.name,
-          duration_min: Number(newSvc.duration_min),
           price: Number(newSvc.price),
-          home_service_price: newSvc.home_service_price ? Number(newSvc.home_service_price) : null,
-          salon_service_available: !newSvc.home_only,
+          home_service_price: newSvc.mode !== "shop" ? Number(newSvc.home_service_price) : null,
+          salon_service_available: newSvc.mode !== "home",
+          category: newSvc.category,
         }),
       });
       setSalon((prev) => ({
         ...prev,
         services: [...prev.services, {
-          id: created.id, name: newSvc.name, duration_min: Number(newSvc.duration_min), price: Number(newSvc.price),
-          home_service_price: newSvc.home_service_price ? Number(newSvc.home_service_price) : null,
-          salon_service_available: !newSvc.home_only,
+          id: created.id, name: newSvc.name, price: Number(newSvc.price),
+          home_service_price: newSvc.mode !== "shop" ? Number(newSvc.home_service_price) : null,
+          salon_service_available: newSvc.mode !== "home",
+          category: newSvc.category,
         }],
       }));
-      setNewSvc({ name: "", duration_min: "", price: "", home_service_price: "", home_only: false });
+      setNewSvc({ name: "", price: "", home_service_price: "", mode: "shop", category: newSvc.category });
       setAddingService(false);
     } catch (err) {
       setServiceError(err.message || "Couldn't add that service.");
@@ -1366,15 +1424,19 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                           <button
                             key={c.name}
                             type="button"
-                            onClick={() => setDetailsForm((prev) => ({
-                              ...prev,
-                              categories: selected ? prev.categories.filter((n) => n !== c.name) : [...prev.categories, c.name],
-                            }))}
+                            onClick={() => {
+                              if (selected) {
+                                setExpandedDetailCategory((prev) => (prev === c.name ? null : c.name));
+                              } else {
+                                setDetailsForm((prev) => ({ ...prev, categories: [...prev.categories, c.name] }));
+                                setExpandedDetailCategory(c.name);
+                              }
+                            }}
                             className="px-3 py-2.5 rounded-xl text-sm text-left tap-glass"
                             style={{
                               background: selected ? colors.hairline : colors.panelLight,
                               color: selected ? "#FFFFFF" : colors.cream,
-                              border: `2px solid ${selected ? colors.hairline : "transparent"}`,
+                              border: `2px solid ${expandedDetailCategory === c.name ? colors.gold : (selected ? colors.hairline : "transparent")}`,
                             }}
                           >
                             {c.name}
@@ -1382,6 +1444,120 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                         );
                       })}
                     </div>
+                    {expandedDetailCategory && detailsForm.categories.includes(expandedDetailCategory) && (
+                      <div className="mt-3 rounded-xl px-3 py-3" style={{ border: `2px dashed ${colors.hairline}` }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-sm font-bold" style={{ color: colors.cream }}>{expandedDetailCategory} — services & pricing</h5>
+                          <button type="button" onClick={() => {
+                            setDetailsForm((prev) => ({ ...prev, categories: prev.categories.filter((n) => n !== expandedDetailCategory) }));
+                            setExpandedDetailCategory(null);
+                          }} className="text-xs" style={{ color: colors.creamDim }}>
+                            Remove category
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-2 mb-3">
+                          {(salon.services || []).filter((svc) => svc.category === expandedDetailCategory).map((svc) => (
+                            <div key={svc.id} className="rounded-xl px-3 py-2" style={{ border: `2px solid ${colors.hairline}` }}>
+                              {editingServiceId === svc.id ? (
+                                <div className="flex flex-col gap-2">
+                                  <input value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
+                                    placeholder="Service name" className="pb-2 text-base outline-none" style={inputStyle} />
+                                  <input value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                                    type="number" placeholder="Price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
+                                  <div className="flex gap-2">
+                                    {[{ key: "shop", label: "At my shop" }, { key: "home", label: "Home visit only" }, { key: "both", label: "Both" }].map((opt) => (
+                                      <button key={opt.key} type="button"
+                                        onClick={() => setServiceForm({ ...serviceForm, mode: opt.key, home_service_price: opt.key === "shop" ? "" : serviceForm.home_service_price })}
+                                        className="flex-1 py-1.5 rounded-xl text-xs tap-glass"
+                                        style={{
+                                          background: serviceForm.mode === opt.key ? colors.hairline : colors.panelLight,
+                                          color: serviceForm.mode === opt.key ? "#FFFFFF" : colors.cream,
+                                          fontWeight: serviceForm.mode === opt.key ? 700 : 500,
+                                        }}>
+                                        {opt.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {serviceForm.mode !== "shop" && (
+                                    <input value={serviceForm.home_service_price} onChange={(e) => setServiceForm({ ...serviceForm, home_service_price: e.target.value })}
+                                      type="number" placeholder="Home visit price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
+                                  )}
+                                  {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
+                                  <div className="flex gap-2">
+                                    <button onClick={saveService} disabled={savingService}
+                                      className="flex-1 py-2 rounded-full text-sm tap-glass"
+                                      style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}>
+                                      {savingService ? <Loader2 size={16} className="animate-spin" /> : "Save"}
+                                    </button>
+                                    <button onClick={() => setEditingServiceId(null)}
+                                      className="flex-1 py-2 rounded-full text-sm tap-glass"
+                                      style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}>
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
+                                    {svc.salon_service_available !== false && (
+                                      <p className="text-sm" style={{ color: colors.creamDim }}>₦{svc.price}</p>
+                                    )}
+                                    {svc.home_service_price != null && (
+                                      <p className="text-sm" style={{ color: colors.gold }}>
+                                        🏠 ₦{svc.home_service_price}{svc.salon_service_available === false ? " (home only)" : ""}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <button onClick={() => startEditService(svc)} className="text-sm font-semibold" style={{ color: colors.hairline }}>Edit</button>
+                                    {confirmDeleteServiceId === svc.id ? (
+                                      <button onClick={() => deleteService(svc.id)} className="text-sm font-semibold" style={{ color: "#E07A5F" }}>Confirm?</button>
+                                    ) : (
+                                      <button onClick={() => setConfirmDeleteServiceId(svc.id)} className="text-sm" style={{ color: colors.creamDim }}>Remove</button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <input
+                            value={newSvc.category === expandedDetailCategory ? newSvc.name : ""}
+                            onChange={(e) => setNewSvc({ ...newSvc, category: expandedDetailCategory, name: e.target.value })}
+                            placeholder="Service name" className="pb-2 text-base outline-none" style={inputStyle} />
+                          <input
+                            value={newSvc.category === expandedDetailCategory ? newSvc.price : ""}
+                            onChange={(e) => setNewSvc({ ...newSvc, category: expandedDetailCategory, price: e.target.value })}
+                            type="number" placeholder="Price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
+                          <div className="flex gap-2">
+                            {[{ key: "shop", label: "At my shop" }, { key: "home", label: "Home visit only" }, { key: "both", label: "Both" }].map((opt) => (
+                              <button key={opt.key} type="button"
+                                onClick={() => setNewSvc({ ...newSvc, category: expandedDetailCategory, mode: opt.key, home_service_price: opt.key === "shop" ? "" : newSvc.home_service_price })}
+                                className="flex-1 py-1.5 rounded-xl text-xs tap-glass"
+                                style={{
+                                  background: (newSvc.category === expandedDetailCategory && newSvc.mode === opt.key) ? colors.hairline : colors.panelLight,
+                                  color: (newSvc.category === expandedDetailCategory && newSvc.mode === opt.key) ? "#FFFFFF" : colors.cream,
+                                  fontWeight: (newSvc.category === expandedDetailCategory && newSvc.mode === opt.key) ? 700 : 500,
+                                }}>
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                          {newSvc.category === expandedDetailCategory && newSvc.mode !== "shop" && (
+                            <input value={newSvc.home_service_price} onChange={(e) => setNewSvc({ ...newSvc, home_service_price: e.target.value })}
+                              type="number" placeholder="Home visit price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
+                          )}
+                          {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
+                          <button onClick={addService} disabled={savingNewSvc}
+                            className="w-full py-2.5 rounded-full text-sm flex items-center justify-center gap-2 tap-glass"
+                            style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}>
+                            {savingNewSvc ? <Loader2 size={16} className="animate-spin" /> : <><Plus size={16} /> Add another service</>}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <select value={detailsForm.service_type} onChange={(e) => setDetailsForm({ ...detailsForm, service_type: e.target.value })}
                     className="pb-2 text-base outline-none" style={inputStyle}>
@@ -1424,26 +1600,41 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
 
             <div className="mt-4 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
               <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg mb-3">Services & pricing</h3>
-              <div className="flex flex-col gap-2">
-                {(salon.services || []).map((svc) => (
+              <div className="flex flex-col gap-4">
+                {(salon.categories?.length ? salon.categories : [salon.category]).map((cat) => {
+                  const catServices = (salon.services || []).filter((svc) => svc.category === cat);
+                  if (catServices.length === 0) return null;
+                  const showHeader = (salon.categories?.length || 1) > 1;
+                  return (
+                    <div key={cat}>
+                      {showHeader && <h4 className="text-sm font-bold mb-2" style={{ color: colors.creamDim }}>{cat}</h4>}
+                      <div className="flex flex-col gap-2">
+                        {catServices.map((svc) => (
                   <div key={svc.id} className="rounded-xl px-3 py-3" style={{ border: `2px solid ${colors.hairline}` }}>
                     {editingServiceId === svc.id ? (
                       <div className="flex flex-col gap-2">
                         <input value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
                           placeholder="Service name" className="pb-2 text-base outline-none" style={inputStyle} />
+                        <input value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                          type="number" placeholder="Price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
                         <div className="flex gap-2">
-                          <input value={serviceForm.duration_min} onChange={(e) => setServiceForm({ ...serviceForm, duration_min: e.target.value })}
-                            type="number" placeholder="Minutes" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
-                          <input value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
-                            type="number" placeholder="Price ₦" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                          {[{ key: "shop", label: "At my shop" }, { key: "home", label: "Home visit only" }, { key: "both", label: "Both" }].map((opt) => (
+                            <button key={opt.key} type="button"
+                              onClick={() => setServiceForm({ ...serviceForm, mode: opt.key, home_service_price: opt.key === "shop" ? "" : serviceForm.home_service_price })}
+                              className="flex-1 py-1.5 rounded-xl text-xs tap-glass"
+                              style={{
+                                background: serviceForm.mode === opt.key ? colors.hairline : colors.panelLight,
+                                color: serviceForm.mode === opt.key ? "#FFFFFF" : colors.cream,
+                                fontWeight: serviceForm.mode === opt.key ? 700 : 500,
+                              }}>
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
-                        <label className="flex items-center gap-2 text-sm" style={{ color: colors.creamDim }}>
-                          <input type="checkbox" checked={!serviceForm.salon_service_available}
-                            onChange={(e) => setServiceForm({ ...serviceForm, salon_service_available: !e.target.checked })} />
-                          Home-visit only (no shop)
-                        </label>
-                        <input value={serviceForm.home_service_price} onChange={(e) => setServiceForm({ ...serviceForm, home_service_price: e.target.value })}
-                          type="number" placeholder="Home visit price ₦ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
+                        {serviceForm.mode !== "shop" && (
+                          <input value={serviceForm.home_service_price} onChange={(e) => setServiceForm({ ...serviceForm, home_service_price: e.target.value })}
+                            type="number" placeholder="Home visit price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
+                        )}
                         {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
                         <div className="flex gap-2">
                           <button onClick={saveService} disabled={savingService}
@@ -1462,9 +1653,9 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
-                          <p className="text-sm" style={{ color: colors.creamDim }}>
-                            {svc.duration_min} min{svc.salon_service_available !== false ? ` · ₦${svc.price}` : ""}
-                          </p>
+                          {svc.salon_service_available !== false && (
+                            <p className="text-sm" style={{ color: colors.creamDim }}>₦{svc.price}</p>
+                          )}
                           {svc.home_service_price != null && (
                             <p className="text-sm" style={{ color: colors.gold }}>
                               🏠 ₦{svc.home_service_price}{svc.salon_service_available === false ? " (home only)" : ""}
@@ -1482,25 +1673,56 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                       </div>
                     )}
                   </div>
-                ))}
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {addingService ? (
                 <div className="flex flex-col gap-2 mt-3 rounded-xl px-3 py-3" style={{ border: `2px dashed ${colors.hairline}` }}>
+                  {(salon.categories?.length || 1) > 1 && (
+                    <div className="flex flex-wrap gap-2 mb-1">
+                      {(salon.categories || [salon.category]).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setNewSvc({ ...newSvc, category: c })}
+                          className="px-3 py-1.5 rounded-full text-xs tap-glass"
+                          style={{
+                            background: newSvc.category === c ? colors.hairline : colors.panelLight,
+                            color: newSvc.category === c ? "#FFFFFF" : colors.cream,
+                            fontWeight: newSvc.category === c ? 700 : 500,
+                          }}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <input value={newSvc.name} onChange={(e) => setNewSvc({ ...newSvc, name: e.target.value })}
                     placeholder="Service name" className="pb-2 text-base outline-none" style={inputStyle} />
+                  <input value={newSvc.price} onChange={(e) => setNewSvc({ ...newSvc, price: e.target.value })}
+                    type="number" placeholder="Price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
                   <div className="flex gap-2">
-                    <input value={newSvc.duration_min} onChange={(e) => setNewSvc({ ...newSvc, duration_min: e.target.value })}
-                      type="number" placeholder="Minutes" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
-                    <input value={newSvc.price} onChange={(e) => setNewSvc({ ...newSvc, price: e.target.value })}
-                      type="number" placeholder="Price ₦" className="flex-1 pb-2 text-base outline-none" style={inputStyle} />
+                    {[{ key: "shop", label: "At my shop" }, { key: "home", label: "Home visit only" }, { key: "both", label: "Both" }].map((opt) => (
+                      <button key={opt.key} type="button"
+                        onClick={() => setNewSvc({ ...newSvc, mode: opt.key, home_service_price: opt.key === "shop" ? "" : newSvc.home_service_price })}
+                        className="flex-1 py-1.5 rounded-xl text-xs tap-glass"
+                        style={{
+                          background: newSvc.mode === opt.key ? colors.hairline : colors.panelLight,
+                          color: newSvc.mode === opt.key ? "#FFFFFF" : colors.cream,
+                          fontWeight: newSvc.mode === opt.key ? 700 : 500,
+                        }}>
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
-                  <label className="flex items-center gap-2 text-sm" style={{ color: colors.creamDim }}>
-                    <input type="checkbox" checked={newSvc.home_only} onChange={(e) => setNewSvc({ ...newSvc, home_only: e.target.checked })} />
-                    I don't have a shop — home-visit only
-                  </label>
-                  <input value={newSvc.home_service_price} onChange={(e) => setNewSvc({ ...newSvc, home_service_price: e.target.value })}
-                    type="number" placeholder="Home visit price ₦ (optional)" className="pb-2 text-base outline-none" style={inputStyle} />
+                  {newSvc.mode !== "shop" && (
+                    <input value={newSvc.home_service_price} onChange={(e) => setNewSvc({ ...newSvc, home_service_price: e.target.value })}
+                      type="number" placeholder="Home visit price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
+                  )}
                   {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
                   <div className="flex gap-2">
                     <button onClick={addService} disabled={savingNewSvc}
@@ -1516,7 +1738,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setAddingService(true)} className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 tap-glass"
+                <button onClick={() => { setNewSvc((prev) => ({ ...prev, category: (salon.categories?.length ? salon.categories : [salon.category])[0] })); setAddingService(true); }} className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 tap-glass"
                   style={{ border: `2px solid ${colors.hairline}`, color: colors.cream }}>
                   <Plus size={16} /> Add a service
                 </button>
