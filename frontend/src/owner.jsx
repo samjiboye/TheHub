@@ -109,8 +109,9 @@ function CreateSalonView({ token, onDone }) {
                   onClick={() => toggleCategory(c.name)}
                   className="px-3.5 py-2 rounded-full text-sm tap-glass"
                   style={{
-                    background: categories.includes(c.name) ? colors.hairline : colors.panelLight,
-                    color: categories.includes(c.name) ? "#FFFFFF" : colors.cream,
+                    background: categories.includes(c.name) ? "rgba(217,112,46,0.14)" : colors.panelLight,
+                    color: categories.includes(c.name) ? colors.hairline : colors.cream,
+                    fontWeight: categories.includes(c.name) ? 700 : 500,
                     border: `2px solid ${categories.includes(c.name) ? colors.hairline : "transparent"}`,
                   }}
                 >
@@ -1420,50 +1421,56 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                     <div className="flex flex-wrap gap-2">
                       {CATEGORIES.map((c) => {
                         const selected = detailsForm.categories.includes(c.name);
-                        const expanded = expandedDetailCategory === c.name;
                         return (
-                          <div
+                          <button
                             key={c.name}
-                            className="flex items-stretch overflow-hidden"
+                            type="button"
+                            onClick={() => {
+                              setDetailsForm((prev) => ({
+                                ...prev,
+                                categories: selected ? prev.categories.filter((n) => n !== c.name) : [...prev.categories, c.name],
+                              }));
+                              if (selected && expandedDetailCategory === c.name) setExpandedDetailCategory(null);
+                            }}
+                            className="px-3.5 py-2 rounded-full text-sm tap-glass"
                             style={{
-                              borderRadius: "9999px",
-                              background: selected ? colors.hairline : colors.panelLight,
-                              border: `2px solid ${expanded ? colors.gold : (selected ? colors.hairline : "transparent")}`,
+                              background: selected ? "rgba(217,112,46,0.14)" : colors.panelLight,
+                              color: selected ? colors.hairline : colors.cream,
+                              fontWeight: selected ? 700 : 500,
+                              border: `2px solid ${selected ? colors.hairline : "transparent"}`,
                             }}
                           >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (selected) {
-                                  setExpandedDetailCategory((prev) => (prev === c.name ? null : c.name));
-                                } else {
-                                  setDetailsForm((prev) => ({ ...prev, categories: [...prev.categories, c.name] }));
-                                  setExpandedDetailCategory(c.name);
-                                }
-                              }}
-                              className="px-3.5 py-2 text-sm tap-glass"
-                              style={{ color: selected ? "#FFFFFF" : colors.cream }}
-                            >
-                              {c.name}
-                            </button>
-                            {selected && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDetailsForm((prev) => ({ ...prev, categories: prev.categories.filter((n) => n !== c.name) }));
-                                  if (expandedDetailCategory === c.name) setExpandedDetailCategory(null);
-                                }}
-                                aria-label={`Remove ${c.name}`}
-                                className="pl-1 pr-3 flex items-center tap-glass"
-                                style={{ color: "#FFFFFF" }}
-                              >
-                                <X size={14} />
-                              </button>
-                            )}
-                          </div>
+                            {c.name}
+                          </button>
                         );
                       })}
                     </div>
+                    {detailsForm.categories.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm mb-2" style={{ color: colors.creamDim }}>Manage services for:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {detailsForm.categories.map((name) => {
+                            const expanded = expandedDetailCategory === name;
+                            return (
+                              <button
+                                key={name}
+                                type="button"
+                                onClick={() => setExpandedDetailCategory((prev) => (prev === name ? null : name))}
+                                className="px-3.5 py-2 rounded-full text-sm tap-glass"
+                                style={{
+                                  background: expanded ? colors.panel : colors.panelLight,
+                                  color: colors.cream,
+                                  border: `2px solid ${expanded ? colors.gold : colors.hairline}`,
+                                  fontWeight: expanded ? 700 : 500,
+                                }}
+                              >
+                                {name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {expandedDetailCategory && detailsForm.categories.includes(expandedDetailCategory) && (
                       <div className="mt-3 rounded-xl px-3 py-3" style={{ border: `2px dashed ${colors.hairline}` }}>
                         <div className="flex items-center justify-between mb-2">
