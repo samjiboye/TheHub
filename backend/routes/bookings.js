@@ -520,7 +520,6 @@ router.post("/:id/check-in", requireAuth, checkInLimiter, async (req, res) => {
     }
 
     let isRewardVisit = false;
-    await db.query("UPDATE bookings SET checked_in_at = NOW() WHERE id = $1", [booking.id]);
 
     const { rows: loyaltyRows } = await db.query(
       `INSERT INTO salon_loyalty (customer_id, salon_id, visit_count)
@@ -534,12 +533,19 @@ router.post("/:id/check-in", requireAuth, checkInLimiter, async (req, res) => {
 
     if (visitCount >= 5) {
       isRewardVisit = true;
-      await db.query("UPDATE bookings SET is_loyalty_reward = true WHERE id = $1", [booking.id]);
       await db.query(
         "UPDATE salon_loyalty SET visit_count = 0, updated_at = NOW() WHERE customer_id = $1 AND salon_id = $2",
         [booking.customer_id, booking.salon_id]
       );
     }
+
+    // loyalty_visit_number is saved permanently on the booking itself (not just
+    // returned in this response) so "My Bookings" can show a 2/5, 3/5 ... badge
+    // on past visits, not only in the toast at the moment of check-in.
+    await db.query(
+      "UPDATE bookings SET checked_in_at = NOW(), is_loyalty_reward = $2, loyalty_visit_number = $3 WHERE id = $1",
+      [booking.id, isRewardVisit, visitCount]
+    );
 
     const { rows: salonForCompletionRows } = await db.query("SELECT * FROM salons WHERE id = $1", [booking.salon_id]);
     await completeBooking(booking, salonForCompletionRows[0]);

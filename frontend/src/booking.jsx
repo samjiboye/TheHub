@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  MapPin, MessageCircle, CheckCircle2, ArrowRight, Loader2,
+  MapPin, MessageCircle, CheckCircle2, ArrowRight, ChevronRight, Loader2,
 } from "lucide-react";
 import { API_BASE, apiFetch } from "./api";
 import { LocationShareBlock } from "./chat";
@@ -603,10 +603,25 @@ function MyBookingsView({ token, onBack, onOpenSalon, onOpenChat: onOpenChatProp
                   style={{ cursor: onOpenSalon ? "pointer" : "default" }}
                 >
                   <div>
-                    <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
+                      {onOpenSalon && <ChevronRight size={14} color={colors.creamDim} />}
+                    </div>
                     <p className="text-xs" style={{ color: colors.creamDim }}>{b.salon_name}</p>
                     {b.location_type === "home" && (
                       <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 At your address</p>
+                    )}
+                    {b.loyalty_visit_number != null && (
+                      <span
+                        className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                        style={
+                          b.is_loyalty_reward
+                            ? { background: colors.hairline, color: "#FFFFFF" }
+                            : { border: `1.5px solid ${colors.hairline}`, color: colors.gold }
+                        }
+                      >
+                        {b.is_loyalty_reward ? "🎉 5/5 — 50% off used" : `${b.loyalty_visit_number}/5 visits`}
+                      </span>
                     )}
                   </div>
                   <span className="text-xs text-right" style={{ color: colors.creamDim }}>
