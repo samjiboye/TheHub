@@ -12,11 +12,11 @@ import { CompletedAppointmentsView, OwnerDashboard, OwnerProfileView } from "./o
 import { RatingPopup, RatingsReviewsView } from "./ratings";
 import { SettingsView, FeedbackView } from "./settings";
 import { Header } from "./shared";
-import { FONT_BODY, FONT_DISPLAY, colors } from "./theme";
+import { FONT_BODY, FONT_DISPLAY, colors, NEUTRAL_HERO_GRADIENT } from "./theme";
 
 function NotificationsPage({ notifications, unreadCount, onBack, onMarkAllRead, onItemClick }) {
   return (
-    <div className="min-h-dvh" style={{ background: colors.bg }}>
+    <div className="min-h-dvh" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header
         title="Notifications"
         onBack={onBack}

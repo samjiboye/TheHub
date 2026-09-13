@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "./api";
 import { Header } from "./shared";
-import { colors } from "./theme";
+import { colors, NEUTRAL_HERO_GRADIENT } from "./theme";
 
 function ChatThreadView({ conversationId, token, myRole, myUserId, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -58,7 +58,7 @@ function ChatThreadView({ conversationId, token, myRole, myUserId, onBack }) {
   const otherName = myRole === "owner" ? conversation?.customer_name : conversation?.salon_name;
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: colors.bg }}>
+    <div className="min-h-dvh flex flex-col" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title={otherName || "Chat"} onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         {loading ? (
@@ -133,7 +133,7 @@ function ChatInboxView({ token, onBack, onOpenConversation }) {
   }, [token]);
 
   return (
-    <div className="min-h-dvh" style={{ background: colors.bg }}>
+    <div className="min-h-dvh" style={{ background: NEUTRAL_HERO_GRADIENT }}>
       <Header title="Messages" onBack={onBack} />
       <div className="px-4 py-4">
         {loading ? (
