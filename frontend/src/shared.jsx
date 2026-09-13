@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  Search, Sparkles, ChevronLeft, ArrowRight,
+  Search, Sparkles, ChevronLeft,
 } from "lucide-react";
 import { TierStars } from "./ratings";
 import { CATEGORIES, FONT_DISPLAY, colors, inputStyle } from "./theme";
@@ -80,46 +80,47 @@ function SalonCard({ salon, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="text-left rounded-3xl overflow-hidden w-full transition-transform active:scale-[0.97]"
+      className="text-left rounded-2xl overflow-hidden w-full flex items-center gap-3 px-3 py-3 transition-transform active:scale-[0.97]"
       style={{ background: colors.panel, border: `3px solid ${colors.hairline}` }}
     >
-      <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-48" imageUrl={salon.profile_image_url} />
-      <div className="relative px-4 pt-5 pb-4">
-        <TicketNotch top />
+      <div
+        className="shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+        style={{ width: 60, height: 60, background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+      >
+        {salon.profile_image_url ? (
+          <img src={salon.profile_image_url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <cat.icon size={26} strokeWidth={1.6} color={colors.hairline} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-2xl leading-tight">
+          <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-base leading-tight truncate">
             {salon.name}
           </h3>
           <div className="flex items-center gap-1 shrink-0">
-            <TierStars fiveStarCount={salon.fiveStarCount} size={16} />
+            <TierStars fiveStarCount={salon.fiveStarCount} size={12} />
           </div>
         </div>
         {salon.services && salon.services.length > 0 && (
-          <p className="text-sm mt-1" style={{ color: colors.creamDim }}>
+          <p className="text-xs mt-0.5 truncate" style={{ color: colors.creamDim }}>
             {salon.services.slice(0, 3).map((s) => s.name).join(" · ")}
-            {salon.services.length > 3 ? ` +${salon.services.length - 3} more` : ""}
           </p>
         )}
-        {locationTag(salon) && (
-          <p className="text-xs mt-0.5 text-right" style={{ color: colors.creamDim }}>
-            {locationTag(salon)}
-          </p>
-        )}
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between mt-1">
+          {locationTag(salon) ? (
+            <span className="text-xs truncate" style={{ color: colors.creamDim }}>
+              {locationTag(salon)}
+            </span>
+          ) : <span />}
           {salon.distance != null && (
             <span
-              className="text-base px-3 py-1.5 rounded-full"
-              style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontWeight: 600 }}
+              className="text-xs px-2 py-0.5 rounded-full shrink-0 ml-2"
+              style={{ border: `1.5px solid ${colors.hairline}`, color: colors.cream, fontWeight: 600 }}
             >
               {salon.distance} mi
             </span>
           )}
-          <span
-            className="w-14 h-14 rounded-full flex items-center justify-center ml-auto tap-glass"
-            style={{ background: colors.hairline }}
-          >
-            <ArrowRight size={24} color="#FFFFFF" />
-          </span>
         </div>
       </div>
     </button>
