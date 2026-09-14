@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Search, MapPin, Sparkles, ChevronDown, X, Send, Loader2,
+  Search, MapPin, Sparkles, ChevronDown, X, Send, Loader2, UserPlus, Check,
 } from "lucide-react";
 import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
 import { apiFetch } from "./api";
@@ -9,7 +9,23 @@ import { TierStars } from "./ratings";
 import { Header, SalonCard, SalonPhoto } from "./shared";
 import { CATEGORIES, CATEGORY_THEMES, FONT_BODY, FONT_DISPLAY, NEUTRAL_HERO_GRADIENT, PRICE_BUCKETS, colors } from "./theme";
 
-function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon, topOffset = 64, searchOpen, setSearchOpen }) {
+function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon, topOffset = 64 }) {
+  const [searchOpen, setSearchOpen] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY;
+      if (y <= 40) {
+        setSearchOpen(true);
+      } else if (y > lastScrollY.current + 4) {
+        setSearchOpen(false);
+      }
+      lastScrollY.current = y;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const filtered = salons
     .filter((s) => (category ? (s.categories?.length ? s.categories : [s.category]).includes(category) : true))
@@ -130,7 +146,21 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
           </div>
         </div>
 
-        {!searchOpen && <div className="mb-1" />}
+        {!searchOpen && (
+          <button
+            onClick={() => setSearchOpen(true)}
+            aria-label="Show search and location filters"
+            className="w-full flex items-center justify-center mb-2 tap-glass"
+            style={{ padding: "4px 0" }}
+          >
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{ width: 36, height: 22, background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+            >
+              <ChevronDown size={16} color={colors.cream} />
+            </div>
+          </button>
+        )}
 
         <div ref={chipRowRef} className="flex gap-2 overflow-x-auto pb-1 relative">
           <div
@@ -213,11 +243,44 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
   );
 }
 
-function ProfileView({ salon, onBack, onBook }) {
+function ProfileView({ salon, onBack, onBook, token, onRequireAuth }) {
   const cat = CATEGORIES.find((c) => c.name === salon.category) || { icon: Sparkles };
   const heroTheme = CATEGORY_THEMES[salon.category] || null;
   const textColor = heroTheme ? "#FFFFFF" : colors.cream;
   const textColorDim = heroTheme ? "rgba(255,255,255,0.78)" : colors.creamDim;
+
+  const [isClient, setIsClient] = useState(false);
+  const [clientLoading, setClientLoading] = useState(false);
+  const [clientChecked, setClientChecked] = useState(false);
+
+  useEffect(() => {
+    if (!token) { setClientChecked(true); return; }
+    let cancelled = false;
+    apiFetch(`/salons/${salon.id}/is-client`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => { if (!cancelled) setIsClient(!!res.isClient); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setClientChecked(true); });
+    return () => { cancelled = true; };
+  }, [salon.id, token]);
+
+  const toggleClient = async () => {
+    if (!token) { onRequireAuth && onRequireAuth(); return; }
+    setClientLoading(true);
+    try {
+      if (isClient) {
+        await apiFetch(`/salons/${salon.id}/add-client`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+        setIsClient(false);
+      } else {
+        await apiFetch(`/salons/${salon.id}/add-client`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+        setIsClient(true);
+      }
+    } catch (e) {
+      // silent - the button just stays in its previous state, no need for a toast here
+    } finally {
+      setClientLoading(false);
+    }
+  };
+
   return (
     <div
       className="pb-8 relative overflow-hidden transition-[background] duration-500"
@@ -252,6 +315,27 @@ function ProfileView({ salon, onBack, onBook }) {
           </div>
         )}
 
+        {clientChecked && (
+          <button
+            onClick={toggleClient}
+            disabled={clientLoading}
+            className="flex items-center gap-2 mt-3 px-4 py-2.5 rounded-full text-sm font-semibold tap-glass"
+            style={
+              isClient
+                ? { background: "rgba(255,255,255,0.16)", border: `2px solid ${textColorDim}`, color: textColor }
+                : { background: colors.hairline, color: "#FFFFFF" }
+            }
+          >
+            {clientLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : isClient ? (
+              <Check size={16} />
+            ) : (
+              <UserPlus size={16} />
+            )}
+            {isClient ? "Added as a client" : "Add as a client"}
+          </button>
+        )}
 
         <MediaGallery salonId={salon.id} textColor={textColor} />
 

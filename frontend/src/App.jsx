@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell, Home, Search,
+  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell, Home,
 } from "lucide-react";
 import { API_BASE, apiFetch } from "./api";
 import { AuthGate, OnboardingView, ResetPasswordView } from "./auth";
@@ -8,7 +8,7 @@ import { BookingView, MyBookingsView } from "./booking";
 import { ChatInboxView, ChatThreadView } from "./chat";
 import { CustomerProfileView } from "./customer";
 import { Concierge, HomeView, ProfileView } from "./home";
-import { CompletedAppointmentsView, OwnerDashboard, OwnerProfileView } from "./owner";
+import { CompletedAppointmentsView, OwnerClientsView, OwnerDashboard, OwnerProfileView } from "./owner";
 import { RatingPopup, RatingsReviewsView } from "./ratings";
 import { SettingsView, FeedbackView } from "./settings";
 import { Header } from "./shared";
@@ -62,7 +62,6 @@ export default function App() {
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [homeSearchOpen, setHomeSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -426,20 +425,6 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {role === "customer" && view === "home" && (
-              <button
-                onClick={() => setHomeSearchOpen((o) => !o)}
-                className="p-2.5 rounded-full tap-glass"
-                style={{
-                  border: `2px solid ${colors.hairline}`,
-                  color: homeSearchOpen ? "#FFFFFF" : colors.creamDim,
-                  background: homeSearchOpen ? colors.hairline : "transparent",
-                }}
-                aria-label="Search"
-              >
-                <Search size={20} />
-              </button>
-            )}
             <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}
@@ -544,8 +529,10 @@ export default function App() {
         )}
         {role === "owner" ? (
           ownerAuth ? (
-            <div style={{ paddingBottom: ["dashboard", "completed", "profile", "chatInbox", "alerts"].includes(ownerPage) ? "6rem" : 0 }}>
-            {ownerPage === "completed" ? (
+            <div style={{ paddingBottom: ["dashboard", "completed", "profile", "chatInbox", "alerts", "clients"].includes(ownerPage) ? "6rem" : 0 }}>
+            {ownerPage === "clients" ? (
+              <OwnerClientsView token={ownerAuth.token} onBack={() => setOwnerPage("profile")} />
+            ) : ownerPage === "completed" ? (
               <CompletedAppointmentsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : ownerPage === "ratings" ? (
               <RatingsReviewsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
@@ -577,6 +564,7 @@ export default function App() {
                 setOwnerAuth(null);
               }}
               onOpenWallet={() => setOwnerPage("wallet")}
+              onOpenClients={() => setOwnerPage("clients")}
             />
             ) : ownerPage === "chatInbox" ? (
               <ChatInboxView
@@ -629,8 +617,6 @@ export default function App() {
                 locationStatus={locationStatus} onRequestLocation={requestLocation}
                 onSelectSalon={(s) => { setSelectedSalon(s); setView("salonDetail"); }}
                 topOffset={iconBarHeight}
-                searchOpen={homeSearchOpen}
-                setSearchOpen={setHomeSearchOpen}
               />
             )}
             {view === "salonDetail" && selectedSalon && (
@@ -638,6 +624,8 @@ export default function App() {
                 salon={selectedSalon}
                 onBack={() => setView("home")}
                 onBook={(svc) => { setSelectedService(svc); setView(customerAuth ? "booking" : "auth"); }}
+                token={customerAuth?.token}
+                onRequireAuth={() => setView("auth")}
               />
             )}
             {view === "auth" && (
@@ -745,7 +733,7 @@ export default function App() {
             )}
           </div>
         )}
-        {role === "owner" && ownerAuth && ["dashboard", "completed", "profile", "chatInbox", "alerts"].includes(ownerPage) && (
+        {role === "owner" && ownerAuth && ["dashboard", "completed", "profile", "chatInbox", "alerts", "clients"].includes(ownerPage) && (
           <div
             className="fixed bottom-0 left-0 right-0 z-30 flex justify-center"
             style={{

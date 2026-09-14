@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  X, TrendingUp, MessageCircle, Users, ArrowRight, Loader2, WifiOff, Plus, Play, Trash2, Upload, UserCircle,
+  X, TrendingUp, MessageCircle, Users, ArrowRight, Loader2, WifiOff, Plus, Play, Trash2, Upload, UserCircle, ChevronRight,
 } from "lucide-react";
 import { NIGERIA_LOCATIONS } from "./nigeriaLocations";
 import { API_BASE, apiFetch } from "./api";
@@ -1051,7 +1051,7 @@ const OWNER_CANCEL_REASONS = [
 ];
 
 
-function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
+function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClients }) {
   const [salon, setSalon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -1375,6 +1375,23 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
                 </button>
               )}
             </div>
+
+            <button
+              onClick={onOpenClients}
+              className="mt-8 w-full flex items-center justify-between rounded-2xl px-4 py-4 tap-glass"
+              style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+                  <Users size={18} color={colors.hairline} />
+                </div>
+                <div className="text-left">
+                  <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-base">My Clients</p>
+                  <p className="text-xs" style={{ color: colors.creamDim }}>See who's added you and their visit progress</p>
+                </div>
+              </div>
+              <ChevronRight size={20} color={colors.creamDim} />
+            </button>
 
             <div className="mt-8 rounded-2xl px-4 py-4" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
               <h3 style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontWeight: 700 }} className="text-lg mb-1">Your booking link</h3>
@@ -1781,6 +1798,104 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet }) {
 
 
 
+// OwnerClientsView - the roster of everyone who has tapped "Add as a client"
+// on this owner's salon profile. Shows each client's current progress toward
+// the 5-visit reward (same visit_count that powers the X/5 badges on bookings),
+// so the owner can see at a glance who's close to earning their discount.
+function OwnerClientsView({ token, onBack }) {
+  const [salonId, setSalonId] = useState(null);
+  const [clients, setClients] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [viewingClient, setViewingClient] = useState(null); // { id, name } | null
+
+  useEffect(() => {
+    if (!token) return;
+    apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } })
+      .then((mine) => setSalonId(mine[0]?.id || null))
+      .catch(() => setError("Couldn't load your salon."));
+  }, [token]);
+
+  useEffect(() => {
+    if (!salonId) return;
+    setLoading(true);
+    apiFetch(`/salons/${salonId}/clients`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(setClients)
+      .catch(() => setError("Couldn't load your clients."))
+      .finally(() => setLoading(false));
+  }, [salonId, token]);
+
+  if (viewingClient) {
+    return (
+      <OwnerCustomerProfileView
+        token={token}
+        salonId={salonId}
+        customerId={viewingClient.id}
+        onBack={() => setViewingClient(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="pb-8" style={{ background: OWNER_THEME_GRADIENT, minHeight: "100vh" }}>
+      <Header title="My Clients" onBack={onBack} />
+      <div className="px-4 max-w-xl mx-auto w-full">
+        {loading && (
+          <div className="flex justify-center pt-8">
+            <Loader2 size={28} className="animate-spin" color={colors.creamDim} />
+          </div>
+        )}
+        {error && <p className="text-sm text-center mt-4" style={{ color: colors.creamDim }}>{error}</p>}
+        {!loading && clients && clients.length === 0 && (
+          <p className="text-sm text-center mt-8" style={{ color: colors.creamDim }}>
+            No clients yet. When a customer taps "Add as a client" on your profile, they'll show up here.
+          </p>
+        )}
+        {!loading && clients && clients.length > 0 && (
+          <div className="flex flex-col gap-3 mt-4">
+            {clients.map((c) => {
+              const isReward = c.visit_count >= 5;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setViewingClient({ id: c.id, name: c.name })}
+                  className="flex items-center gap-3 text-left rounded-2xl p-3 tap-glass"
+                  style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+                >
+                  {c.profile_photo_url ? (
+                    <img src={c.profile_photo_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+                    >
+                      <Users size={20} color={colors.hairline} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p style={{ color: colors.cream, fontWeight: 700 }} className="text-base truncate">{c.name}</p>
+                    <span
+                      className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      style={
+                        isReward
+                          ? { background: colors.hairline, color: "#FFFFFF" }
+                          : { border: `1.5px solid ${colors.hairline}`, color: colors.gold }
+                      }
+                    >
+                      {isReward ? "🎉 5/5 — reward ready" : `${c.visit_count}/5 visits`}
+                    </span>
+                  </div>
+                  <ChevronRight size={18} color={colors.creamDim} />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OwnerCustomerProfileView({ token, salonId, customerId, onBack }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2013,4 +2128,4 @@ function CompletedAppointmentsView({ token, onBack }) {
   );
 }
 
-export { CreateSalonView, MediaManager, MediaGallery, OwnerDashboard, OwnerProfileView, OwnerCustomerProfileView, CompletedAppointmentsView };
+export { CreateSalonView, MediaManager, MediaGallery, OwnerDashboard, OwnerProfileView, OwnerCustomerProfileView, OwnerClientsView, CompletedAppointmentsView };

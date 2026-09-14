@@ -455,6 +455,78 @@ router.get("/:id/customers/:customerId", requireAuth, async (req, res) => {
   }
 });
 
+// POST /salons/:id/add-client - a customer opts in to follow this salon as a
+// client, so the owner sees them in their client roster and can track visit
+// progress toward the 5-visit reward, independent of any single booking.
+router.post("/:id/add-client", requireAuth, async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT id FROM salons WHERE id = $1", [req.params.id]);
+    if (!salonRows[0]) return res.status(404).json({ error: "Salon not found" });
+
+    await db.query(
+      `INSERT INTO salon_clients (salon_id, customer_id) VALUES ($1, $2)
+       ON CONFLICT (salon_id, customer_id) DO NOTHING`,
+      [req.params.id, req.user.id]
+    );
+    res.json({ ok: true, isClient: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't add this salon as a client." });
+  }
+});
+
+// DELETE /salons/:id/add-client - customer removes themselves from this salon's roster
+router.delete("/:id/add-client", requireAuth, async (req, res) => {
+  try {
+    await db.query("DELETE FROM salon_clients WHERE salon_id = $1 AND customer_id = $2", [req.params.id, req.user.id]);
+    res.json({ ok: true, isClient: false });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't update this." });
+  }
+});
+
+// GET /salons/:id/is-client - has the current customer already added this salon?
+router.get("/:id/is-client", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT 1 FROM salon_clients WHERE salon_id = $1 AND customer_id = $2",
+      [req.params.id, req.user.id]
+    );
+    res.json({ isClient: rows.length > 0 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't check client status." });
+  }
+});
+
+// GET /salons/:id/clients - owner-only roster of everyone who has added this
+// salon as a client, with their current loyalty visit count (X/5) toward the
+// reward. Uses the same salon_loyalty count that powers the booking badges.
+router.get("/:id/clients", requireAuth, async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows } = await db.query(
+      `SELECT u.id, u.name, u.profile_photo_url, sc.created_at AS added_at,
+              COALESCE(sl.visit_count, 0) AS visit_count
+       FROM salon_clients sc
+       JOIN users u ON u.id = sc.customer_id
+       LEFT JOIN salon_loyalty sl ON sl.customer_id = sc.customer_id AND sl.salon_id = sc.salon_id
+       WHERE sc.salon_id = $1
+       ORDER BY sc.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load your clients." });
+  }
+});
+
 // GET /salons/:id/completed-bookings (owner's completed appointment history)
 router.get("/:id/completed-bookings", requireAuth, async (req, res) => {
   try {
