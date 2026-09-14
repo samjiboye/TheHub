@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell, Home,
+  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell, Home, Search, Users,
 } from "lucide-react";
 import { API_BASE, apiFetch } from "./api";
 import { AuthGate, OnboardingView, ResetPasswordView } from "./auth";
@@ -62,6 +62,7 @@ export default function App() {
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [homeSearchOpen, setHomeSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -425,6 +426,38 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {role === "customer" && view === "home" && (
+              <button
+                onClick={() => setHomeSearchOpen((o) => !o)}
+                className="p-2.5 rounded-full tap-glass"
+                style={{
+                  border: `2px solid ${colors.hairline}`,
+                  color: homeSearchOpen ? "#FFFFFF" : colors.creamDim,
+                  background: homeSearchOpen ? colors.hairline : "transparent",
+                }}
+                aria-label="Search"
+              >
+                <Search size={20} />
+              </button>
+            )}
+            {role === "owner" && ownerAuth && (
+              <button
+                onClick={() => setOwnerPage("alerts")}
+                className="relative p-2.5 rounded-full tap-glass"
+                style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                aria-label="Alerts"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold"
+                    style={{ background: colors.hairline, color: "#FFFFFF" }}
+                  >
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
             <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}
@@ -617,6 +650,8 @@ export default function App() {
                 locationStatus={locationStatus} onRequestLocation={requestLocation}
                 onSelectSalon={(s) => { setSelectedSalon(s); setView("salonDetail"); }}
                 topOffset={iconBarHeight}
+                searchOpen={homeSearchOpen}
+                setSearchOpen={setHomeSearchOpen}
               />
             )}
             {view === "salonDetail" && selectedSalon && (
@@ -758,7 +793,7 @@ export default function App() {
                 { key: "dashboard", label: "Dashboard", icon: Home, onClick: () => setOwnerPage("dashboard") },
                 { key: "completed", label: "Completed", icon: CheckCircle2, onClick: () => setOwnerPage("completed") },
                 { key: "chatInbox", label: "Messages", icon: MessageCircle, onClick: () => setOwnerPage("chatInbox"), badge: unreadMessageCount },
-                { key: "alerts", label: "Alerts", icon: Bell, onClick: () => setOwnerPage("alerts"), badge: unreadCount },
+                { key: "clients", label: "Clients", icon: Users, onClick: () => setOwnerPage("clients") },
                 { key: "profile", label: "Profile", icon: UserCircle, onClick: () => setOwnerPage("profile") },
               ].map((tab) => {
                 const active = ownerPage === tab.key;

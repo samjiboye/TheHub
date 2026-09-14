@@ -9,23 +9,7 @@ import { TierStars } from "./ratings";
 import { Header, SalonCard, SalonPhoto } from "./shared";
 import { CATEGORIES, CATEGORY_THEMES, FONT_BODY, FONT_DISPLAY, NEUTRAL_HERO_GRADIENT, PRICE_BUCKETS, colors } from "./theme";
 
-function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon, topOffset = 64 }) {
-  const [searchOpen, setSearchOpen] = useState(true);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const y = window.scrollY;
-      if (y <= 40) {
-        setSearchOpen(true);
-      } else if (y > lastScrollY.current + 4) {
-        setSearchOpen(false);
-      }
-      lastScrollY.current = y;
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon, topOffset = 64, searchOpen, setSearchOpen }) {
 
   const filtered = salons
     .filter((s) => (category ? (s.categories?.length ? s.categories : [s.category]).includes(category) : true))
@@ -146,21 +130,7 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
           </div>
         </div>
 
-        {!searchOpen && (
-          <button
-            onClick={() => setSearchOpen(true)}
-            aria-label="Show search and location filters"
-            className="w-full flex items-center justify-center mb-2 tap-glass"
-            style={{ padding: "4px 0" }}
-          >
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{ width: 36, height: 22, background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
-            >
-              <ChevronDown size={16} color={colors.cream} />
-            </div>
-          </button>
-        )}
+        {!searchOpen && <div className="mb-1" />}
 
         <div ref={chipRowRef} className="flex gap-2 overflow-x-auto pb-1 relative">
           <div
@@ -292,7 +262,33 @@ function ProfileView({ salon, onBack, onBook, token, onRequireAuth }) {
         color="#FFFFFF"
         style={{ position: "absolute", right: -40, top: 70, opacity: 0.10, pointerEvents: "none" }}
       />
-      <Header title={salon.name} onBack={onBack} />
+      <Header
+        title={salon.name}
+        onBack={onBack}
+        right={
+          clientChecked ? (
+            <button
+              onClick={toggleClient}
+              disabled={clientLoading}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold tap-glass shrink-0"
+              style={
+                isClient
+                  ? { border: `2px solid ${colors.hairline}`, color: colors.cream }
+                  : { background: colors.hairline, color: "#FFFFFF" }
+              }
+            >
+              {clientLoading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : isClient ? (
+                <Check size={14} />
+              ) : (
+                <UserPlus size={14} />
+              )}
+              {isClient ? "Added" : "Add as a client"}
+            </button>
+          ) : null
+        }
+      />
       <div className="pt-3 pb-1 relative">
         <SalonPhoto hue={salon.hue} icon={cat.icon} size="h-44" imageUrl={salon.profile_image_url} />
       </div>
@@ -313,28 +309,6 @@ function ProfileView({ salon, onBack, onBook, token, onRequireAuth }) {
           <div className="flex items-center gap-2 mt-3 text-base" style={{ color: textColorDim }}>
             <MapPin size={18} />{salon.distance} mi away
           </div>
-        )}
-
-        {clientChecked && (
-          <button
-            onClick={toggleClient}
-            disabled={clientLoading}
-            className="flex items-center gap-2 mt-3 px-4 py-2.5 rounded-full text-sm font-semibold tap-glass"
-            style={
-              isClient
-                ? { background: "rgba(255,255,255,0.16)", border: `2px solid ${textColorDim}`, color: textColor }
-                : { background: colors.hairline, color: "#FFFFFF" }
-            }
-          >
-            {clientLoading ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : isClient ? (
-              <Check size={16} />
-            ) : (
-              <UserPlus size={16} />
-            )}
-            {isClient ? "Added as a client" : "Add as a client"}
-          </button>
         )}
 
         <MediaGallery salonId={salon.id} textColor={textColor} />
