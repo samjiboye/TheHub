@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell, Home,
+  Star, MessageCircle, CheckCircle2, Loader2, WifiOff, LogIn, Store, Menu, Settings, LogOut, CalendarCheck, UserCircle, Bell, Home, Search,
 } from "lucide-react";
 import { API_BASE, apiFetch } from "./api";
 import { AuthGate, OnboardingView, ResetPasswordView } from "./auth";
@@ -12,11 +12,11 @@ import { CompletedAppointmentsView, OwnerDashboard, OwnerProfileView } from "./o
 import { RatingPopup, RatingsReviewsView } from "./ratings";
 import { SettingsView, FeedbackView } from "./settings";
 import { Header } from "./shared";
-import { FONT_BODY, FONT_DISPLAY, colors, NEUTRAL_HERO_GRADIENT } from "./theme";
+import { FONT_BODY, FONT_DISPLAY, colors } from "./theme";
 
 function NotificationsPage({ notifications, unreadCount, onBack, onMarkAllRead, onItemClick }) {
   return (
-    <div className="min-h-dvh" style={{ background: NEUTRAL_HERO_GRADIENT }}>
+    <div className="min-h-dvh" style={{ background: colors.bg }}>
       <Header
         title="Notifications"
         onBack={onBack}
@@ -62,6 +62,7 @@ export default function App() {
   const [selectedService, setSelectedService] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [homeSearchOpen, setHomeSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -425,6 +426,20 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {role === "customer" && view === "home" && (
+              <button
+                onClick={() => setHomeSearchOpen((o) => !o)}
+                className="p-2.5 rounded-full tap-glass"
+                style={{
+                  border: `2px solid ${colors.hairline}`,
+                  color: homeSearchOpen ? "#FFFFFF" : colors.creamDim,
+                  background: homeSearchOpen ? colors.hairline : "transparent",
+                }}
+                aria-label="Search"
+              >
+                <Search size={20} />
+              </button>
+            )}
             <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}
@@ -614,6 +629,8 @@ export default function App() {
                 locationStatus={locationStatus} onRequestLocation={requestLocation}
                 onSelectSalon={(s) => { setSelectedSalon(s); setView("salonDetail"); }}
                 topOffset={iconBarHeight}
+                searchOpen={homeSearchOpen}
+                setSearchOpen={setHomeSearchOpen}
               />
             )}
             {view === "salonDetail" && selectedSalon && (

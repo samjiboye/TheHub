@@ -9,23 +9,7 @@ import { TierStars } from "./ratings";
 import { Header, SalonCard, SalonPhoto } from "./shared";
 import { CATEGORIES, CATEGORY_THEMES, FONT_BODY, FONT_DISPLAY, NEUTRAL_HERO_GRADIENT, PRICE_BUCKETS, colors } from "./theme";
 
-function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon, topOffset = 64 }) {
-  const [searchOpen, setSearchOpen] = useState(true);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const y = window.scrollY;
-      if (y <= 40) {
-        setSearchOpen(true);
-      } else if (y > lastScrollY.current + 4) {
-        setSearchOpen(false);
-      }
-      lastScrollY.current = y;
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, searchQuery, setSearchQuery, searchState, setSearchState, searchCity, setSearchCity, locationStatus, onRequestLocation, onSelectSalon, topOffset = 64, searchOpen, setSearchOpen }) {
 
   const filtered = salons
     .filter((s) => (category ? (s.categories?.length ? s.categories : [s.category]).includes(category) : true))
@@ -146,21 +130,7 @@ function HomeView({ salons, category, setCategory, priceFilter, setPriceFilter, 
           </div>
         </div>
 
-        {!searchOpen && (
-          <button
-            onClick={() => setSearchOpen(true)}
-            aria-label="Show search and location filters"
-            className="w-full flex items-center justify-center mb-2 tap-glass"
-            style={{ padding: "4px 0" }}
-          >
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{ width: 36, height: 22, background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
-            >
-              <ChevronDown size={16} color={colors.cream} />
-            </div>
-          </button>
-        )}
+        {!searchOpen && <div className="mb-1" />}
 
         <div ref={chipRowRef} className="flex gap-2 overflow-x-auto pb-1 relative">
           <div
