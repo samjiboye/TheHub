@@ -1,0 +1,8 @@
+{
+  "appId": "com.ajiboyehub.thehub",
+  "appName": "TheHub",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "automatic"
+  }
+}
