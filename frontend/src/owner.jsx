@@ -1575,7 +1575,15 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
                               ) : (
                                 <div className="flex items-center justify-between">
                                   <div>
-                                    <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
+                                      {svc.gender === "male" && (
+                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ border: `1.5px solid ${colors.hairline}`, color: colors.gold }}>Male</span>
+                                      )}
+                                      {svc.gender === "female" && (
+                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ border: `1.5px solid ${colors.hairline}`, color: colors.gold }}>Female</span>
+                                      )}
+                                    </div>
                                     {svc.salon_service_available !== false && (
                                       <p className="text-sm" style={{ color: colors.creamDim }}>₦{svc.price}</p>
                                     )}
@@ -1625,6 +1633,21 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
                             <input value={newSvc.home_service_price} onChange={(e) => setNewSvc({ ...newSvc, home_service_price: e.target.value })}
                               type="number" placeholder="Home visit price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
                           )}
+                          <p className="text-xs -mb-1" style={{ color: colors.creamDim }}>Who is this price for?</p>
+                          <div className="flex gap-2">
+                            {[{ key: "all", label: "Everyone" }, { key: "male", label: "Male" }, { key: "female", label: "Female" }].map((opt) => (
+                              <button key={opt.key} type="button"
+                                onClick={() => setNewSvc({ ...newSvc, category: expandedDetailCategory, gender: opt.key })}
+                                className="flex-1 py-1.5 rounded-xl text-xs tap-glass"
+                                style={{
+                                  background: (newSvc.category === expandedDetailCategory && newSvc.gender === opt.key) ? colors.hairline : colors.panelLight,
+                                  color: (newSvc.category === expandedDetailCategory && newSvc.gender === opt.key) ? "#FFFFFF" : colors.cream,
+                                  fontWeight: (newSvc.category === expandedDetailCategory && newSvc.gender === opt.key) ? 700 : 500,
+                                }}>
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
                           {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
                           <button onClick={addService} disabled={savingNewSvc}
                             className="w-full py-2.5 rounded-full text-sm flex items-center justify-center gap-2 tap-glass"
