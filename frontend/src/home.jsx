@@ -222,6 +222,13 @@ function ProfileView({ salon, onBack, onBook, token, onRequireAuth }) {
   const [isClient, setIsClient] = useState(false);
   const [clientLoading, setClientLoading] = useState(false);
   const [clientChecked, setClientChecked] = useState(false);
+  const [genderFilter, setGenderFilter] = useState(null); // null | "male" | "female"
+
+  const hasGenderedServices = (salon.services || []).some((s) => s.gender === "male" || s.gender === "female");
+  const visibleServices = (salon.services || []).filter((s) => {
+    const g = s.gender || "all";
+    return g === "all" || g === genderFilter;
+  });
 
   useEffect(() => {
     if (!token) { setClientChecked(true); return; }
@@ -316,8 +323,33 @@ function ProfileView({ salon, onBack, onBook, token, onRequireAuth }) {
         <h3 className="mt-7 mb-3 text-xl" style={{ fontFamily: FONT_DISPLAY, color: textColor, fontWeight: 700 }}>
           Pick a service
         </h3>
+
+        {hasGenderedServices && (
+          <div className="flex gap-2 mb-3">
+            {[{ key: "male", label: "Male" }, { key: "female", label: "Female" }].map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setGenderFilter(opt.key)}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold tap-glass"
+                style={
+                  genderFilter === opt.key
+                    ? { background: colors.hairline, color: "#FFFFFF" }
+                    : { border: `2px solid ${textColorDim}`, color: textColor }
+                }
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {hasGenderedServices && !genderFilter && (
+          <p className="text-sm mb-3" style={{ color: textColorDim }}>
+            Tap Male or Female above to see pricing for those services.
+          </p>
+        )}
+
         <div className="flex flex-col gap-3">
-          {(salon.services || []).map((svc) => (
+          {visibleServices.map((svc) => (
             <button
               key={svc.id ?? svc.name}
               onClick={() => onBook(svc)}

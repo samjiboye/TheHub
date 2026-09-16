@@ -26,6 +26,7 @@ function CreateSalonView({ token, onDone }) {
   const [svcHomePrice, setSvcHomePrice] = useState("");
   const [svcHomeOnly, setSvcHomeOnly] = useState(false);
   const [svcMode, setSvcMode] = useState("shop"); // "shop" | "home" | "both"
+  const [svcGender, setSvcGender] = useState("all"); // "all" | "male" | "female"
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -73,6 +74,7 @@ function CreateSalonView({ token, onDone }) {
           home_service_price: svcMode !== "shop" ? Number(svcHomePrice) : null,
           salon_service_available: !homeOnly,
           category: svcCategory,
+          gender: svcGender,
         }),
       });
       setServices((prev) => [...prev, {
@@ -81,8 +83,9 @@ function CreateSalonView({ token, onDone }) {
         home_service_price: svcMode !== "shop" ? svcHomePrice : null,
         salon_service_available: !homeOnly,
         category: svcCategory,
+        gender: svcGender,
       }]);
-      setSvcName(""); setSvcPrice(""); setSvcHomePrice(""); setSvcHomeOnly(false); setSvcMode("shop");
+      setSvcName(""); setSvcPrice(""); setSvcHomePrice(""); setSvcHomeOnly(false); setSvcMode("shop"); setSvcGender("all");
     } catch (err) {
       setError(err.message || "Couldn't add that service.");
     } finally {
@@ -268,6 +271,31 @@ function CreateSalonView({ token, onDone }) {
             style={inputStyle}
           />
         )}
+
+        <p className="text-sm -mb-1" style={{ color: colors.creamDim }}>
+          Who is this price for? <span style={{ color: colors.gold }}>(only pick Male/Female if you charge them differently)</span>
+        </p>
+        <div className="flex gap-2">
+          {[
+            { key: "all", label: "Everyone" },
+            { key: "male", label: "Male" },
+            { key: "female", label: "Female" },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setSvcGender(opt.key)}
+              className="flex-1 py-2 rounded-xl text-sm tap-glass"
+              style={{
+                background: svcGender === opt.key ? colors.hairline : colors.panelLight,
+                color: svcGender === opt.key ? "#FFFFFF" : colors.cream,
+                fontWeight: svcGender === opt.key ? 700 : 500,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
 
         {error && <p className="text-sm text-center" style={{ color: colors.creamDim }}>{error}</p>}
         <button type="submit" disabled={loading}
@@ -1071,7 +1099,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
   const [confirmDeleteServiceId, setConfirmDeleteServiceId] = useState(null);
 
   const [addingService, setAddingService] = useState(false);
-  const [newSvc, setNewSvc] = useState({ name: "", price: "", home_service_price: "", mode: "shop", category: "" });
+  const [newSvc, setNewSvc] = useState({ name: "", price: "", home_service_price: "", mode: "shop", category: "", gender: "all" });
   const [savingNewSvc, setSavingNewSvc] = useState(false);
 
   const [confirmDeleteSalon, setConfirmDeleteSalon] = useState(false);
@@ -1239,6 +1267,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
       home_service_price: svc.home_service_price ?? "",
       mode: svc.salon_service_available === false ? "home" : (svc.home_service_price != null ? "both" : "shop"),
       category: svc.category,
+      gender: svc.gender || "all",
     });
     setServiceError(null);
     setEditingServiceId(svc.id);
@@ -1257,6 +1286,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
           home_service_price: serviceForm.mode !== "shop" ? Number(serviceForm.home_service_price) : null,
           salon_service_available: serviceForm.mode !== "home",
           category: serviceForm.category,
+          gender: serviceForm.gender,
         }),
       });
       setSalon((prev) => ({ ...prev, services: prev.services.map((s) => (s.id === updated.id ? updated : s)) }));
@@ -1299,6 +1329,7 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
           home_service_price: newSvc.mode !== "shop" ? Number(newSvc.home_service_price) : null,
           salon_service_available: newSvc.mode !== "home",
           category: newSvc.category,
+          gender: newSvc.gender,
         }),
       });
       setSalon((prev) => ({
@@ -1308,9 +1339,10 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
           home_service_price: newSvc.mode !== "shop" ? Number(newSvc.home_service_price) : null,
           salon_service_available: newSvc.mode !== "home",
           category: newSvc.category,
+          gender: newSvc.gender,
         }],
       }));
-      setNewSvc({ name: "", price: "", home_service_price: "", mode: "shop", category: newSvc.category });
+      setNewSvc({ name: "", price: "", home_service_price: "", mode: "shop", category: newSvc.category, gender: "all" });
       setAddingService(false);
     } catch (err) {
       setServiceError(err.message || "Couldn't add that service.");
@@ -1679,6 +1711,20 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
                           <input value={serviceForm.home_service_price} onChange={(e) => setServiceForm({ ...serviceForm, home_service_price: e.target.value })}
                             type="number" placeholder="Home visit price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
                         )}
+                        <div className="flex gap-2">
+                          {[{ key: "all", label: "Everyone" }, { key: "male", label: "Male" }, { key: "female", label: "Female" }].map((opt) => (
+                            <button key={opt.key} type="button"
+                              onClick={() => setServiceForm({ ...serviceForm, gender: opt.key })}
+                              className="flex-1 py-1.5 rounded-xl text-xs tap-glass"
+                              style={{
+                                background: serviceForm.gender === opt.key ? colors.hairline : colors.panelLight,
+                                color: serviceForm.gender === opt.key ? "#FFFFFF" : colors.cream,
+                                fontWeight: serviceForm.gender === opt.key ? 700 : 500,
+                              }}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
                         {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
                         <div className="flex gap-2">
                           <button onClick={saveService} disabled={savingService}
@@ -1696,7 +1742,15 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
                     ) : (
                       <div className="flex items-center justify-between">
                         <div>
-                          <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p style={{ color: colors.cream, fontWeight: 600 }}>{svc.name}</p>
+                            {svc.gender === "male" && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ border: `1.5px solid ${colors.hairline}`, color: colors.gold }}>Male</span>
+                            )}
+                            {svc.gender === "female" && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ border: `1.5px solid ${colors.hairline}`, color: colors.gold }}>Female</span>
+                            )}
+                          </div>
                           {svc.salon_service_available !== false && (
                             <p className="text-sm" style={{ color: colors.creamDim }}>₦{svc.price}</p>
                           )}
@@ -1767,6 +1821,21 @@ function OwnerProfileView({ token, onBack, onDeleted, onOpenWallet, onOpenClient
                     <input value={newSvc.home_service_price} onChange={(e) => setNewSvc({ ...newSvc, home_service_price: e.target.value })}
                       type="number" placeholder="Home visit price ₦" className="pb-2 text-base outline-none" style={inputStyle} />
                   )}
+                  <p className="text-xs -mb-1" style={{ color: colors.creamDim }}>Who is this price for?</p>
+                  <div className="flex gap-2">
+                    {[{ key: "all", label: "Everyone" }, { key: "male", label: "Male" }, { key: "female", label: "Female" }].map((opt) => (
+                      <button key={opt.key} type="button"
+                        onClick={() => setNewSvc({ ...newSvc, gender: opt.key })}
+                        className="flex-1 py-1.5 rounded-xl text-xs tap-glass"
+                        style={{
+                          background: newSvc.gender === opt.key ? colors.hairline : colors.panelLight,
+                          color: newSvc.gender === opt.key ? "#FFFFFF" : colors.cream,
+                          fontWeight: newSvc.gender === opt.key ? 700 : 500,
+                        }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                   {serviceError && <p className="text-sm" style={{ color: "#E07A5F" }}>{serviceError}</p>}
                   <div className="flex gap-2">
                     <button onClick={addService} disabled={savingNewSvc}
