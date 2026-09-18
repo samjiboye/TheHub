@@ -332,6 +332,14 @@ function AuthGate({ role, onAuthed, allowGuest }) {
         Sign in with Google
       </a>
 
+      <a
+        href="https://thehub-api.onrender.com/auth/apple"
+        className="w-full mt-3 py-3 rounded-2xl text-base flex items-center justify-center gap-2"
+        style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontWeight: 600, textDecoration: "none" }}
+      >
+        Sign in with Apple
+      </a>
+
       {allowGuest && (
         <button
           onClick={guest}

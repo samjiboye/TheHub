@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const appleSignin = require("apple-signin-auth");
 const db = require("../db");
 const { JWT_SECRET } = require("../middleware/auth");
 const { loginLimiter, authLimiter } = require("../middleware/rateLimiters");
@@ -252,6 +253,94 @@ router.get("/google/callback", authLimiter, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.redirect(`${process.env.FRONTEND_URL}/?error=google_auth_failed`);
+  }
+});
+
+// GET /auth/apple - redirect to Apple's consent screen
+router.get("/apple", (req, res) => {
+  const url = appleSignin.getAuthorizationUrl({
+    clientID: process.env.APPLE_CLIENT_ID, // the Services ID, e.g. com.ajiboyehub.thehub.web
+    redirectUri: `${process.env.BACKEND_URL}/auth/apple/callback`,
+    scope: "name email",
+    state: "thehub",
+  });
+  res.redirect(url);
+});
+
+// POST /auth/apple/callback - Apple posts back here (it uses form_post, not a
+// GET redirect like Google, whenever name/email scopes are requested)
+router.post("/apple/callback", authLimiter, async (req, res) => {
+  const { code, user: userJson } = req.body || {};
+  if (!code) {
+    return res.redirect(`${process.env.FRONTEND_URL}/?error=apple_auth_failed`);
+  }
+
+  try {
+    const clientSecret = appleSignin.getClientSecret({
+      clientID: process.env.APPLE_CLIENT_ID,
+      teamID: process.env.APPLE_TEAM_ID,
+      privateKey: (process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+      keyIdentifier: process.env.APPLE_KEY_ID,
+    });
+
+    const tokenResponse = await appleSignin.getAuthorizationToken(code, {
+      clientID: process.env.APPLE_CLIENT_ID,
+      clientSecret,
+      redirectUri: `${process.env.BACKEND_URL}/auth/apple/callback`,
+    });
+
+    const { sub, email } = await appleSignin.verifyIdToken(tokenResponse.id_token, {
+      audience: process.env.APPLE_CLIENT_ID,
+      ignoreExpiration: false,
+    });
+
+    // Apple only ever sends the user's name once, on their very first
+    // authorization for this app -- it arrives as a JSON string in the
+    // `user` field, never as a token claim, and never again after that.
+    let name = null;
+    if (userJson) {
+      try {
+        const parsed = JSON.parse(userJson);
+        name = [parsed?.name?.firstName, parsed?.name?.lastName].filter(Boolean).join(" ") || null;
+      } catch {}
+    }
+
+    if (!email && !sub) {
+      return res.redirect(`${process.env.FRONTEND_URL}/?error=apple_auth_failed`);
+    }
+
+    // Apple's "Hide My Email" gives a relay address, not the person's real
+    // one -- it's still a stable, unique, working email, so it's safe to
+    // store and match against exactly like any other email.
+    let result = await db.query(
+      "SELECT * FROM users WHERE apple_sub = $1 OR email = $2",
+      [sub, email]
+    );
+    let row = result.rows[0];
+
+    if (!row) {
+      const randomPassword = require("crypto").randomBytes(32).toString("hex");
+      const password_hash = bcrypt.hashSync(randomPassword, 10);
+      const insertResult = await db.query(
+        "INSERT INTO users (name, email, phone, role, password_hash, apple_sub) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, role",
+        [name || (email ? email.split("@")[0] : "Apple User"), email, null, "customer", password_hash, sub]
+      );
+      row = insertResult.rows[0];
+      const ownReferralCode = `HUB${String(row.id).padStart(5, "0")}`;
+      await db.query("UPDATE users SET referral_code = $1 WHERE id = $2", [ownReferralCode, row.id]);
+    } else if (!row.apple_sub) {
+      // First time this existing (email/password or Google) account has
+      // signed in with Apple -- link the identity for next time.
+      await db.query("UPDATE users SET apple_sub = $1 WHERE id = $2", [sub, row.id]);
+    }
+
+    const user = { id: row.id, name: row.name, email: row.email, role: row.role, isAdmin: !!row.is_admin };
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: "30d" });
+
+    res.redirect(`${process.env.FRONTEND_URL}/?token=${token}`);
+  } catch (err) {
+    console.error(err);
+    res.redirect(`${process.env.FRONTEND_URL}/?error=apple_auth_failed`);
   }
 });
 
