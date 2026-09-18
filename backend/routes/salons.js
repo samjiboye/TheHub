@@ -186,10 +186,16 @@ router.post("/:id/services", requireAuth, async (req, res) => {
     if (!salon) return res.status(404).json({ error: "Salon not found" });
     if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
 
-    const { name, duration_min, price, home_service_price, salon_service_available, category } = req.body;
+    const { name, duration_min, price, home_service_price, salon_service_available, category, gender } = req.body;
     if (!name || price == null) {
       return res.status(400).json({ error: "name and price are required" });
     }
+    // gender lets one service (e.g. "Haircut") carry a different price for
+    // male vs female clients on salons where the work genuinely differs
+    // (e.g. hairdressing: detangling/length work on female hair takes far
+    // longer than a male cut). Defaults to "all" so nothing changes for
+    // salons that don't need this.
+    const finalGender = ["male", "female"].includes(gender) ? gender : "all";
     // Owners no longer enter a duration in the app; we keep the column (some
     // reports/exports may still reference it) but backfill a harmless default.
     const finalDurationMin = duration_min || 30;
@@ -205,9 +211,9 @@ router.post("/:id/services", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "A home-visit price is required when a service isn't offered at the salon." });
     }
     const { rows } = await db.query(
-      `INSERT INTO services (salon_id, name, duration_min, price, home_service_price, salon_service_available, category)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [salon.id, name, finalDurationMin, price, home_service_price ?? null, salonAvailable, category]
+      `INSERT INTO services (salon_id, name, duration_min, price, home_service_price, salon_service_available, category, gender)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [salon.id, name, finalDurationMin, price, home_service_price ?? null, salonAvailable, category, finalGender]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
@@ -254,7 +260,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// PATCH /salons/:id/services/:serviceId (owner edits a service's name/duration/price/home-visit settings)
+// PATCH /salons/:id/services/:serviceId (owner edits a service's name/duration/price/home-visit settings/gender)
 router.patch("/:id/services/:serviceId", requireAuth, async (req, res) => {
   try {
     const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
@@ -269,9 +275,10 @@ router.patch("/:id/services/:serviceId", requireAuth, async (req, res) => {
     const existing = svcRows[0];
     if (!existing) return res.status(404).json({ error: "Service not found" });
 
-    const { name, duration_min, price, home_service_price, salon_service_available, category } = req.body;
+    const { name, duration_min, price, home_service_price, salon_service_available, category, gender } = req.body;
     const salonAvailable = salon_service_available !== undefined ? salon_service_available !== false : existing.salon_service_available;
     const homePrice = home_service_price !== undefined ? home_service_price : existing.home_service_price;
+    const finalGender = gender !== undefined ? (["male", "female"].includes(gender) ? gender : "all") : (existing.gender || "all");
     if (!salonAvailable && homePrice == null) {
       return res.status(400).json({ error: "A home-visit price is required when a service isn't offered at the salon." });
     }
@@ -282,8 +289,8 @@ router.patch("/:id/services/:serviceId", requireAuth, async (req, res) => {
     }
 
     const { rows } = await db.query(
-      `UPDATE services SET name = $1, duration_min = $2, price = $3, home_service_price = $4, salon_service_available = $5, category = $6
-       WHERE id = $7 RETURNING *`,
+      `UPDATE services SET name = $1, duration_min = $2, price = $3, home_service_price = $4, salon_service_available = $5, category = $6, gender = $7
+       WHERE id = $8 RETURNING *`,
       [
         name || existing.name,
         duration_min || existing.duration_min,
@@ -291,6 +298,7 @@ router.patch("/:id/services/:serviceId", requireAuth, async (req, res) => {
         homePrice,
         salonAvailable,
         finalCategory,
+        finalGender,
         existing.id,
       ]
     );
