@@ -559,6 +559,30 @@ router.get("/:id/completed-bookings", requireAuth, async (req, res) => {
   }
 });
 
+// GET /salons/:id/cancelled-bookings (owner's cancelled appointment history)
+router.get("/:id/cancelled-bookings", requireAuth, async (req, res) => {
+  try {
+    const { rows: salonRows } = await db.query("SELECT * FROM salons WHERE id = $1", [req.params.id]);
+    const salon = salonRows[0];
+    if (!salon) return res.status(404).json({ error: "Salon not found" });
+    if (salon.owner_id !== req.user.id) return res.status(403).json({ error: "Not your salon" });
+
+    const { rows: cancelled } = await db.query(
+      `SELECT b.*, s.name AS service_name, u.name AS customer_name, u.profile_photo_url AS customer_photo_url
+       FROM bookings b
+       JOIN services s ON s.id = b.service_id
+       JOIN users u ON u.id = b.customer_id
+       WHERE b.salon_id = $1 AND b.status = 'cancelled'
+       ORDER BY b.created_at DESC LIMIT 100`,
+      [salon.id]
+    );
+    res.json({ cancelled });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Couldn't load cancelled appointments." });
+  }
+});
+
 // GET /salons/:id/reviews (owner-only: full review list + ratings breakdown)
 router.get("/:id/reviews", requireAuth, async (req, res) => {
   try {

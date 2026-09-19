@@ -1845,6 +1845,8 @@ function CompletedAppointmentsView({ token, onBack, onOpenChat: onOpenChatProp }
   const [salon, setSalon] = useState(null);
   const [upcoming, setUpcoming] = useState([]);
   const [completed, setCompleted] = useState([]);
+  const [cancelled, setCancelled] = useState([]);
+  const [activeTab, setActiveTab] = useState("Upcoming");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -1958,11 +1960,11 @@ function CompletedAppointmentsView({ token, onBack, onOpenChat: onOpenChatProp }
 
   useEffect(() => {
     if (!token) return;
-    let cancelled = false;
+    let aborted = false;
     (async () => {
       try {
         const mine = await apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } });
-        if (cancelled) return;
+        if (aborted) return;
         const s = mine[0];
         if (!s) {
           setError("No salon found.");
@@ -1970,20 +1972,22 @@ function CompletedAppointmentsView({ token, onBack, onOpenChat: onOpenChatProp }
           return;
         }
         setSalon(s);
-        const [dashboard, completedData] = await Promise.all([
+        const [dashboard, completedData, cancelledData] = await Promise.all([
           apiFetch(`/salons/${s.id}/dashboard`, { headers: { Authorization: `Bearer ${token}` } }),
           apiFetch(`/salons/${s.id}/completed-bookings`, { headers: { Authorization: `Bearer ${token}` } }),
+          apiFetch(`/salons/${s.id}/cancelled-bookings`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
-        if (cancelled) return;
+        if (aborted) return;
         setUpcoming(dashboard.upcoming);
         setCompleted(completedData.completed);
+        setCancelled(cancelledData.cancelled);
       } catch (e) {
-        if (!cancelled) setError("Couldn't load appointments.");
+        if (!aborted) setError("Couldn't load appointments.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!aborted) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { aborted = true; };
   }, [token, refreshKey]);
 
   if (viewingCustomer && salon) {
@@ -2012,10 +2016,30 @@ function CompletedAppointmentsView({ token, onBack, onOpenChat: onOpenChatProp }
 
         {!loading && !error && (
           <>
-        <h3 className="mt-6 mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_MONO }}>
-          Upcoming appointments
-        </h3>
-        <div className="flex flex-col gap-2">
+            <div className="flex gap-2 mt-4">
+              {[
+                { label: "Upcoming", count: upcoming.length },
+                { label: "Completed", count: completed.length },
+                { label: "Cancelled", count: cancelled.length },
+              ].map((t) => (
+                <button
+                  key={t.label}
+                  onClick={() => setActiveTab(t.label)}
+                  className="flex-1 py-2.5 rounded-full text-sm font-semibold tap-glass"
+                  style={{
+                    background: activeTab === t.label ? colors.hairline : colors.panelLight,
+                    color: activeTab === t.label ? "#FFFFFF" : colors.creamDim,
+                    border: `2px solid ${colors.hairline}`,
+                  }}
+                >
+                  {t.label} ({t.count})
+                </button>
+              ))}
+            </div>
+
+            {activeTab === "Upcoming" && (
+              <>
+        <div className="flex flex-col gap-2 mt-4">
           {upcoming.length === 0 && (
             <p className="text-sm py-4" style={{ color: colors.creamDim }}>No bookings yet — try booking one from the customer app.</p>
           )}
@@ -2192,16 +2216,17 @@ function CompletedAppointmentsView({ token, onBack, onOpenChat: onOpenChatProp }
             </div>
           ))}
         </div>
+              </>
+            )}
 
-            <h3 className="mt-8 mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_MONO }}>
-              Completed appointments
-            </h3>
+            {activeTab === "Completed" && (
+              <>
             {completed.length === 0 && (
               <p className="text-sm py-4" style={{ color: colors.creamDim }}>
                 No completed appointments yet.
               </p>
             )}
-            <div className="flex flex-col gap-2 mt-2">
+            <div className="flex flex-col gap-2 mt-4">
               {completed.map((b) => (
                 <div
                   key={b.id}
@@ -2236,6 +2261,57 @@ function CompletedAppointmentsView({ token, onBack, onOpenChat: onOpenChatProp }
                 </div>
               ))}
             </div>
+              </>
+            )}
+
+            {activeTab === "Cancelled" && (
+              <>
+            {cancelled.length === 0 && (
+              <p className="text-sm py-4" style={{ color: colors.creamDim }}>
+                No cancelled appointments.
+              </p>
+            )}
+            <div className="flex flex-col gap-2 mt-4">
+              {cancelled.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex flex-col gap-1 px-4 py-3 rounded-xl"
+                  style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {b.customer_photo_url ? (
+                        <img
+                          src={b.customer_photo_url}
+                          alt={b.customer_name}
+                          className="w-8 h-8 rounded-full object-cover shrink-0"
+                          style={{ border: `2px solid ${colors.hairline}` }}
+                        />
+                      ) : (
+                        <div className="p-2 rounded-full" style={{ background: colors.panelLight }}>
+                          <Users size={14} color={colors.hairline} />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
+                        <p className="text-xs" style={{ color: colors.creamDim }}>{b.customer_name}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                      {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)}<br /></>}
+                      {b.time_slot}
+                    </span>
+                  </div>
+                  {b.cancel_reason && (
+                    <p className="text-xs mt-1" style={{ color: colors.creamDim }}>
+                      Cancelled by {b.cancelled_by === "owner" ? "you" : "client"} — {b.cancel_reason}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+              </>
+            )}
           </>
         )}
       </div>
