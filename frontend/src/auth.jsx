@@ -5,7 +5,7 @@ import {
 import { DEMO_CUSTOMER, apiFetch, ensureDemoAuth } from "./api";
 import { CATEGORIES, FONT_DISPLAY, colors, inputStyle } from "./theme";
 
-function AuthGate({ role, onAuthed, allowGuest }) {
+function AuthGate({ role, onAuthed, allowGuest, onViewTerms, onViewPrivacy }) {
   const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,6 +22,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
   const [referralCode, setReferralCode] = useState("");
   const [signupStep, setSignupStep] = useState("form");
   const [code, setCode] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -36,6 +37,11 @@ function AuthGate({ role, onAuthed, allowGuest }) {
     setError(null);
     try {
       if (mode === "signup" && signupStep === "form") {
+        if (!termsAccepted) {
+          setError("Please accept the Terms of Service and Privacy Policy to continue.");
+          setLoading(false);
+          return;
+        }
         // Confirm they actually own this email before an account is made with it.
         await apiFetch("/auth/send-signup-code", {
           method: "POST",
@@ -47,7 +53,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
       const body =
         mode === "login"
           ? { email, password }
-          : { name, email, password, role, referralCode: referralCode || undefined, code };
+          : { name, email, password, role, referralCode: referralCode || undefined, code, terms_accepted: true };
       const { token, user } = await apiFetch(mode === "login" ? "/auth/login" : "/auth/signup", {
         method: "POST",
         body: JSON.stringify(body),
@@ -224,6 +230,29 @@ function AuthGate({ role, onAuthed, allowGuest }) {
             {mode === "signup" && (
               <p className="text-xs -mt-1" style={{ color: colors.creamDim }}>At least 8 characters.</p>
             )}
+            {mode === "signup" && (
+              <label
+                className="flex items-start gap-2 text-xs cursor-pointer"
+                style={{ color: colors.creamDim }}
+              >
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  style={{ accentColor: colors.gold, marginTop: 2 }}
+                />
+                <span>
+                  I have read and accept TheHub's{" "}
+                  <button type="button" onClick={onViewTerms} className="underline" style={{ color: colors.cream }}>
+                    Terms of Service
+                  </button>{" "}
+                  and{" "}
+                  <button type="button" onClick={onViewPrivacy} className="underline" style={{ color: colors.cream }}>
+                    Privacy Policy
+                  </button>
+                </span>
+              </label>
+            )}
           </>
         )}
 
@@ -295,7 +324,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || (mode === "signup" && signupStep === "form" && !termsAccepted)}
           className="mt-2 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 tap-glass"
           style={{ background: colors.hairline, color: "#FFFFFF", fontWeight: 700 }}
         >
@@ -329,27 +358,7 @@ function AuthGate({ role, onAuthed, allowGuest }) {
         className="w-full mt-4 py-3 rounded-2xl text-base flex items-center justify-center gap-2"
         style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontWeight: 600, textDecoration: "none" }}
       >
-        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-          <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.08-1.81 2.72v2.26h2.92c1.71-1.57 2.69-3.88 2.69-6.62z" />
-          <path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.81.54-1.84.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z" />
-          <path fill="#FBBC05" d="M3.97 10.72c-.18-.54-.28-1.11-.28-1.72s.1-1.18.28-1.72V4.95H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.05l3.01-2.33z" />
-          <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
-        </svg>
         Sign in with Google
-      </a>
-
-      <a
-        href="https://thehub-api.onrender.com/auth/apple"
-        className="w-full mt-3 py-3 rounded-2xl text-base flex items-center justify-center gap-2"
-        style={{ border: `2px solid ${colors.hairline}`, color: colors.cream, fontWeight: 600, textDecoration: "none" }}
-      >
-        <svg width="16" height="18" viewBox="0 0 170 210" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-          <path
-            fill={colors.cream}
-            d="M150.4 47.6c-9.1.6-19.8 6.3-26 13.9-5.6 6.8-10.2 16.8-8.4 26.5 10.1.8 20.5-5.1 26.5-12.9 5.9-7.5 10.2-17.3 7.9-27.5zM168 154.7c-4.6-6.9-8.7-14.6-8.6-23.1.1-13.4 8.2-24.4 17.5-31.4-8.8-12.4-22.3-18.7-33.4-19.7-1.6-.1-3.2-.2-4.9-.2-9.6 0-17.7 4.5-24.8 4.5-7.4 0-16.4-4.3-25.5-4.2-16.7.2-32.2 9.7-40.7 24.7-16.9 29.5-4.3 76.4 12.1 101.4 8 11.8 17.7 25.1 30.5 24.6 12.1-.5 16.8-8 31.7-8s19.1 8 31.2 7.8c13.2-.2 22.1-11.9 30.1-23.7 6.2-9.2 11-19.4 14.3-30.3-.2-.1-9.4-3.6-9.5-23.4z"
-          />
-        </svg>
-        Sign in with Apple
       </a>
 
       {allowGuest && (

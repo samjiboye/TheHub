@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { API_BASE, apiFetch } from "./api";
 import { AuthGate, OnboardingView, ResetPasswordView } from "./auth";
+import { TermsOfServiceView, PrivacyPolicyView } from "./legal";
 import { BookingView, MyBookingsView } from "./booking";
 import { ChatInboxView, ChatThreadView } from "./chat";
 import { CustomerProfileView } from "./customer";
@@ -56,6 +57,7 @@ export default function App() {
   const [view, setView] = useState("home");
   const [ownerPage, setOwnerPage] = useState("dashboard");
   const [role, setRole] = useState("customer");
+  const [legalView, setLegalView] = useState(null); // null | "terms" | "privacy"
   const [category, setCategory] = useState(null);
   const [priceFilter, setPriceFilter] = useState(null);
   const [selectedSalon, setSelectedSalon] = useState(null);
@@ -319,6 +321,8 @@ export default function App() {
   }
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ background: colors.bg, fontFamily: FONT_BODY }}>
+      {legalView === "terms" && <TermsOfServiceView onBack={() => setLegalView(null)} />}
+      {legalView === "privacy" && <PrivacyPolicyView onBack={() => setLegalView(null)} />}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');
         input::placeholder { color: ${colors.creamDim}; opacity: 0.7; }
@@ -634,6 +638,8 @@ export default function App() {
             <AuthGate
               role="owner"
               allowGuest={false}
+              onViewTerms={() => setLegalView("terms")}
+              onViewPrivacy={() => setLegalView("privacy")}
               onAuthed={(token, user) => {
                 localStorage.setItem("ownerAuth", JSON.stringify({ token, user }));
                 setOwnerAuth({ token, user });
@@ -676,6 +682,8 @@ export default function App() {
                 <AuthGate
                   role="customer"
                   allowGuest
+                  onViewTerms={() => setLegalView("terms")}
+                  onViewPrivacy={() => setLegalView("privacy")}
                   onAuthed={(token, user) => {
                     localStorage.setItem("customerAuth", JSON.stringify({ token, user }));
                     setCustomerAuth({ token, user });

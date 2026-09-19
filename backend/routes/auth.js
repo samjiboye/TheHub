@@ -38,7 +38,7 @@ router.post("/send-signup-code", authLimiter, async (req, res) => {
 
 // POST /auth/signup
 router.post("/signup", authLimiter, async (req, res) => {
-  const { name, email, phone, password, role, referralCode, code } = req.body;
+  const { name, email, phone, password, role, referralCode, code, terms_accepted } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: "name, email, and password are required" });
   }
@@ -50,6 +50,9 @@ router.post("/signup", authLimiter, async (req, res) => {
   }
   if (!code) {
     return res.status(400).json({ error: "Please enter the verification code we sent to your email." });
+  }
+  if (!terms_accepted) {
+    return res.status(400).json({ error: "Please accept the Terms of Service and Privacy Policy to continue." });
   }
   try {
     const { rows: codeRows } = await db.query(
@@ -66,7 +69,7 @@ router.post("/signup", authLimiter, async (req, res) => {
     await db.query("DELETE FROM signup_verification_codes WHERE email = $1", [email]);
     const password_hash = bcrypt.hashSync(password, 10);
     const result = await db.query(
-      "INSERT INTO users (name, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      "INSERT INTO users (name, email, phone, role, password_hash, terms_accepted_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING id",
       [name, email, phone || null, role === "owner" ? "owner" : "customer", password_hash]
     );
     const newUserId = result.rows[0].id;
