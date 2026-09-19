@@ -566,7 +566,14 @@ export default function App() {
             {ownerPage === "clients" ? (
               <OwnerClientsView token={ownerAuth.token} onBack={() => setOwnerPage("profile")} />
             ) : ownerPage === "completed" ? (
-              <CompletedAppointmentsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
+              <CompletedAppointmentsView
+                token={ownerAuth.token}
+                onBack={() => setOwnerPage("dashboard")}
+                onOpenChat={(convoId) => {
+                  setActiveConversationId(convoId);
+                  setOwnerPage("chatThread");
+                }}
+              />
             ) : ownerPage === "ratings" ? (
               <RatingsReviewsView token={ownerAuth.token} onBack={() => setOwnerPage("dashboard")} />
             ) : ownerPage === "alerts" ? (
@@ -791,7 +798,7 @@ export default function App() {
             >
               {[
                 { key: "dashboard", label: "Dashboard", icon: Home, onClick: () => setOwnerPage("dashboard") },
-                { key: "completed", label: "Completed", icon: CheckCircle2, onClick: () => setOwnerPage("completed") },
+                { key: "completed", label: "Appointments", icon: CheckCircle2, onClick: () => setOwnerPage("completed") },
                 { key: "chatInbox", label: "Messages", icon: MessageCircle, onClick: () => setOwnerPage("chatInbox"), badge: unreadMessageCount },
                 { key: "clients", label: "Clients", icon: Users, onClick: () => setOwnerPage("clients") },
                 { key: "profile", label: "Profile", icon: UserCircle, onClick: () => setOwnerPage("profile") },

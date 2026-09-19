@@ -508,13 +508,6 @@ function OwnerDashboard({ token, onOpenChat: onOpenChatProp }) {
   const [error, setError] = useState(null);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [cancellingId, setCancellingId] = useState(null);
-  const [cancelReason, setCancelReason] = useState("");
-  const [cancelError, setCancelError] = useState(null);
-  const [acceptingId, setAcceptingId] = useState(null);
-  const [decliningId, setDecliningId] = useState(null);
-  const [declineSubmitting, setDeclineSubmitting] = useState(false);
-  const [respondErrors, setRespondErrors] = useState({});
   const [completingId, setCompletingId] = useState(null); // booking whose "mark as done" panel is open
   const [completionPhoto, setCompletionPhoto] = useState(null);
   const [completionSubmitting, setCompletionSubmitting] = useState(false);
@@ -522,105 +515,6 @@ function OwnerDashboard({ token, onOpenChat: onOpenChatProp }) {
   const [otpInputs, setOtpInputs] = useState({}); // bookingId -> code string
   const [confirmSubmittingId, setConfirmSubmittingId] = useState(null);
   const [confirmErrors, setConfirmErrors] = useState({});
-  const [viewingCustomer, setViewingCustomer] = useState(null); // { id, name } | null
-  const [openingChatId, setOpeningChatId] = useState(null);
-  const [openChatErrors, setOpenChatErrors] = useState({});
-
-  async function openChatWithCustomer(booking) {
-    setOpeningChatId(booking.id);
-    setOpenChatErrors((prev) => ({ ...prev, [booking.id]: null }));
-    try {
-      const convo = await apiFetch("/conversations/start", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ salon_id: booking.salon_id, customer_id: booking.customer_id }),
-      });
-      onOpenChatProp && onOpenChatProp(convo.id);
-    } catch (e) {
-      setOpenChatErrors((prev) => ({ ...prev, [booking.id]: e.message || "Couldn't open this chat." }));
-    } finally {
-      setOpeningChatId(null);
-    }
-  }
-  const [revealedCodes, setRevealedCodes] = useState({}); // bookingId -> code
-  const [revealingCodeId, setRevealingCodeId] = useState(null);
-  const [revealCodeErrors, setRevealCodeErrors] = useState({});
-
-  async function revealCode(bookingId) {
-    setRevealingCodeId(bookingId);
-    setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: null }));
-    try {
-      const res = await apiFetch(`/bookings/${bookingId}/checkin-code`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRevealedCodes((prev) => ({ ...prev, [bookingId]: res.code }));
-    } catch (e) {
-      setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: "Couldn't load this booking's code." }));
-    } finally {
-      setRevealingCodeId(null);
-    }
-  }
-
-  async function submitCancel(bookingId) {
-    if (!cancelReason) {
-      setCancelError("Please select a reason.");
-      return;
-    }
-    try {
-      const res = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reason: cancelReason }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setCancelError(err.error || "Failed to cancel booking.");
-        return;
-      }
-      setCancellingId(null);
-      setCancelReason("");
-      setCancelError(null);
-      setRefreshKey((k) => k + 1);
-    } catch (e) {
-      setCancelError("Network error. Please try again.");
-    }
-  }
-
-  async function submitAccept(bookingId) {
-    setAcceptingId(bookingId);
-    setRespondErrors((prev) => ({ ...prev, [bookingId]: null }));
-    try {
-      await apiFetch(`/bookings/${bookingId}/accept`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRefreshKey((k) => k + 1);
-    } catch (e) {
-      setRespondErrors((prev) => ({ ...prev, [bookingId]: e.message || "Couldn't accept — try again." }));
-    } finally {
-      setAcceptingId(null);
-    }
-  }
-
-  async function submitDecline(bookingId) {
-    setDeclineSubmitting(true);
-    setRespondErrors((prev) => ({ ...prev, [bookingId]: null }));
-    try {
-      await apiFetch(`/bookings/${bookingId}/decline`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setDecliningId(null);
-      setRefreshKey((k) => k + 1);
-    } catch (e) {
-      setRespondErrors((prev) => ({ ...prev, [bookingId]: e.message || "Couldn't decline — try again." }));
-    } finally {
-      setDeclineSubmitting(false);
-    }
-  }
 
   async function submitRequestCompletion(bookingId) {
     setCompletionSubmitting(true);
@@ -760,16 +654,6 @@ function OwnerDashboard({ token, onOpenChat: onOpenChatProp }) {
   if (needsSetup) {
     return <CreateSalonView token={token} onDone={() => setRefreshKey((k) => k + 1)} />;
   }
-  if (viewingCustomer && salon) {
-    return (
-      <OwnerCustomerProfileView
-        token={token}
-        salonId={salon.id}
-        customerId={viewingCustomer.id}
-        onBack={() => setViewingCustomer(null)}
-      />
-    );
-  }
   if (error) {
     return (
       <div className="pb-10 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
@@ -885,186 +769,6 @@ function OwnerDashboard({ token, onOpenChat: onOpenChatProp }) {
 
         <MediaManager salonId={salon.id} token={token} />
 
-        <h3 className="mt-6 mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_MONO }}>
-          Upcoming appointments
-        </h3>
-        <div className="flex flex-col gap-2">
-          {data.upcoming.length === 0 && (
-            <p className="text-sm py-4" style={{ color: colors.creamDim }}>No bookings yet — try booking one from the customer app.</p>
-          )}
-          {data.upcoming.map((a) => (
-            <div key={a.id} className="flex flex-col gap-2 px-4 py-3 rounded-xl" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  onClick={() => setViewingCustomer({ id: a.customer_id, name: a.customer_name })}
-                  className="flex items-center gap-3 text-left tap-glass"
-                >
-                  {a.customer_photo_url ? (
-                    <img
-                      src={a.customer_photo_url}
-                      alt={a.customer_name}
-                      className="w-8 h-8 rounded-full object-cover shrink-0"
-                      style={{ border: `2px solid ${colors.hairline}` }}
-                    />
-                  ) : (
-                    <div className="p-2 rounded-full" style={{ background: colors.panelLight }}>
-                      <Users size={14} color={colors.hairline} />
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm" style={{ color: colors.cream }}>{a.service_name}</p>
-                    <p className="text-xs underline" style={{ color: colors.creamDim }}>{a.customer_name}</p>
-                    {a.location_type === "home" && (
-                      <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 {a.customer_address}</p>
-                    )}
-                  </div>
-                </button>
-                <div className="flex items-start gap-2 shrink-0">
-                  <span className="text-xs text-right" style={{ color: colors.creamDim }}>
-                    {formatBookingDate(a.booking_date) && <>{formatBookingDate(a.booking_date)}<br /></>}
-                    {a.time_slot}
-                  </span>
-                  {onOpenChatProp && (
-                    <button
-                      onClick={() => openChatWithCustomer(a)}
-                      disabled={openingChatId === a.id}
-                      className="p-2 rounded-full tap-glass"
-                      style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
-                      aria-label="Message this client"
-                    >
-                      {openingChatId === a.id ? (
-                        <Loader2 size={16} className="animate-spin" color={colors.cream} />
-                      ) : (
-                        <MessageCircle size={16} color={colors.cream} />
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-              {openChatErrors[a.id] && (
-                <p className="text-xs" style={{ color: "#E07A5F" }}>{openChatErrors[a.id]}</p>
-              )}
-
-              {a.owner_response === "pending" ? (
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold" style={{ color: colors.gold }}>New booking — accept or decline</p>
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => submitAccept(a.id)}
-                      disabled={acceptingId === a.id}
-                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                      style={{ background: colors.hairline, color: "#FFFFFF" }}
-                    >
-                      {acceptingId === a.id ? "Accepting…" : "Accept"}
-                    </button>
-                    {decliningId !== a.id && (
-                      <button
-                        onClick={() => setDecliningId(a.id)}
-                        className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                        style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}
-                      >
-                        Decline
-                      </button>
-                    )}
-                  </div>
-                  {decliningId === a.id && (
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => submitDecline(a.id)}
-                        disabled={declineSubmitting}
-                        className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                        style={{ background: "#E07A5F", color: "#FFFFFF" }}
-                      >
-                        {declineSubmitting ? "Declining…" : "Confirm decline"}
-                      </button>
-                      <button
-                        onClick={() => setDecliningId(null)}
-                        className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                        style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
-                      >
-                        Never mind
-                      </button>
-                    </div>
-                  )}
-                  {respondErrors[a.id] && <p className="text-xs" style={{ color: "#E07A5F" }}>{respondErrors[a.id]}</p>}
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {a.disputed_at ? (
-                      <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}>
-                        ⚠️ Disputed
-                      </span>
-                    ) : (
-                      cancellingId !== a.id && (
-                        <button
-                          onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
-                          className="text-xs font-semibold px-3 py-1 rounded-full tap-glass"
-                          style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
-                        >
-                          Cancel
-                        </button>
-                      )
-                    )}
-                  </div>
-                  <LocationShareBlock bookingId={a.id} token={token} otherLabel="client" />
-                  {!a.checked_in_at && !a.disputed_at && (
-                    <div className="mt-2">
-                      {revealedCodes[a.id] ? (
-                        <div className="px-3 py-2 rounded-xl text-center inline-block" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
-                          <p className="text-xs" style={{ color: colors.creamDim }}>This client's code</p>
-                          <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 800, letterSpacing: "0.15em" }}>
-                            {revealedCodes[a.id]}
-                          </p>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => revealCode(a.id)}
-                          disabled={revealingCodeId === a.id}
-                          className="text-xs font-semibold px-3 py-1 rounded-full tap-glass"
-                          style={{ background: colors.hairline, color: "#FFFFFF" }}
-                        >
-                          {revealingCodeId === a.id ? "Loading…" : "Show check-in code"}
-                        </button>
-                      )}
-                      {revealCodeErrors[a.id] && <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{revealCodeErrors[a.id]}</p>}
-                    </div>
-                  )}
-                  {cancellingId === a.id && (
-                    <div className="flex flex-col gap-2">
-                      <select
-                        value={cancelReason}
-                        onChange={(e) => setCancelReason(e.target.value)}
-                        className="px-3 py-2 rounded-xl text-sm outline-none"
-                        style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
-                      >
-                        <option value="">Select a reason</option>
-                        {OWNER_CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                      {cancelError && <p className="text-xs" style={{ color: "#E07A5F" }}>{cancelError}</p>}
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => submitCancel(a.id)}
-                          className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                          style={{ background: colors.hairline, color: "#FFFFFF" }}
-                        >
-                          Confirm cancel
-                        </button>
-                        <button
-                          onClick={() => setCancellingId(null)}
-                          className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
-                          style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
-                        >
-                          Keep booking
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -2137,35 +1841,165 @@ function OwnerCustomerProfileView({ token, salonId, customerId, onBack }) {
 }
 
 
-function CompletedAppointmentsView({ token, onBack }) {
+function CompletedAppointmentsView({ token, onBack, onOpenChat: onOpenChatProp }) {
+  const [salon, setSalon] = useState(null);
+  const [upcoming, setUpcoming] = useState([]);
   const [completed, setCompleted] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState(null);
+  const [acceptingId, setAcceptingId] = useState(null);
+  const [decliningId, setDecliningId] = useState(null);
+  const [declineSubmitting, setDeclineSubmitting] = useState(false);
+  const [respondErrors, setRespondErrors] = useState({});
+  const [viewingCustomer, setViewingCustomer] = useState(null); // { id, name } | null
+  const [openingChatId, setOpeningChatId] = useState(null);
+  const [openChatErrors, setOpenChatErrors] = useState({});
+  const [revealedCodes, setRevealedCodes] = useState({}); // bookingId -> code
+  const [revealingCodeId, setRevealingCodeId] = useState(null);
+  const [revealCodeErrors, setRevealCodeErrors] = useState({});
+
+  async function openChatWithCustomer(booking) {
+    setOpeningChatId(booking.id);
+    setOpenChatErrors((prev) => ({ ...prev, [booking.id]: null }));
+    try {
+      const convo = await apiFetch("/conversations/start", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ salon_id: booking.salon_id, customer_id: booking.customer_id }),
+      });
+      onOpenChatProp && onOpenChatProp(convo.id);
+    } catch (e) {
+      setOpenChatErrors((prev) => ({ ...prev, [booking.id]: e.message || "Couldn't open this chat." }));
+    } finally {
+      setOpeningChatId(null);
+    }
+  }
+
+  async function revealCode(bookingId) {
+    setRevealingCodeId(bookingId);
+    setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      const res = await apiFetch(`/bookings/${bookingId}/checkin-code`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRevealedCodes((prev) => ({ ...prev, [bookingId]: res.code }));
+    } catch (e) {
+      setRevealCodeErrors((prev) => ({ ...prev, [bookingId]: "Couldn't load this booking's code." }));
+    } finally {
+      setRevealingCodeId(null);
+    }
+  }
+
+  async function submitCancel(bookingId) {
+    if (!cancelReason) {
+      setCancelError("Please select a reason.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: cancelReason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCancelError(err.error || "Failed to cancel booking.");
+        return;
+      }
+      setCancellingId(null);
+      setCancelReason("");
+      setCancelError(null);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setCancelError("Network error. Please try again.");
+    }
+  }
+
+  async function submitAccept(bookingId) {
+    setAcceptingId(bookingId);
+    setRespondErrors((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      await apiFetch(`/bookings/${bookingId}/accept`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setRespondErrors((prev) => ({ ...prev, [bookingId]: e.message || "Couldn't accept — try again." }));
+    } finally {
+      setAcceptingId(null);
+    }
+  }
+
+  async function submitDecline(bookingId) {
+    setDeclineSubmitting(true);
+    setRespondErrors((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      await apiFetch(`/bookings/${bookingId}/decline`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDecliningId(null);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setRespondErrors((prev) => ({ ...prev, [bookingId]: e.message || "Couldn't decline — try again." }));
+    } finally {
+      setDeclineSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
+    let cancelled = false;
     (async () => {
       try {
         const mine = await apiFetch("/salons/mine", { headers: { Authorization: `Bearer ${token}` } });
-        const salon = mine[0];
-        if (!salon) {
+        if (cancelled) return;
+        const s = mine[0];
+        if (!s) {
           setError("No salon found.");
           setLoading(false);
           return;
         }
-        const data = await apiFetch(`/salons/${salon.id}/completed-bookings`, { headers: { Authorization: `Bearer ${token}` } });
-        setCompleted(data.completed);
+        setSalon(s);
+        const [dashboard, completedData] = await Promise.all([
+          apiFetch(`/salons/${s.id}/dashboard`, { headers: { Authorization: `Bearer ${token}` } }),
+          apiFetch(`/salons/${s.id}/completed-bookings`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        if (cancelled) return;
+        setUpcoming(dashboard.upcoming);
+        setCompleted(completedData.completed);
       } catch (e) {
-        setError("Couldn't load completed appointments.");
+        if (!cancelled) setError("Couldn't load appointments.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [token]);
+    return () => { cancelled = true; };
+  }, [token, refreshKey]);
+
+  if (viewingCustomer && salon) {
+    return (
+      <OwnerCustomerProfileView
+        token={token}
+        salonId={salon.id}
+        customerId={viewingCustomer.id}
+        onBack={() => setViewingCustomer(null)}
+      />
+    );
+  }
 
   return (
     <div className="pb-8 transition-[background] duration-500" style={{ background: OWNER_THEME_GRADIENT }}>
-      <Header title="Completed Appointments" onBack={onBack} />
+      <Header title="Appointments" onBack={onBack} />
       <div className="px-4 max-w-xl mx-auto w-full">
         {loading && (
           <div className="flex justify-center pt-8">
@@ -2175,49 +2009,239 @@ function CompletedAppointmentsView({ token, onBack }) {
         {error && (
           <p className="text-sm text-center mt-4" style={{ color: colors.creamDim }}>{error}</p>
         )}
-        {!loading && !error && completed.length === 0 && (
-          <p className="text-sm py-4" style={{ color: colors.creamDim }}>
-            No completed appointments yet.
-          </p>
-        )}
-        <div className="flex flex-col gap-2 mt-2">
-          {completed.map((b) => (
-            <div
-              key={b.id}
-              className="flex items-center justify-between px-4 py-3 rounded-xl"
-              style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
-            >
-              <div className="flex items-center gap-3">
-                {b.customer_photo_url ? (
-                  <img
-                    src={b.customer_photo_url}
-                    alt={b.customer_name}
-                    className="w-8 h-8 rounded-full object-cover shrink-0"
-                    style={{ border: `2px solid ${colors.hairline}` }}
-                  />
-                ) : (
-                  <div className="p-2 rounded-full" style={{ background: colors.panelLight }}>
-                    <Users size={14} color={colors.hairline} />
+
+        {!loading && !error && (
+          <>
+        <h3 className="mt-6 mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_MONO }}>
+          Upcoming appointments
+        </h3>
+        <div className="flex flex-col gap-2">
+          {upcoming.length === 0 && (
+            <p className="text-sm py-4" style={{ color: colors.creamDim }}>No bookings yet — try booking one from the customer app.</p>
+          )}
+          {upcoming.map((a) => (
+            <div key={a.id} className="flex flex-col gap-2 px-4 py-3 rounded-xl" style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setViewingCustomer({ id: a.customer_id, name: a.customer_name })}
+                  className="flex items-center gap-3 text-left tap-glass"
+                >
+                  {a.customer_photo_url ? (
+                    <img
+                      src={a.customer_photo_url}
+                      alt={a.customer_name}
+                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                      style={{ border: `2px solid ${colors.hairline}` }}
+                    />
+                  ) : (
+                    <div className="p-2 rounded-full" style={{ background: colors.panelLight }}>
+                      <Users size={14} color={colors.hairline} />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm" style={{ color: colors.cream }}>{a.service_name}</p>
+                    <p className="text-xs underline" style={{ color: colors.creamDim }}>{a.customer_name}</p>
+                    {a.location_type === "home" && (
+                      <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 {a.customer_address}</p>
+                    )}
                   </div>
-                )}
-                <div>
-                  <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
-                  <p className="text-xs" style={{ color: colors.creamDim }}>{b.customer_name}</p>
-                  {b.location_type === "home" && (
-                    <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 {b.customer_address}</p>
+                </button>
+                <div className="flex items-start gap-2 shrink-0">
+                  <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                    {formatBookingDate(a.booking_date) && <>{formatBookingDate(a.booking_date)}<br /></>}
+                    {a.time_slot}
+                  </span>
+                  {onOpenChatProp && (
+                    <button
+                      onClick={() => openChatWithCustomer(a)}
+                      disabled={openingChatId === a.id}
+                      className="p-2 rounded-full tap-glass"
+                      style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}
+                      aria-label="Message this client"
+                    >
+                      {openingChatId === a.id ? (
+                        <Loader2 size={16} className="animate-spin" color={colors.cream} />
+                      ) : (
+                        <MessageCircle size={16} color={colors.cream} />
+                      )}
+                    </button>
                   )}
                 </div>
               </div>
-              <span className="text-xs text-right" style={{ color: colors.creamDim }}>
-                {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)}<br /></>}
-                {b.time_slot}
-              </span>
+              {openChatErrors[a.id] && (
+                <p className="text-xs" style={{ color: "#E07A5F" }}>{openChatErrors[a.id]}</p>
+              )}
+
+              {a.owner_response === "pending" ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold" style={{ color: colors.gold }}>New booking — accept or decline</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => submitAccept(a.id)}
+                      disabled={acceptingId === a.id}
+                      className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                      style={{ background: colors.hairline, color: "#FFFFFF" }}
+                    >
+                      {acceptingId === a.id ? "Accepting…" : "Accept"}
+                    </button>
+                    {decliningId !== a.id && (
+                      <button
+                        onClick={() => setDecliningId(a.id)}
+                        className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                        style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}
+                      >
+                        Decline
+                      </button>
+                    )}
+                  </div>
+                  {decliningId === a.id && (
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => submitDecline(a.id)}
+                        disabled={declineSubmitting}
+                        className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                        style={{ background: "#E07A5F", color: "#FFFFFF" }}
+                      >
+                        {declineSubmitting ? "Declining…" : "Confirm decline"}
+                      </button>
+                      <button
+                        onClick={() => setDecliningId(null)}
+                        className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                        style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                      >
+                        Never mind
+                      </button>
+                    </div>
+                  )}
+                  {respondErrors[a.id] && <p className="text-xs" style={{ color: "#E07A5F" }}>{respondErrors[a.id]}</p>}
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {a.disputed_at ? (
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ border: `2px solid #E07A5F`, color: "#E07A5F" }}>
+                        ⚠️ Disputed
+                      </span>
+                    ) : (
+                      cancellingId !== a.id && (
+                        <button
+                          onClick={() => { setCancellingId(a.id); setCancelReason(""); setCancelError(null); }}
+                          className="text-xs font-semibold px-3 py-1 rounded-full tap-glass"
+                          style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                        >
+                          Cancel
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <LocationShareBlock bookingId={a.id} token={token} otherLabel="client" />
+                  {!a.checked_in_at && !a.disputed_at && (
+                    <div className="mt-2">
+                      {revealedCodes[a.id] ? (
+                        <div className="px-3 py-2 rounded-xl text-center inline-block" style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}` }}>
+                          <p className="text-xs" style={{ color: colors.creamDim }}>This client's code</p>
+                          <p style={{ fontFamily: FONT_DISPLAY, color: colors.cream, fontSize: "1.5rem", fontWeight: 800, letterSpacing: "0.15em" }}>
+                            {revealedCodes[a.id]}
+                          </p>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => revealCode(a.id)}
+                          disabled={revealingCodeId === a.id}
+                          className="text-xs font-semibold px-3 py-1 rounded-full tap-glass"
+                          style={{ background: colors.hairline, color: "#FFFFFF" }}
+                        >
+                          {revealingCodeId === a.id ? "Loading…" : "Show check-in code"}
+                        </button>
+                      )}
+                      {revealCodeErrors[a.id] && <p className="text-xs mt-1" style={{ color: "#E07A5F" }}>{revealCodeErrors[a.id]}</p>}
+                    </div>
+                  )}
+                  {cancellingId === a.id && (
+                    <div className="flex flex-col gap-2">
+                      <select
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        className="px-3 py-2 rounded-xl text-sm outline-none"
+                        style={{ background: colors.panelLight, border: `2px solid ${colors.hairline}`, color: colors.cream }}
+                      >
+                        <option value="">Select a reason</option>
+                        {OWNER_CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      {cancelError && <p className="text-xs" style={{ color: "#E07A5F" }}>{cancelError}</p>}
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => submitCancel(a.id)}
+                          className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                          style={{ background: colors.hairline, color: "#FFFFFF" }}
+                        >
+                          Confirm cancel
+                        </button>
+                        <button
+                          onClick={() => setCancellingId(null)}
+                          className="px-4 py-2 rounded-full text-xs font-semibold tap-glass"
+                          style={{ border: `2px solid ${colors.hairline}`, color: colors.creamDim }}
+                        >
+                          Keep booking
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))}
         </div>
+
+            <h3 className="mt-8 mb-2 text-xs uppercase tracking-wide" style={{ color: colors.creamDim, fontFamily: FONT_MONO }}>
+              Completed appointments
+            </h3>
+            {completed.length === 0 && (
+              <p className="text-sm py-4" style={{ color: colors.creamDim }}>
+                No completed appointments yet.
+              </p>
+            )}
+            <div className="flex flex-col gap-2 mt-2">
+              {completed.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between px-4 py-3 rounded-xl"
+                  style={{ background: colors.panel, border: `2px solid ${colors.hairline}` }}
+                >
+                  <div className="flex items-center gap-3">
+                    {b.customer_photo_url ? (
+                      <img
+                        src={b.customer_photo_url}
+                        alt={b.customer_name}
+                        className="w-8 h-8 rounded-full object-cover shrink-0"
+                        style={{ border: `2px solid ${colors.hairline}` }}
+                      />
+                    ) : (
+                      <div className="p-2 rounded-full" style={{ background: colors.panelLight }}>
+                        <Users size={14} color={colors.hairline} />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm" style={{ color: colors.cream }}>{b.service_name}</p>
+                      <p className="text-xs" style={{ color: colors.creamDim }}>{b.customer_name}</p>
+                      {b.location_type === "home" && (
+                        <p className="text-xs mt-0.5" style={{ color: colors.gold }}>🏠 {b.customer_address}</p>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs text-right" style={{ color: colors.creamDim }}>
+                    {formatBookingDate(b.booking_date) && <>{formatBookingDate(b.booking_date)}<br /></>}
+                    {b.time_slot}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
+
 
 export { CreateSalonView, MediaManager, MediaGallery, OwnerDashboard, OwnerProfileView, OwnerCustomerProfileView, OwnerClientsView, CompletedAppointmentsView };
